@@ -98,3 +98,9 @@ summary{cursor:pointer;color:var(--mute);margin-top:6px}
 .ln.dim{opacity:.5}.ln.dim.now{opacity:.9}.ln.mine[data-who]::before{font-weight:700}
 #turn{font-weight:600;margin-top:4px}
 #chatBtn{position:relative}#chatBtn .bd{display:none;position:absolute;top:-6px;right:-6px;background:var(--pink);color:#fff;border-radius:99px;font-size:.7rem;padding:0 6px;line-height:1.5}#chatBtn.unread .bd{display:block}
+.ln.now{animation:lnIn .35s ease-out}
+@keyframes lnIn{from{transform:scale(.94);opacity:.5}to{transform:scale(1);opacity:1}}
+.ln.now{position:relative}
+.ln.now::after{content:"";position:absolute;top:-4px;left:var(--fill,0%);width:12px;height:12px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);transform:translate(-50%,0);animation:ball .45s ease-in-out infinite alternate;pointer-events:none}
+@keyframes ball{to{transform:translate(-50%,-10px)}}
+@media (prefers-reduced-motion:reduce){.ln.now::after{animation:none}}
