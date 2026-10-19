@@ -196,8 +196,17 @@ async function runSong() {
   const endT = () => lines[lines.length - 1].t * scale + 8, fb = new Float32Array(2048);
   const lineEnd = i => Math.min(lines[i + 1] ? lines[i + 1].t * scale : lines[i].t * scale + 4, lines[i].t * scale + 6);
   let last = -1, lvl = 0, peak = 0, pkT = 0, clr = 0, liveT = 0, clkT = 0;
+  // Countdown in the lyrics area, so everyone knows when to come in: while the music is starting, before the first line, and after long instrumental breaks.
+  const lyC = $('#lyCount'), lyN = $('#lyNum'), lyL = $('#lyLbl'), lyD = $('#lyDots'); let lyKey = '', everPlayed = false;
+  const lyShow = (n, label) => {      // n = whole seconds left (0 = just show the message), label '' = hide
+    const key = label ? n + '|' + label : ''; if (key === lyKey) return; lyKey = key;
+    if (!label) { lyC.classList.remove('show'); return; }
+    lyC.style.height = $('#lyrics').clientHeight + 'px'; lyL.textContent = label; lyN.textContent = n || ''; lyD.textContent = '';
+    for (let k = 0; k < Math.min(3, n); k++) lyD.appendChild(el('i'));
+    lyC.classList.toggle('wait', !n); lyC.classList.remove('show'); void lyC.offsetWidth; lyC.classList.add('show');   // restart the pop animation for every new number
+  };
   const tick = now => {
-    if (!active) return;
+    if (!active) { lyShow(0, ''); return; }
     const playing = isPlay(), t = playing ? getT() + offset + tweak() : -1;
     if (playing && current.song.bpm) { const ph = (((getT() - (current.song.lead || 0)) * current.song.bpm / 60) % 1 + 1) % 1; document.body.style.setProperty('--beat', Math.pow(1 - ph, 3).toFixed(2)); }
     let idx = -1; for (let i = 0; i < lines.length; i++) if (lines[i].t * scale <= t) idx = i;
@@ -210,6 +219,11 @@ async function runSong() {
         : 'Song time ' + fmt(raw) + ' · line ' + (idx + 1) + ' of ' + lines.length;
     }
     if (idx >= 0 && playing) { const a = lines[idx].t * scale, gap = lineEnd(idx) - a, est = Math.min(gap * 0.95, Math.max(1, (lines[idx].text || '').length * 0.14)), p = Math.max(0, Math.min(1, (t - a) / Math.max(0.5, est))); const n = $('#l' + idx); if (n) n.style.setProperty('--fill', (p * 100).toFixed(1) + '%'); }
+    { let cn = 0, cl = '';
+      if (!playing) { const toGo = room.on && room.startAt ? room.startAt - (Date.now() + room.skew) : 0; if (toGo > 0 && toGo <= 9000) { cn = Math.ceil(toGo / 1000); cl = 'Song starts in'; } else cl = everPlayed ? 'Waiting for the music…' : 'Song starting…'; }
+      else { everPlayed = true; const nx = lines[idx + 1];
+        if (nx) { const left = nx.t * scale - t; if (left > 0 && left <= 3 && (idx < 0 || nx.t * scale - lines[idx].t * scale >= 9)) { cn = Math.ceil(left); cl = idx < 0 ? 'First line in' : 'Next line in'; } } }
+      lyShow(cn, cl); }
     if (idx !== last || force) { force = false;
       last = idx;
       lines.forEach((_, i) => { const e = $('#l' + i); e.classList.toggle('now', i === idx); e.classList.toggle('past', i < idx); e.classList.toggle('next', i === idx + 1); });

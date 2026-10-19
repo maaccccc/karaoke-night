@@ -115,3 +115,6 @@ All the extra visuals live in three new files, so the app's own code is untouche
 - **Slow devices:** the page checks its own frame rate in the first few seconds and, if it is slow, switches to a lighter "lite" look automatically. To force it, run `localStorage.karaokeLite = '1'` (lite) or `'0'` (always the full look) in the browser console, then refresh.
 - People who prefer reduced motion get a still page (the microphone still responds when dragged).
 - To remove the layer completely, delete the `premium.css`, `premium.js` and `ornaments.html` lines in `public/index.html`.
+
+### Countdown in the lyrics area
+A big 3 · 2 · 1 appears over the lyrics so everyone knows when to come in: "Song starting…" while the music loads, "First line in 3, 2, 1" before the first lyric, and "Next line in…" after a long instrumental break (9 seconds or more between lines). It shows on every screen in the room, in fullscreen too. The styles are in `public/css/countdown.css` and the timing is in `public/js/singing.js` (`lyShow`).

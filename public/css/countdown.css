@@ -1,0 +1,16 @@
+/* countdown shown over the lyrics area (see singing.js, lyShow) */
+#lyCountWrap{position:relative;height:0;z-index:4;pointer-events:none}
+#lyCount{position:absolute;left:0;right:0;top:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;isolation:isolate}
+#lyCount.show{display:flex;animation:lyIn .25s ease-out}
+#lyCount::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(closest-side,rgba(10,4,20,.93) 58%,transparent)}
+#lyLbl{font:600 clamp(.85rem,2vw,1.1rem) Rubik,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--ink);text-shadow:0 2px 12px rgba(0,0,0,.7)}
+#lyNum{font:400 clamp(4.5rem,17vw,9.5rem)/1 Bungee,Impact,sans-serif;background:linear-gradient(180deg,#fff3c4,var(--gold) 45%,var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 22px color-mix(in srgb,var(--pink) 70%,transparent));animation:lyPop .9s ease-out both}
+#lyNum:empty{display:none}
+#lyDots{display:flex;gap:14px;min-height:18px}
+#lyDots i{width:16px;height:16px;border-radius:50%;background:var(--gold);box-shadow:0 0 16px var(--gold)}
+#lyCount.wait #lyLbl{animation:lyPulse 1.4s ease-in-out infinite}
+@keyframes lyPop{0%{transform:scale(1.7);opacity:0}22%{opacity:1}100%{transform:scale(1)}}
+@keyframes lyPulse{50%{opacity:.45}}
+@keyframes lyIn{from{opacity:0}}
+body.fs #stage>#lyCountWrap{display:block;flex:none}   /* fullscreen.css hides every other stage child */
+@media (prefers-reduced-motion:reduce){#lyNum,#lyCount.wait #lyLbl,#lyCount.show{animation:none}}
