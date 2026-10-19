@@ -1,21 +1,12 @@
 // ---- stage look: themes, bouncing lyrics, dimming lights, singer avatars, crowd energy, combo, confetti
 const THEMES = { neon: 'Neon club', arcade: 'Retro arcade', stars: 'Starry sky' };
 { const bg = $('.bg'); ['arcade', 'stars'].forEach(k => bg.appendChild(el('b', null, 'th th-' + k))); bg.after(el('div', null, 'bgdim')); }
-const themeFor = item => prefs.theme && prefs.theme !== 'auto' ? prefs.theme : (item && THEMES[item.theme] ? item.theme : 'neon');
+if (!THEMES[prefs.theme]) prefs.theme = 'neon';      // older saved settings said "song's choice"; there is now one overall theme
+const themeFor = () => THEMES[prefs.theme] ? prefs.theme : 'neon';
 function applyTheme(t) { document.body.dataset.theme = THEMES[t] ? t : 'neon'; renderThemeRow(); }
-function refreshTheme() { applyTheme(themeFor(active ? current : null)); }
-function renderThemeRow() { document.querySelectorAll('#themeRow button').forEach(b => b.classList.toggle('on', b.dataset.th === (prefs.theme || 'auto'))); }
-document.querySelectorAll('#themeRow button').forEach(b => b.onclick = () => { prefs.theme = b.dataset.th; applyPrefs(); });
-const savedTheme = () => { try { return localStorage.getItem('karaokeTheme') || 'neon'; } catch (e) { return 'neon'; } };
-function renderPickThemes() {       // the singer picks the stage look, or lets the room vote
-  const b = $('#pkThemes'); b.textContent = ''; const all = Object.assign({}, THEMES, { vote: '🗳 Room votes' });
-  Object.keys(all).forEach(k => { const x = el('button', all[k], 'ghost' + (pkSel.theme === k ? ' on' : '')); x.type = 'button'; x.onclick = () => { pkSel.theme = k; renderPickThemes(); }; b.appendChild(x); });
-}
-function renderVote() {             // ready check: vote for the look when the singer chose "Room votes"
-  const box = $('#rdVote'), m = rdIn; if (!m || m.item.theme !== 'vote') { box.style.display = 'none'; return; }
-  box.style.display = 'block'; const b = $('#rdVoteBtns'); b.textContent = '';
-  Object.keys(THEMES).forEach(k => { const x = el('button', THEMES[k] + (m.tv && m.tv[k] ? ' · ' + m.tv[k] : ''), 'ghost' + (m.myVote === k ? ' on' : '')); x.type = 'button'; x.onclick = () => { m.myVote = k; roomOp({ op: 'tvote', t: k }); renderVote(); }; b.appendChild(x); });
-}
+function refreshTheme() { applyTheme(themeFor()); }
+function renderThemeRow() { document.querySelectorAll('#lTheme button[data-th]').forEach(b => { const on = b.dataset.th === prefs.theme; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
+document.querySelectorAll('#lTheme button[data-th]').forEach(b => b.onclick = () => { prefs.theme = b.dataset.th; applyPrefs(); });   // home page: changes the whole site
 
 const fx = { bn: 0, lights: 1, lastIdx: -1, lastBeat: -1, prev: 0, lastB: 0, vl: 0, t: 0 };
 const crowd = { e: 0, txt: '' }; let fxStats = { reacts: 0 };
@@ -55,7 +46,7 @@ function comboEval(i) {             // line i is over: did I sing it?
 function comboTick(idx) { while (cb.last < idx - 1) comboEval(++cb.last); }
 function comboFinish() { while (cb.last < lines.length - 1) comboEval(++cb.last); return { max: cb.max, bonus: Math.min(10, Math.round(cb.max * .8)) }; }
 function fxStart() {
-  applyTheme(themeFor(current)); Object.assign(fx, { bn: 0, lights: 1, lastIdx: -1, lastBeat: -1, prev: 0, vl: 0, t: 0 });
+  applyTheme(themeFor()); Object.assign(fx, { bn: 0, lights: 1, lastIdx: -1, lastBeat: -1, prev: 0, vl: 0, t: 0 });
   Object.assign(cb, { n: 0, max: 0, last: -1 }); setCombo(); crowd.e = 0; fxStats = { reacts: 0 };
   avBuild(); crowdBuild(); document.body.style.setProperty('--lights', 1);
 }
@@ -94,4 +85,4 @@ function confetti(score) {
     document.body.appendChild(c); setTimeout(() => c.remove(), 1900); } }, k * 500);
   if (score >= 95) ['🎆', '🎇', '✨', '🎆', '🎇'].forEach((e, i) => setTimeout(() => { const d = el('div', e, 'rx'); d.style.left = (10 + i * 18) + '%'; d.style.fontSize = '3.4rem'; $('#rxl').appendChild(d); setTimeout(() => d.remove(), 2700); }, i * 220));
 }
-renderThemeRow(); applyTheme(themeFor(null));
+renderThemeRow(); applyTheme(themeFor());

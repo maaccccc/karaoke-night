@@ -19,12 +19,12 @@ function renderPick() {
     const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888';
     b.append(av, el('span', p.name)); b.onclick = () => { pkSel.p2 = p.name; renderPick(); }; pl.appendChild(b);
   });
-  renderPickThemes(); $('#pkGo').disabled = two && !pkSel.p2;
+  $('#pkGo').disabled = two && !pkSel.p2;
 }
 function showPick(m) {
   pkIn = m; clearInterval(pkTimer);
   if (m.item.singer !== room.name) { say(m.item.singer + ' is choosing how to sing “' + m.item.song.title + '”…'); return; }
-  pkSel = { mode: 'solo', p2: '', theme: savedTheme() }; $('#pkSong').textContent = m.item.song.title + ' · ' + m.item.song.artist;
+  pkSel = { mode: 'solo', p2: '' }; $('#pkSong').textContent = m.item.song.title + ' · ' + m.item.song.artist;
   renderPick(); $('#pickdlg').classList.add('show'); say('Your song is next. Choose how you want to sing it.');
   pkTimer = setInterval(() => {
     const s = Math.ceil((m.until - (Date.now() + room.skew)) / 1000);
@@ -33,7 +33,7 @@ function showPick(m) {
   }, 250);
 }
 function hidePick() { clearInterval(pkTimer); pkIn = null; $('#pickdlg').classList.remove('show'); }
-$('#pkGo').onclick = () => { if (!pkIn) return; roomOp({ op: 'mode', mode: pkSel.mode, singer2: pkSel.p2, theme: pkSel.theme }); try { localStorage.setItem('karaokeTheme', pkSel.theme); } catch (e) {} };
+$('#pkGo').onclick = () => { if (!pkIn) return; roomOp({ op: 'mode', mode: pkSel.mode, singer2: pkSel.p2 }); };
 $('#pkNo').onclick = () => { hidePick(); roomOp({ op: 'unpick' }); };
 
 let rdIn = null, rdTimer = 0;
@@ -42,7 +42,7 @@ function renderReady() {
   $('#rdSong').textContent = m.item.song.title + ' · ' + whoTxt(m.item) + (m.item.singer2 ? ' sing (' + modeName[m.item.mode] + ')' : ' sings');
   $('#rdBy').textContent = m.by + ' wants to start the next song.';
   $('#rdWho').textContent = 'Ready: ' + m.yes.join(', ');
-  $('#rdYes').disabled = me; $('#rdYes').textContent = me ? 'Waiting for the others…' : 'I’m ready!'; renderVote();
+  $('#rdYes').disabled = me; $('#rdYes').textContent = me ? 'Waiting for the others…' : 'I’m ready!';
 }
 function showReady(m) {
   rdIn = m; renderReady(); $('#rdy').classList.add('show'); clearInterval(rdTimer);

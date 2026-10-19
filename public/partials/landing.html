@@ -1,4 +1,5 @@
 <section id="landing" aria-label="Welcome to Karaoke Night">
+  <div class="lbar"><button type="button" class="ghost icon" id="lSettings" aria-label="Open settings">⚙ Settings</button></div>
   <div class="lhero">
     <h1>Karaoke Night</h1>
     <p class="tag">Sing your favourite songs with time-synced lyrics, live scoring and your friends, whether they are next to you or across the world.</p>
@@ -18,6 +19,15 @@
       <button type="button" class="lbtn" id="lCreate">✨ Create a room<small>Get a room code and invite friends from anywhere</small></button>
       <div class="ljoin"><input id="rCode" maxlength="12" placeholder="ROOM CODE" autocapitalize="characters" aria-label="Room code"><button type="button" id="lJoin">Join a room</button></div>
       <p id="rStat" class="note" style="min-height:1.3em;margin:8px 0 0"></p>
+    </div>
+  </div>
+  <div class="card" id="lTheme">
+    <h2>Theme</h2>
+    <p class="note">Changes the look of the whole site, on every page and while you sing.</p>
+    <div class="thgrid">
+      <button type="button" class="ghost thbtn" data-th="neon" aria-pressed="false"><span class="thsw thsw-neon"></span><b>Neon club</b><small>Hot pink beams and gold glow</small></button>
+      <button type="button" class="ghost thbtn" data-th="arcade" aria-pressed="false"><span class="thsw thsw-arcade"></span><b>Retro arcade</b><small>Yellow and cyan on deep purple</small></button>
+      <button type="button" class="ghost thbtn" data-th="stars" aria-pressed="false"><span class="thsw thsw-stars"></span><b>Starry sky</b><small>Calm midnight blue and stars</small></button>
     </div>
   </div>
   <div class="lfeat">

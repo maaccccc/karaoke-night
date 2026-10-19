@@ -86,7 +86,6 @@ function handleMsg(m) {
   else if (m.type === 'chat') { addChat(m); fxChat(); }
   else if (m.type === 'hist') { hist.length = 0; hist.push(...(m.hist || [])); }
   else if (m.type === 'night') openNight();
-  else if (m.type === 'tvotes') { if (rdIn) { rdIn.tv = m.counts; renderVote(); } }
   else if (m.type === 'chatlog') { $('#chatLog').textContent = ''; (m.msgs || []).forEach(x => addChat(x, true)); }
   else if (m.type === 'react') { floatReact(m); fxReact(); }
   else if (m.type === 'stars') { aud.avg = m.avg; aud.n = m.n; if ($('#rate').style.display === 'block') { renderAud(); renderAwards(); } }
