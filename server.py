@@ -1,7 +1,7 @@
 """Karaoke Night server: YouTube Music search (ytmusicapi) + timed lyrics (LRCLIB).
 Run: pip install -r requirements.txt && python server.py
 """
-import importlib.util, json, os, queue as _queue, random, re, shutil, tempfile, threading, time, unicodedata, urllib.request, urllib.parse
+import importlib.util, json, os, queue as _queue, random, re, shutil, tempfile, threading, time, urllib.request, urllib.parse
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from ytmusicapi import YTMusic
 
@@ -443,8 +443,6 @@ def room_join(code, cid, name, av=None):
             r['clients'][cid]['q'].put({'type': 'chatlog', 'msgs': r['chat'][-40:]})
         if r.get('hist'):
             r['clients'][cid]['q'].put({'type': 'hist', 'hist': r['hist']})
-        if r.get('lg'):
-            r['clients'][cid]['q'].put(lg_msg(r))
         return {'id': cid, 'name': name, 'now': int(time.time() * 1000)}
 
 def room_leave(code, cid):
@@ -619,29 +617,6 @@ def room_send(code, cid, typ, data, to=None):
             if r['ready']:
                 r['ready'] = None
                 room_push(r, {'type': 'readycancel', 'name': me['name'], 'reason': me['name'] + ' is not ready yet.'})
-        elif op == 'lg_guess':     # Guess the Lyrics: a guess for the missing word (checked here, so nobody can peek at the answer)
-            lg = r.get('lg')
-            if not lg or lg['phase'] != 'round' or me['name'] in lg['solved']:
-                return None
-            now = time.time()
-            if now - me.get('lgt', 0) < 0.35:
-                return None
-            me['lgt'] = now
-            if lg_match(data.get('text'), lg['rounds'][lg['i']]['answer']):
-                pts = 5 + round(10 * max(0.0, lg['ends'] - now) / LG_SECS) + (3 if not lg['solved'] else 0)   # faster is worth more, first solver gets +3
-                lg['solved'][me['name']] = pts
-                lg['scores'][me['name']] = lg['scores'].get(me['name'], 0) + pts
-                room_push(r, lg_msg(r))
-                if all(c['name'] in lg['solved'] for c in r['clients'].values()):
-                    lg_round_end(r['code'], lg, lg['i'])
-            else:
-                room_push(r, {'type': 'lgwrong'}, to=cid)
-            return None
-        elif op == 'lg_stop':
-            lg = r.get('lg')
-            if lg and lg['phase'] != 'final':
-                lg_finish(r, lg, me['name'] + ' ended the game.')
-            return None
         elif op == 'score':
             nw = r['now']
             if not nw or me['name'] not in nw['singers'] or me['name'] in nw['got']:
@@ -661,160 +636,6 @@ def room_send(code, cid, typ, data, to=None):
             song_done(r)
         room_push(r, room_state(r))
         return reply
-
-# ---- Guess the Lyrics (room game for 2+ people): a lyric line with one word missing, type the word.
-# The answers stay on the server; browsers only ever receive the line with the blank.
-LG_SECS, LG_REVEAL, LG_INTRO, LG_ROUNDS = 25, 5, 4, 8
-LG_STOP = set("the and you that with have this your for are but not was were from they them what when will would could there their about into just like dont cant wont been being than then these those over only also some more much very here where which while still every ever never always again away down back gonna wanna cause because".split())
-
-def lg_norm(s):
-    s = unicodedata.normalize('NFKD', str(s or '')).casefold()
-    return re.sub(r'[\W_]+', '', ''.join(ch for ch in s if not unicodedata.combining(ch)))
-
-def lg_match(guess, answer):
-    """Exact match, or one typo for longer words."""
-    g, a = lg_norm(guess), lg_norm(answer)
-    if not g:
-        return False
-    if g == a:
-        return True
-    if len(a) >= 5 and abs(len(g) - len(a)) <= 1:
-        if len(g) == len(a):
-            return sum(x != y for x, y in zip(g, a)) <= 1
-        short, long_ = (g, a) if len(g) < len(a) else (a, g)
-        return any(long_[:i] + long_[i + 1:] == short for i in range(len(long_)))
-    return False
-
-def lg_core(w):
-    return re.sub(r'^\W+|\W+$', '', w)
-
-def lg_build(title, artist, duration):
-    """Pick random lyric lines and hide one word in each. Raises RuntimeError with a friendly message if the song will not work."""
-    lrc = synced_lyrics(title, artist, duration)[0]
-    if not lrc:
-        raise RuntimeError('No lyrics were found for that song. Try another one.')
-    seen, pool = set(), []
-    for raw in lrc.splitlines():
-        text = re.sub(r'\s+', ' ', re.sub(r'^(\s*\[[^\]]*\])+', '', raw)).strip()
-        words = text.split(' ')
-        key = lg_norm(text)
-        if not key or key in seen or not 4 <= len(words) <= 12 or not 16 <= len(text) <= 90:
-            continue
-        seen.add(key)
-        cands = [i for i, w in enumerate(words)
-                 if len(lg_core(w)) >= 4 and re.fullmatch(r"[^\W\d_]+", lg_core(w)) and lg_core(w).casefold() not in LG_STOP]
-        if cands:
-            pool.append((text, words, cands))
-    if len(pool) < 5:
-        raise RuntimeError('That song does not have enough plain English-style lyric lines for this game. Try another song.')
-    rounds = []
-    for text, words, cands in random.sample(pool, min(LG_ROUNDS, len(pool))):
-        i = random.choice(cands)
-        mo = re.match(r'^(\W*)(.*?)(\W*)$', words[i])
-        lead, core, trail = mo.group(1), mo.group(2), mo.group(3)
-        rounds.append({'line': text, 'answer': core, 'n': len(core),
-                       'pre': ' '.join(words[:i]) + (' ' if i else '') + lead,
-                       'post': trail + (' ' if i + 1 < len(words) else '') + ' '.join(words[i + 1:])})
-    return rounds
-
-def lg_msg(r):
-    lg = r.get('lg')
-    if not lg:
-        return {'type': 'lg', 'phase': 'none'}
-    m = {'type': 'lg', 'phase': lg['phase'], 'song': lg['song'], 'host': lg['host'], 'of': len(lg['rounds']), 'n': lg['i'] + 1,
-         'scores': lg['scores'], 'solved': lg['solved'], 'hint': lg['hint'], 'note': lg.get('note', ''),
-         'ends': int(lg['ends'] * 1000), 'secs': LG_SECS, 'players': [c['name'] for c in r['clients'].values()]}
-    if lg['phase'] in ('round', 'reveal') and 0 <= lg['i'] < len(lg['rounds']):
-        rd = lg['rounds'][lg['i']]
-        m.update(pre=rd['pre'], post=rd['post'], len=rd['n'])
-        if lg['phase'] == 'reveal':
-            m.update(line=rd['line'], answer=rd['answer'])
-    return m
-
-def lg_timer(lg, key, secs, fn, *args):
-    old = lg.get(key)
-    if old:
-        old.cancel()
-    t = threading.Timer(secs, fn, args); t.daemon = True; lg[key] = t; t.start()
-
-def lg_alive(code, lg):
-    r = ROOMS.get(code)
-    return r if r and r.get('lg') is lg else None
-
-def lg_round_start(code, lg, i):
-    with RLOCK:
-        r = lg_alive(code, lg)
-        if not r or lg['phase'] == 'final':
-            return
-        if len(r['clients']) < 2:
-            lg_finish(r, lg, 'Everyone else left, so the game ended.'); return
-        lg.update(i=i, phase='round', solved={}, hint='', ends=time.time() + LG_SECS)
-        room_push(r, lg_msg(r))
-        lg_timer(lg, 'timer', LG_SECS, lg_round_end, code, lg, i)
-        lg_timer(lg, 'htimer', LG_SECS * 0.45, lg_hint, code, lg, i)
-
-def lg_hint(code, lg, i):
-    with RLOCK:
-        r = lg_alive(code, lg)
-        if not r or lg['i'] != i or lg['phase'] != 'round':
-            return
-        lg['hint'] = lg['rounds'][i]['answer'][0]          # first letter appears in the first box
-        room_push(r, lg_msg(r))
-
-def lg_round_end(code, lg, i):
-    with RLOCK:
-        r = lg_alive(code, lg)
-        if not r or lg['i'] != i or lg['phase'] != 'round':
-            return
-        lg['phase'] = 'reveal'; lg['ends'] = time.time() + LG_REVEAL
-        if lg.get('htimer'):
-            lg['htimer'].cancel()
-        room_push(r, lg_msg(r))
-        if i + 1 < len(lg['rounds']):
-            lg_timer(lg, 'timer', LG_REVEAL, lg_round_start, code, lg, i + 1)
-        else:
-            lg_timer(lg, 'timer', LG_REVEAL, lg_finish_later, code, lg)
-
-def lg_finish_later(code, lg):
-    with RLOCK:
-        r = lg_alive(code, lg)
-        if r and lg['phase'] != 'final':
-            lg_finish(r, lg, '')
-
-def lg_finish(r, lg, note):
-    lg['phase'] = 'final'; lg['note'] = note
-    for k in ('timer', 'htimer'):
-        if lg.get(k):
-            lg[k].cancel()
-    room_push(r, lg_msg(r))
-
-def lg_start_game(code, cid, song):
-    """Called from /api/lg/start. The lyric lookup is a network call, so it happens outside the room lock."""
-    def check():
-        r = ROOMS.get(code); me = r and r['clients'].get(cid)
-        if not me:
-            raise RuntimeError('You are not in the room any more. Reload the page.')
-        if len(r['clients']) < 2:
-            raise RuntimeError('Guess the Lyrics needs at least 2 people in the room.')
-        old = r.get('lg')
-        if old and old['phase'] in ('intro', 'round', 'reveal'):
-            raise RuntimeError('A game is already running. Wait for it to finish, or end it first.')
-        return r, me
-    with RLOCK:
-        check()
-    title, artist = str(song.get('title') or '')[:120], str(song.get('artist') or '')[:120]
-    try: dur = float(song.get('duration') or 0)
-    except Exception: dur = 0
-    rounds = lg_build(title, artist, dur)
-    with RLOCK:
-        r, me = check()
-        lg = {'host': me['name'], 'song': {'title': title, 'artist': artist}, 'rounds': rounds, 'i': -1, 'phase': 'intro',
-              'scores': {c['name']: 0 for c in r['clients'].values()}, 'solved': {}, 'hint': '', 'note': '',
-              'ends': time.time() + LG_INTRO, 'timer': None, 'htimer': None}
-        r['lg'] = lg
-        room_push(r, lg_msg(r))
-        lg_timer(lg, 'timer', LG_INTRO, lg_round_start, code, lg, 0)
-    return {'ok': True, 'rounds': len(rounds)}
 
 class Handler(BaseHTTPRequestHandler):
     def send_json(self, code, obj):
@@ -909,8 +730,6 @@ class Handler(BaseHTTPRequestHandler):
                 msg = room_send(clean_code(data.get('room')), clean_id(data.get('id')), str(data.get('type')),
                                 data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None)
                 return self.send_json(200, {'ok': True, 'msg': msg})
-            if u.path == '/api/lg/start':
-                return self.send_json(200, lg_start_game(clean_code(data.get('room')), clean_id(data.get('id')), data.get('song') if isinstance(data.get('song'), dict) else {}))
             if u.path == '/api/align/start':
                 code, obj = start_align(data)
                 return self.send_json(code, obj)
