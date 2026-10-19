@@ -209,7 +209,7 @@ async function runSong() {
         : idx < 0 ? 'Song time ' + fmt(raw) + ' · first lyric line at ' + fmt(Math.max(0, first)) + ' (in ' + Math.max(0, Math.round(first - raw)) + 's)'
         : 'Song time ' + fmt(raw) + ' · line ' + (idx + 1) + ' of ' + lines.length;
     }
-    if (idx >= 0 && playing) { const a = lines[idx].t * scale, p = Math.max(0, Math.min(1, (t - a) / Math.max(0.5, (lineEnd(idx) - a) * 0.9))); const n = $('#l' + idx); if (n) n.style.setProperty('--fill', (p * 100).toFixed(1) + '%'); }
+    if (idx >= 0 && playing) { const a = lines[idx].t * scale, gap = lineEnd(idx) - a, est = Math.min(gap * 0.95, Math.max(1, (lines[idx].text || '').length * 0.14)), p = Math.max(0, Math.min(1, (t - a) / Math.max(0.5, est))); const n = $('#l' + idx); if (n) n.style.setProperty('--fill', (p * 100).toFixed(1) + '%'); }
     if (idx !== last || force) { force = false;
       last = idx;
       lines.forEach((_, i) => { const e = $('#l' + i); e.classList.toggle('now', i === idx); e.classList.toggle('past', i < idx); e.classList.toggle('next', i === idx + 1); });
