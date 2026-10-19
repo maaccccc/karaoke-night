@@ -1,0 +1,30 @@
+<div id="home">
+  <div class="card" id="cWho">
+    <h2>Room</h2>
+    <div class="row"><button class="ghost" id="skipBtn">Skip current song</button></div>
+    <p class="note" style="margin-bottom:0">Your look</p><div id="avPick2"></div>
+    <p class="note" id="whoNote">A mic marked “untested” can be checked in Settings before the song starts.</p>
+  </div>
+  <div class="card" id="cSingers">
+    <h2>Singers</h2>
+    <div class="row"><input id="pname" placeholder="Name" maxlength="20" aria-label="Singer name"><button id="addP">Add</button></div>
+    <div id="plist"></div>
+  </div>
+  <div class="card" id="cImport">
+    <h2>Import from your computer</h2>
+    <p class="note">Choose audio files (MP3, WAV, M4A, OGG). The app reads the title and artist, measures the length and tempo, and looks up timed lyrics that match.</p>
+    <input type="file" id="imp" accept="audio/*" multiple aria-label="Import audio files">
+    <div id="lib"></div>
+  </div>
+  <div class="card">
+    <h2>Find a song</h2>
+    <div class="row"><input id="q" placeholder="Song or artist" aria-label="Search songs"><button id="searchBtn">Search</button></div>
+    <div id="results"></div>
+  </div>
+  <div class="card">
+    <h2>Queue</h2>
+    <div id="queue"><p class="note">Nothing queued yet.</p></div>
+    <div class="row" style="margin-top:12px"><button id="startBtn">Start the next song</button><button class="ghost" id="saveBtn">Save queue as YouTube Music playlist</button><button class="ghost" id="endNight">🏁 End the night</button></div>
+    <p class="note" id="startNote" style="margin:8px 0 0">The person whose song is next chooses Solo, Duet or Tournament first, then everyone gets the “Are you ready?” check.</p>
+  </div>
+</div>

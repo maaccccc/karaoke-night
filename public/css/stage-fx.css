@@ -1,0 +1,54 @@
+/* ---- stage themes, lights, avatars, crowd, combo, awards, podium, night ---- */
+.bgdim{position:fixed;inset:0;z-index:-1;pointer-events:none;background:#000;opacity:calc((1 - var(--lights,1)) * .6)}
+.bg i{opacity:calc((.72 + var(--beat,0)*.28) * var(--lights,1))}
+.bg .th{position:absolute;inset:0;opacity:0;transition:opacity .9s;pointer-events:none}
+body[data-theme="arcade"]{--pink:#ff2e63;--cyan:#08f7fe;--gold:#fef200}
+body[data-theme="arcade"] .bg{background:linear-gradient(#0b0221,#1a0845 55%,#2b0a5e)}
+body[data-theme="arcade"] .bg i,body[data-theme="stars"] .bg i{display:none}
+body[data-theme="arcade"] .th-arcade,body[data-theme="stars"] .th-stars{opacity:1}
+.th-arcade{background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 2px,transparent 2px 4px)}
+.th-arcade::before{content:"";position:absolute;left:-50%;right:-50%;bottom:0;height:46%;background:linear-gradient(rgba(8,247,254,.5) 1px,transparent 1px) 0 0/100% 38px,linear-gradient(90deg,rgba(8,247,254,.5) 1px,transparent 1px) 0 0/60px 100%;transform:perspective(380px) rotateX(62deg);transform-origin:bottom;animation:grid 1.6s linear infinite}
+@keyframes grid{from{background-position:0 0,0 0}to{background-position:0 38px,0 0}}
+body[data-theme="arcade"] .ln.now{font-family:Bungee,Impact,sans-serif;letter-spacing:.03em;text-transform:uppercase;filter:drop-shadow(3px 3px 0 #ff2e63)}
+body[data-theme="stars"]{--pink:#9ecbff;--cyan:#c4b5ff;--gold:#fff3b0}
+body[data-theme="stars"] .bg{background:radial-gradient(120% 90% at 50% 100%,#1b2a6b,#0a1236 55%,#03060f)}
+.th-stars::before,.th-stars::after{content:"";position:absolute;inset:0;background-image:radial-gradient(2px 2px at 20px 30px,#fff,transparent),radial-gradient(1.5px 1.5px at 90px 80px,#cfe3ff,transparent),radial-gradient(2px 2px at 160px 20px,#fff,transparent),radial-gradient(1px 1px at 60px 130px,#fff,transparent),radial-gradient(2px 2px at 200px 110px,#ffe9a8,transparent);background-size:220px 160px;animation:twinkle 4s ease-in-out infinite alternate}
+.th-stars::after{background-size:310px 230px;background-position:70px 40px;animation-duration:6s;animation-delay:-2s}
+@keyframes twinkle{from{opacity:.35}to{opacity:1}}
+body[data-theme="stars"] .ln.now{filter:drop-shadow(0 0 12px #9ecbff)}
+.ln.now{transform:translateY(calc(var(--bn,0) * -5px)) scale(calc(1 + var(--bn,0) * .035))}
+#themeRow button.on,.mbtns button.on{outline:2px solid var(--gold)}
+#rxl{height:100vh}
+#avStage{display:flex;gap:22px;justify-content:center;align-items:flex-end;margin:4px 0;min-height:118px}
+.avs{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.5;transform:scale(.85);transition:opacity .3s,transform .3s}
+.avs.on{opacity:1;transform:scale(1)}
+.avs .big{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;font-size:3.1rem;animation:bob 2.6s ease-in-out infinite;box-shadow:0 0 0 3px rgba(255,255,255,.18),0 0 calc(8px + var(--vl,0)*44px) var(--ac,var(--pink))}
+.avs.on .big{animation-duration:.9s}
+.avs .em{display:inline-block;transform:scale(calc(1 + var(--vl,0)*.25))}
+.avs .nm{font-weight:600;font-size:.9rem}.avs.on .nm::before{content:"🎤 "}
+@keyframes bob{50%{transform:translateY(-6px)}}
+#crowdWrap{display:none;margin:6px 0 2px}body.inroom #crowdWrap{display:block}
+#crowd{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:6px}
+.cav{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:1.1rem}.cav.hit{animation:hop .45s}
+@keyframes hop{40%{transform:translateY(-10px) scale(1.2)}}
+.cmeter{display:flex;gap:10px;align-items:center}.cbar{flex:1;height:10px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
+.cbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3be58a,var(--gold),var(--pink));transition:width .15s}
+#crowdTxt{min-width:92px;text-align:right;font-size:.9rem}
+.rx{margin-left:-1.1rem}
+#combo{font:400 1.25rem Bungee,Impact,sans-serif;color:var(--cyan);opacity:0;transition:opacity .2s}#combo.on{opacity:1}#combo.pop{animation:cpop .35s}
+@keyframes cpop{40%{transform:scale(1.35)}}
+#awards{display:grid;gap:8px;margin:12px 0}.awh{font:400 1rem Bungee,Impact,sans-serif;text-align:left;margin-top:6px}
+.aw{display:flex;gap:12px;align-items:center;text-align:left;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:14px;padding:8px 12px;animation:in .5s both;animation-delay:calc(var(--i)*.25s)}
+.aw .ic{font-size:1.8rem}.aw b{display:block}.aw small{color:var(--mute)}
+.ovl{position:fixed;inset:0;z-index:70;display:none;place-items:center;background:rgba(10,4,18,.9);backdrop-filter:blur(6px);padding:16px;overflow:auto}.ovl.show{display:grid}
+.ovl .box{width:min(580px,94vw);text-align:center;background:#1c0e2c;border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 20px 80px rgba(0,0,0,.6)}
+.pod{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:18px 0 8px;min-height:230px}
+.pcol{display:flex;flex-direction:column;align-items:center;width:30%;max-width:140px}
+.pcol .pav{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-size:2.1rem;margin-bottom:4px}
+.pcol.first .pav{animation:bob 1.2s ease-in-out infinite}.pcol .crown{font-size:1.6rem;height:1.8rem;animation:bob 1.2s ease-in-out infinite}
+.pcol b{font-size:.95rem;word-break:break-word}.pcol small{color:var(--gold)}
+.pstep{width:100%;margin-top:6px;border-radius:12px 12px 0 0;display:grid;place-items:start center;padding-top:6px;font:400 1.6rem Bungee,Impact,sans-serif;transform-origin:bottom;animation:grow .9s cubic-bezier(.2,.9,.3,1) both}
+@keyframes grow{from{transform:scaleY(0)}}
+.nstats{display:grid;gap:8px;margin:12px 0;text-align:left}.nstat{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:14px;padding:8px 14px}.nstat small{display:block;color:var(--mute)}
+.cb{position:fixed;top:42%;left:50%;width:10px;height:10px;z-index:80;pointer-events:none;border-radius:2px;animation:burst 1.7s cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes burst{to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}

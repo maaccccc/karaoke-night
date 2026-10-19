@@ -1,0 +1,4 @@
+#vcBox{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+#vcBox #vcJoin.on{background:rgba(59,229,138,.25);color:#8ff0bd}
+#vcBox label{display:block;margin-top:10px;font-size:.9rem}#vcBox label b{float:right;color:var(--gold)}#vcBox input[type=range]{width:100%}
+#vcPeers{margin-top:8px}.vcp{display:flex;gap:8px;font-size:.9rem;padding:2px 0}.vcp .vci{width:1.2em;text-align:center}.vcp.ok{color:#8ff0bd}.vcp.fail{color:#ff9aa6}.vcp.wait{color:var(--mute)}

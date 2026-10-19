@@ -1,0 +1,10 @@
+#side{display:flex;flex-direction:column;gap:12px}
+#sideCards{flex:1 1 auto;min-height:0;overflow:auto}
+#chat{display:none;flex:none;flex-direction:column;height:clamp(240px,36vh,400px);background:rgba(28,14,44,.97);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+body.inroom #chat{display:flex}
+#chat.min{height:auto}#chat.min #chatLog,#chat.min #chatForm{display:none}
+.chead{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+#chatLog{flex:1;min-height:0;overflow:auto;padding:8px 14px}
+.cm{margin:5px 0;word-break:break-word;font-size:.95rem}.cm b{color:var(--wc,var(--cyan))}.cm.me b{color:var(--gold)}
+#chatForm{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}#chatIn{flex:1;min-width:0}
+#chatToast{position:fixed;left:12px;bottom:12px;max-width:min(340px,calc(100vw - 24px));z-index:44;display:none;padding:8px 14px;border-radius:14px;background:rgba(28,14,44,.95);border:1px solid var(--line);animation:in .25s both;cursor:pointer}

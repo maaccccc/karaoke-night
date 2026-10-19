@@ -1,0 +1,36 @@
+<div id="stage">
+  <h2 id="now"></h2>
+  <div id="avStage"></div>
+  <div id="lyrics" aria-live="polite"></div>
+  <div id="crowdWrap"><div id="crowd"></div><div class="cmeter"><span class="note">Crowd energy</span><div class="cbar"><i id="crowdBar"></i></div><b id="crowdTxt">Quiet</b></div></div>
+  <div class="live"><span class="note">Live score</span><span id="combo"></span><span id="liveScore">0</span></div>
+  <div class="vu" id="vu" role="img" aria-label="Microphone volume meter"></div>
+  <div class="note" id="micNote" style="margin-top:8px"></div>
+  <div id="turn"></div><div class="note" id="lat"></div>
+  <div id="ytslot"></div>
+  <div class="row" id="rvRow" style="margin-top:10px"><label class="note" for="rvol">Singer voice</label><input type="range" id="rvol" min="0" max="100" value="100" style="width:200px"></div>
+  <audio id="rv" autoplay playsinline></audio>
+  <div class="row" id="sRow" style="margin-top:10px"><label class="note" for="sLive">Mic level (friends hear this)</label><input type="range" id="sLive" min="0.5" max="4" step="0.1" value="1" style="width:200px"><b id="sLiveV">1.0×</b></div>
+  <div class="row" style="margin-top:10px"><span class="note">Lyrics timing:</span><button class="ghost" id="s5">Sooner 0.5s</button><button class="ghost" id="s1">Sooner 0.1s</button><button class="ghost" id="l1">Later 0.1s</button><button class="ghost" id="l5">Later 0.5s</button><b id="off">0.0s</b><button class="ghost" id="rstTiming">Reset timing</button></div>
+  <div class="row" style="margin-top:10px"><button id="syncNow">First line starts now</button><button class="ghost" id="markBtn">Mark picked line</button></div>
+  <div class="note" id="markHint" style="margin-top:6px">Click a lyric line, then press Mark the moment you hear it start. Mark a second line near the end to fix drift too.</div>
+  <div class="note" id="clock" style="margin-top:6px"></div>
+  <div class="row" style="margin-top:10px"><label for="spd" class="note">Lyrics stretch</label><input type="range" id="spd" min="0.88" max="1.12" step="0.002" value="1" style="width:200px"><b id="spdv">0.0%</b><button class="ghost" id="spdAuto">Auto</button></div>
+  <div class="row" style="margin-top:10px"><label for="ver" class="note">Lyrics version</label><select id="ver" style="max-width:100%"><option value="">Loading versions…</option></select></div>
+  <div class="row" style="margin-top:10px"><label for="romMode" class="note">Lyrics:</label><select id="romMode"><option value="both">Original + romanized</option><option value="rom">Romanized only</option><option value="orig">Original only</option></select></div>
+  <p class="note" id="romNote" style="display:none">Korean and Japanese kana are romanized. Kanji and Chinese characters stay as written.</p>
+  <div class="row" id="themeRow" style="margin-top:10px"><span class="note">Stage look:</span><button class="ghost" data-th="auto">Song’s choice</button><button class="ghost" data-th="neon">Neon club</button><button class="ghost" data-th="arcade">Retro arcade</button><button class="ghost" data-th="stars">Starry sky</button></div>
+  <div id="reactBar"><button class="ghost" data-e="👏" aria-label="React 👏">👏</button><button class="ghost" data-e="🔥" aria-label="React 🔥">🔥</button><button class="ghost" data-e="❤️" aria-label="React ❤️">❤️</button><button class="ghost" data-e="😂" aria-label="React 😂">😂</button><button class="ghost" data-e="🎉" aria-label="React 🎉">🎉</button><button class="ghost" data-e="😮" aria-label="React 😮">😮</button></div>
+  <div class="row" style="margin-top:12px"><button class="ghost" id="stopBtn">Finish early</button><button class="ghost" id="skipBtn2" style="display:none">Skip song for everyone</button></div>
+  <div id="rate" class="card">
+    <h2>Your score</h2>
+    <div class="ring" id="ring"><div><b id="big">0</b><small>out of 100</small></div></div>
+    <div class="rank" id="rank"></div>
+    <div id="bk"></div>
+    <div id="awards"></div>
+    <p class="note" id="scoreNote"></p>
+    <div id="aud"></div>
+    <div id="nextBox" style="display:none;margin:12px 0"><p id="nextTimer" style="font-weight:600;margin:0 0 6px"></p><div class="prog"><i id="nextBar"></i></div><button class="ghost" id="nextCancel" style="display:none">Stop auto-play</button></div>
+    <button id="back">Back to the queue</button>
+  </div>
+</div>

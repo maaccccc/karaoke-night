@@ -1,0 +1,94 @@
+/* ===== Premium layer: loaded last, only adds polish. Colours follow --pink / --cyan / --gold so stage themes still recolour everything. ===== */
+:root{--gold2:#fff1b8;--ink2:#0d0716;--rad:20px;--ease:cubic-bezier(.2,.8,.2,1)}
+::selection{background:rgba(255,61,139,.55);color:#fff}
+html{scrollbar-color:rgba(255,255,255,.25) transparent;scrollbar-width:thin}
+*::-webkit-scrollbar{width:10px;height:10px}*::-webkit-scrollbar-thumb{background:linear-gradient(var(--pink),var(--cyan));border-radius:9px;border:3px solid transparent;background-clip:padding-box}*::-webkit-scrollbar-track{background:transparent}
+
+/* ambience: film grain, stage-floor glow, vignette */
+body::before{content:"";position:fixed;inset:0;z-index:100;pointer-events:none;opacity:.045;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+body::after{content:"";position:fixed;left:-10%;right:-10%;bottom:-18vh;height:46vh;z-index:-1;pointer-events:none;background:radial-gradient(60% 70% at 50% 100%,color-mix(in srgb,var(--pink) 34%,transparent),transparent 70%),radial-gradient(40% 55% at 22% 100%,color-mix(in srgb,var(--cyan) 22%,transparent),transparent 70%),radial-gradient(40% 55% at 80% 100%,color-mix(in srgb,var(--gold) 20%,transparent),transparent 70%);will-change:opacity;opacity:calc(.55 + var(--beat,0)*.45)}
+.bg{background:radial-gradient(120% 80% at 50% -10%,#431a66,var(--bg) 60%),radial-gradient(70% 60% at 100% 100%,rgba(53,224,255,.10),transparent)}
+#fxDust{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+
+/* glass cards with a light-catching edge */
+:where(.card){position:relative}
+.card{border:0;border-radius:var(--rad);background:linear-gradient(155deg,rgba(255,255,255,.11),rgba(255,255,255,.035) 38%,rgba(255,255,255,.06));box-shadow:0 18px 38px -24px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.15);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .35s var(--ease),box-shadow .35s}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(140deg,rgba(255,255,255,.55),rgba(255,255,255,.07) 28%,color-mix(in srgb,var(--pink) 55%,transparent) 68%,color-mix(in srgb,var(--cyan) 50%,transparent));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.card>h2{display:flex;align-items:center;gap:10px;letter-spacing:1px;text-shadow:0 0 18px color-mix(in srgb,var(--pink) 50%,transparent)}
+.card>h2::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--pink));box-shadow:0 0 12px var(--pink),0 0 2px #fff inset}
+@media (hover:hover){.lfeat .card:hover,#side .card:hover{transform:translateY(-3px);box-shadow:0 30px 60px -26px rgba(0,0,0,.8),0 0 34px -10px color-mix(in srgb,var(--pink) 60%,transparent),inset 0 1px 0 rgba(255,255,255,.2)}}
+
+/* buttons: jewel gradient, shine on hover (background only, so it stays cheap) */
+button:not(.ghost){border-radius:14px;background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.42) 50%,transparent 62%) 130% 0/260% 100% no-repeat,linear-gradient(135deg,#ff5aa5,var(--pink) 45%,#a24bff);box-shadow:0 8px 20px -8px color-mix(in srgb,var(--pink) 75%,transparent),inset 0 1px 0 rgba(255,255,255,.4);transition:transform .2s,box-shadow .2s,background-position .8s var(--ease)}
+button:not(.ghost):hover{background-position:-30% 0,0 0;box-shadow:0 12px 26px -8px color-mix(in srgb,var(--pink) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.5)}
+button.ghost{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.18);transition:transform .25s var(--ease),border-color .25s,box-shadow .25s,background .25s}
+button.ghost:hover{border-color:color-mix(in srgb,var(--cyan) 70%,#fff 10%);background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));box-shadow:0 0 22px -6px var(--cyan)}
+button.on,.pk button.on{border-color:var(--gold);box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 60%,transparent),0 0 20px -4px var(--gold)}
+input,select{background:linear-gradient(180deg,rgba(6,2,14,.7),rgba(20,8,34,.55));border-color:rgba(255,255,255,.16);box-shadow:inset 0 2px 8px rgba(0,0,0,.45);transition:border-color .2s,box-shadow .2s}
+input:focus,select:focus{border-color:var(--cyan);box-shadow:inset 0 2px 8px rgba(0,0,0,.45),0 0 0 3px color-mix(in srgb,var(--cyan) 28%,transparent),0 0 24px -4px var(--cyan)}
+input[type=range]{accent-color:var(--pink)}
+
+/* header, titles, dialogs */
+.top{background:linear-gradient(180deg,rgba(21,10,34,.9),rgba(21,10,34,.62));border-bottom:0;box-shadow:0 1px 0 rgba(255,255,255,.1),0 18px 40px -22px rgba(0,0,0,.8)}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--pink),var(--gold),var(--cyan),transparent);opacity:.75}
+h1{background:linear-gradient(100deg,var(--pink) 0%,var(--gold) 38%,var(--gold2) 50%,var(--gold) 62%,var(--pink) 100%);background-size:100% 100%;-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 18px color-mix(in srgb,var(--pink) 60%,transparent)) drop-shadow(0 2px 0 rgba(0,0,0,.4))}
+.lhero h1{letter-spacing:.04em;filter:drop-shadow(0 0 28px color-mix(in srgb,var(--pink) 70%,transparent)) drop-shadow(0 4px 0 rgba(0,0,0,.35))}
+.lhero .tag{text-shadow:0 2px 18px rgba(0,0,0,.6)}
+dialog{border:0;border-radius:24px;background:linear-gradient(160deg,rgba(48,20,76,.96),rgba(21,10,34,.97));color:var(--ink);box-shadow:0 40px 90px -20px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.14),0 0 60px -18px var(--pink);animation:dlg .35s var(--ease)}
+dialog::backdrop{background:radial-gradient(circle at 50% 40%,rgba(60,20,90,.55),rgba(8,3,16,.8));backdrop-filter:blur(6px)}
+@keyframes dlg{from{opacity:0;transform:translateY(16px) scale(.96)}}
+.item{transition:background .25s,padding .25s}.item:hover{background:linear-gradient(90deg,rgba(255,255,255,.07),transparent)}
+.ln.now{text-shadow:0 0 12px var(--gold),0 0 40px var(--pink),0 0 80px color-mix(in srgb,var(--pink) 60%,transparent)}
+
+/* ===== theatre: curtains, vinyl, disco ball (landing page only) ===== */
+.curtains,.vinyl,.discoball,.mic3d.hero{display:none}
+body.home .curtains,body.home .vinyl,body.home .discoball,body.home .mic3d.hero{display:block}
+.curtains i{position:fixed;top:0;bottom:0;z-index:-1;width:clamp(34px,8vw,150px);pointer-events:none;background:repeating-linear-gradient(90deg,#3a0a1c 0 14px,#7a1633 14px 30px,#c02a55 30px 36px,#7a1633 36px 46px);-webkit-mask-image:linear-gradient(90deg,#000 55%,transparent);mask-image:linear-gradient(90deg,#000 55%,transparent);box-shadow:inset 0 0 60px rgba(0,0,0,.6);opacity:.85;animation:drape 9s ease-in-out infinite alternate}
+.curtains i:first-child{left:0;transform-origin:left top}
+.curtains i:last-child{right:0;transform:scaleX(-1);animation-delay:-4s}
+.curtains::after{content:"";position:fixed;left:0;right:0;top:0;height:34px;z-index:-1;pointer-events:none;background:linear-gradient(#1b0610,transparent);opacity:.9}
+@keyframes drape{from{filter:brightness(.95)}to{filter:brightness(1.18)}}
+.vinyl{position:fixed;left:max(-190px,calc(50vw - 840px));top:52%;width:min(400px,34vw);aspect-ratio:1;margin-top:-17vw;z-index:-1;border-radius:50%;pointer-events:none;opacity:.9;background:repeating-radial-gradient(circle,#090410 0 2px,#1b1128 3px 4px),conic-gradient(from 0deg,transparent,rgba(255,255,255,.16) 9%,transparent 22%,transparent 50%,rgba(255,255,255,.16) 59%,transparent 72%);background-blend-mode:screen;box-shadow:0 0 0 6px #0b0612,0 30px 60px rgba(0,0,0,.6),0 0 80px -10px color-mix(in srgb,var(--cyan) 45%,transparent);animation:spin 11s linear infinite}
+.vinyl b{position:absolute;inset:34%;border-radius:50%;background:radial-gradient(circle,#0b0612 0 7%,transparent 8%),conic-gradient(var(--pink),var(--gold),var(--cyan),var(--pink));box-shadow:inset 0 0 0 6px rgba(0,0,0,.25)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.discoball{position:fixed;top:0;right:max(60px,calc(50vw - 640px));z-index:-1;width:92px;height:200px;pointer-events:none;transform-origin:top center;animation:swing 5s ease-in-out infinite alternate}
+.discoball::before{content:"";position:absolute;left:50%;top:0;width:2px;height:108px;margin-left:-1px;background:linear-gradient(#fff6,#fff2)}
+.discoball i{position:absolute;left:0;bottom:0;width:92px;height:92px;border-radius:50%;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.95),transparent 26%),radial-gradient(circle at 72% 78%,rgba(0,0,0,.6),transparent 62%),repeating-linear-gradient(0deg,transparent 0 6px,rgba(10,6,24,.55) 6px 7px),repeating-linear-gradient(90deg,transparent 0 8px,rgba(10,6,24,.55) 8px 9px),linear-gradient(135deg,#f3f5ff,#8f95c4 55%,#56598a);background-size:100% 100%,100% 100%,100% 7px,9px 100%,100% 100%;animation:tiles 2.4s steps(9) infinite;box-shadow:0 0 50px 6px rgba(255,255,255,.18),0 0 90px 10px color-mix(in srgb,var(--cyan) 35%,transparent)}
+.discoball u{position:absolute;left:-210px;bottom:-210px;width:512px;height:512px;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.14) 0 3deg,transparent 3deg 22deg);-webkit-mask-image:radial-gradient(circle,#000 10%,transparent 68%);mask-image:radial-gradient(circle,#000 10%,transparent 68%);mix-blend-mode:screen;animation:spin 14s linear infinite reverse}
+@keyframes tiles{to{background-position:0 0,0 0,0 0,9px 0,0 0}}
+@keyframes swing{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+
+/* ===== the 3D microphone ===== */
+.mic3d{position:relative;user-select:none;-webkit-user-select:none;touch-action:pan-y;cursor:grab;outline:none}
+.mic3d:active{cursor:grabbing}
+.mic3d:focus-visible{outline:3px solid var(--cyan);outline-offset:6px;border-radius:24px}
+.mic3d .scene{position:relative;width:100%;height:100%;perspective:820px}
+.mic3d .mic{position:absolute;left:50%;top:50%;width:0;height:360px;margin-top:-180px;transform-origin:0 50%;transform-style:preserve-3d;transform:rotateZ(-11deg) rotateX(-9deg)}
+.mic3d .spin,.mic3d .spin *{transform-style:preserve-3d}
+.mic3d .spin{position:absolute;left:0;top:0;width:0;height:100%}
+.mic3d .fc{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.mic3d .wire{position:absolute;border:2px solid color-mix(in srgb,var(--gold) 88%,#fff);border-radius:50%;box-shadow:0 0 7px color-mix(in srgb,var(--gold) 65%,transparent)}
+.mic3d .core{position:absolute;border-radius:50%;background:radial-gradient(circle at 34% 28%,#4a3470,#150b24 55%,#07030d);box-shadow:inset 0 0 22px rgba(0,0,0,.7)}
+.mic3d .mglow{position:absolute;left:50%;top:38%;width:150%;aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--pink) calc(30% + var(--spd,0)*45%),transparent),transparent 62%);opacity:calc(.55 + var(--spd,0)*.45 + var(--beat,0)*.2);filter:blur(8px)}
+.mic3d .pedestal{position:absolute;left:50%;bottom:2%;width:86%;height:11%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--cyan) 55%,#fff 10%),color-mix(in srgb,var(--pink) 35%,transparent) 45%,transparent 70%);filter:blur(5px);opacity:calc(.6 + var(--spd,0)*.4)}
+.mic3d .mhint,.mic3d .rpm{position:absolute;left:50%;transform:translateX(-50%);font:600 .74rem Rubik,sans-serif;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;pointer-events:none}
+.mic3d .mhint{bottom:-24px;color:var(--mute);transition:opacity .6s;animation:hintpulse 2.4s ease-in-out infinite}
+.mic3d.touched .mhint{opacity:0;animation:none}
+.mic3d .rpm{top:-22px;color:var(--gold);text-shadow:0 0 12px var(--gold);opacity:0;transition:opacity .3s}
+.mic3d.fast .rpm{opacity:1}
+@keyframes hintpulse{50%{opacity:.45}}
+.mic3d.hero{position:fixed;right:max(44px,calc(50vw - 780px));top:50%;width:150px;height:360px;margin-top:-190px;z-index:2}
+.mic3d.mini{width:34px;height:46px;flex:none;margin:-4px 2px -4px 0}
+.mic3d.mini .pedestal,.mic3d.mini .mhint,.mic3d.mini .rpm{display:none}
+.mic3d.mini .mglow{width:230%;opacity:calc(.35 + var(--spd,0)*.5)}
+.mic3d.live .mglow{background:radial-gradient(circle,color-mix(in srgb,#ff3b50 60%,transparent),transparent 62%)}
+@media (max-width:1180px){body.home .mic3d.hero,body.home .vinyl{display:none}}
+@media (max-width:900px){body.home .discoball{display:none}}
+@media (max-width:640px){.mic3d.mini{display:none}}
+@media (prefers-reduced-motion:reduce){.vinyl,.discoball,.discoball i,.discoball u,.curtains i,.mic3d .mhint{animation:none!important}#fxDust{display:none}}
+
+/* lite mode: switched on automatically on slow devices (see premium.js); keeps the look, drops the expensive effects */
+body.lite::before,body.lite::after,body.lite .curtains,body.lite .vinyl,body.lite .discoball,body.lite #fxDust{display:none!important}
+body.lite .card,body.lite dialog::backdrop,body.lite .top{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.lite .card::before{display:none}
+body.lite .mic3d .mglow,body.lite .mic3d .pedestal{filter:none}

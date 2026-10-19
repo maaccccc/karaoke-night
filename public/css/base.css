@@ -1,0 +1,32 @@
+@property --p{syntax:'<number>';inherits:false;initial-value:0}
+:root{--bg:#150a22;--glass:rgba(255,255,255,.07);--line:rgba(255,255,255,.15);--ink:#fbeeff;--mute:#b79ccb;--pink:#ff3d8b;--cyan:#35e0ff;--gold:#ffc83d;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif;background:var(--bg);overflow-x:hidden}
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(120% 80% at 50% 0,#3a1458,var(--bg) 62%)}
+.bg i{position:absolute;top:-12%;width:28vw;min-width:160px;height:135%;transform-origin:top center;filter:blur(20px);animation:sway 9s ease-in-out infinite alternate;background:linear-gradient(180deg,rgba(255,61,139,.38),transparent 72%)}
+.bg i:nth-child(1){left:4%}
+.bg i:nth-child(2){left:36%;animation-delay:-3s;animation-duration:11s;background:linear-gradient(180deg,rgba(53,224,255,.3),transparent 72%)}
+.bg i:nth-child(3){left:68%;animation-delay:-6s;background:linear-gradient(180deg,rgba(255,200,61,.3),transparent 72%)}
+@keyframes sway{from{transform:rotate(-15deg)}to{transform:rotate(15deg)}}
+main{padding:20px 0 60px;min-width:0}
+header{display:flex;align-items:center;gap:14px}
+h1{font:400 2.4rem Bungee,Impact,sans-serif;margin:0;background:linear-gradient(90deg,var(--pink),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 14px rgba(255,61,139,.55))}
+h2{font:400 1.15rem Bungee,Impact,sans-serif;margin:0 0 10px;letter-spacing:.5px}
+.eq{display:flex;align-items:flex-end;gap:4px;height:30px}
+.eq i{width:6px;border-radius:3px;background:linear-gradient(var(--cyan),var(--pink));animation:eq .9s ease-in-out infinite alternate;animation-delay:calc(var(--d)*-.17s)}
+@keyframes eq{from{height:5px}to{height:30px}}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+input,select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.3);color:var(--ink);font:inherit;max-width:100%}
+input[type=file]{font-size:.8rem;max-width:210px}
+label{font-weight:600}
+button{font:600 1rem Rubik,sans-serif;border:0;border-radius:12px;padding:10px 16px;color:#fff;cursor:pointer;background:linear-gradient(135deg,var(--pink),#a83dff);box-shadow:0 4px 18px rgba(255,61,139,.35);transition:transform .15s,box-shadow .15s}
+button:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(255,61,139,.5)}
+button:active{transform:scale(.96)}
+button.ghost{background:transparent;box-shadow:none;border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>input{flex:1;min-width:150px}
+.item{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line);animation:in .35s both}
+@keyframes in{from{opacity:0;transform:translateY(8px)}}
+.item small{color:var(--mute);display:block}
+.chip{display:inline-block;background:rgba(255,255,255,.1);border:1px solid var(--line);border-radius:99px;padding:2px 14px;margin:6px 6px 0 0;animation:in .3s both}
+.note{color:var(--mute);font-size:.9rem}
