@@ -1,0 +1,50 @@
+/* ===== Fullscreen lyrics: body.fs is switched on by js/fullscreen.js ===== */
+#nowRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#fsbar{display:none}
+body.fs{overflow:hidden}
+body.fs.fs-idle{cursor:none}
+body.fs .top,body.fs #chat,body.fs #home,body.fs #msg{display:none!important}
+body.fs .layout{display:block;max-width:none;margin:0;padding:0}
+/* the YouTube player has to stay visible, so it shrinks to a small window in the corner */
+body.fs #side{position:fixed;left:14px;bottom:14px;top:auto;right:auto;width:200px;height:auto;max-height:none;overflow:visible;padding:0;margin:0;background:none;border:0;box-shadow:none;transform:none;z-index:70}
+body.fs #side>*:not(#sideCards){display:none}
+body.fs #sideCards{overflow:visible;padding:0}
+body.fs #sideCards>*:not(#ytcard){display:none}
+body.fs #ytcard{padding:0;border-radius:14px;overflow:hidden}
+body.fs #ytcard h2,body.fs #ytcard::before{display:none}
+body.fs #ytwrap{width:200px;min-width:200px;min-height:200px;border-radius:14px}
+body.fs #stage>#ytslot{display:block;position:fixed;left:14px;bottom:14px;width:200px;z-index:70}
+/* the stage fills the screen */
+body.fs #stage:not([style*="none"]){position:fixed;inset:0;z-index:50;display:flex!important;flex-direction:column;align-items:stretch;padding:clamp(12px,2vw,26px) clamp(16px,4vw,72px) 124px;overflow:hidden;animation:none}
+body.fs #stage>*{display:none}
+body.fs #stage>#nowRow{display:flex;justify-content:center;text-align:center}
+body.fs #nowRow h2{margin:0;font-size:clamp(1rem,1.7vw,1.5rem);opacity:.92}
+body.fs #fsBtn{display:none}
+body.fs #stage>#avStage{display:flex;min-height:0;margin:0;transform:scale(.72);transform-origin:center top;height:84px}
+body.fs #stage>#lyrics{display:block;flex:1 1 auto;height:auto;min-height:0}
+body.fs .ln{font-size:calc(clamp(1.3rem,2.5vw,2.6rem)*var(--fs,1));padding:calc(.4vw + 5px) 0}
+body.fs .ln.now{font-size:calc(clamp(2.1rem,4.8vw,5rem)*var(--fs,1))}
+body.fs #stage>#turn{display:block;text-align:center;margin:0}
+body.fs #stage>.live{display:flex;justify-content:center;gap:16px;margin:2px 0 0}
+body.fs.aud #stage>.live{display:none}
+body.fs .live .note{display:none}
+body.fs #liveScore{font-size:clamp(2rem,4vw,3.6rem)}
+body.fs #stage>#vu{display:grid;height:10px;width:min(560px,70%);margin:8px auto 0}
+body.fs.aud #stage>#reactBar{display:flex;position:fixed;right:16px;top:50%;transform:translateY(-50%);bottom:auto;flex-direction:column;z-index:56;margin:0}
+body.fs #stage>#rate{position:fixed;inset:0;margin:auto;width:min(600px,92vw);height:fit-content;max-height:88vh;overflow:auto;z-index:90}
+/* the control bar: the normal controls move in here while fullscreen is on */
+body.fs #stage>#fsbar{display:flex;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:80;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:center;width:max-content;max-width:96vw;padding:8px 12px;border-radius:18px;background:rgba(14,8,30,.82);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:opacity .35s}
+#fsbar button{padding:6px 11px;font-size:.78rem;border-radius:11px}
+#fsbar .note,#fsbar label{font-size:.76rem;white-space:nowrap}
+#fsbar .row{gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
+#fsbar .row{margin:0!important}
+#fsbar input[type=range]{width:110px!important}
+body.fs.fs-idle #stage>#fsbar{opacity:0;pointer-events:none}
+/* keep the control bar clear of the small video window */
+@media (min-width:901px){body.fs #stage>#fsbar{left:226px;right:14px;transform:none;width:auto;max-width:none}}
+@media (max-width:900px){
+  body.fs #side,body.fs #stage>#ytslot{left:auto;right:12px;top:12px;bottom:auto}
+  body.fs #stage>#fsbar{left:10px;right:10px;bottom:10px;transform:none;width:auto;max-width:none}
+  body.fs #stage:not([style*="none"]){padding-bottom:244px}
+  body.fs #stage>#nowRow{justify-content:flex-start;text-align:left;max-width:calc(100% - 216px)}
+}
