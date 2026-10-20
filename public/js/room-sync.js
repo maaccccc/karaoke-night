@@ -26,7 +26,7 @@ setInterval(() => { if (room.on) syncClock(); }, 60000);
 
 // ---- random line turns (duet + tournament), mic gate, and voice/music sync
 function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-function makeTurns(seed, n, mode, k) {        // 0..k-1 = which singer, 2 = together (duet only, k = 2). Same seed, same turns on every device.
+function makeTurns(seed, n, mode, k) {        // 0..k-1 = which singer, TOGETHER = everybody (duet only). Same seed, same turns on every device.
   if (mode === 'solo') return Array(n).fill(0);
   k = Math.max(2, k || 2);
   if (k > 2) {                                 // 3+ singers: deal the lines out fairly, so everybody gets an equal share in a random order
@@ -42,13 +42,13 @@ function makeTurns(seed, n, mode, k) {        // 0..k-1 = which singer, 2 = toge
   const r = rng(seed), out = []; let prev = -1, run = 0;
   for (let i = 0; i < n; i++) {
     let v = Math.floor(r() * k); const tog = r();
-    if (mode === 'duet' && i > 0 && out[i - 1] !== 2 && tog < .16) v = 2;
+    if (mode === 'duet' && i > 0 && out[i - 1] !== TOGETHER && tog < .16) v = TOGETHER;
     else if (v === prev && run >= 2) v = k === 2 ? 1 - v : (v + 1 + Math.floor(r() * (k - 1))) % k;
     run = v === prev ? run + 1 : 1; prev = v; out.push(v);
   }
   for (let s = 0; s < k && s < n; s++) if (!out.includes(s)) {      // everybody gets at least one line
     const cnt = {}; out.forEach(x => { cnt[x] = (cnt[x] || 0) + 1; });
-    const j = out.findIndex(x => x !== 2 && cnt[x] > 1); out[j >= 0 ? j : s] = s;
+    const j = out.findIndex(x => x !== TOGETHER && cnt[x] > 1); out[j >= 0 ? j : s] = s;
   }
   return out;
 }
@@ -61,12 +61,12 @@ function labelTurns() {
     delete d.dataset.who; d.style.removeProperty('--wc'); d.classList.remove('mine', 'dim');
     if (!current.turns) return;
     const v = current.turns[i];
-    if (v === 2) { d.dataset.who = '👥 Together'; d.style.setProperty('--wc', 'var(--gold)'); }
+    if (v === TOGETHER) { d.dataset.who = '👥 Together'; d.style.setProperty('--wc', 'var(--gold)'); }
     else { const nm = (current.singers && current.singers.length ? current.singers : [current.singer, current.singer2])[v]; d.dataset.who = avTxt(nm) + nm; const a = avOf(nm); if (a) d.style.setProperty('--wc', a.c); }
     d.classList.toggle('mine', ownLine(i)); d.classList.toggle('dim', sing && !ownLine(i));
   });
 }
-const owns = (k, i) => !!current.turns && i >= 0 && i < lines.length && (current.turns[i] === 2 || current.turns[i] === k);
+const owns = (k, i) => !!current.turns && i >= 0 && i < lines.length && (current.turns[i] === TOGETHER || current.turns[i] === k);
 function openAt(k, t) {                    // may singer k be heard at lyric time t?
   let idx = -1; for (let i = 0; i < lines.length; i++) if (lines[i].t * scale <= t) idx = i;
   if (owns(k, idx)) return true;

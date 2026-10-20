@@ -23,7 +23,7 @@ function avBuild() {
 function avUpdate(idx, playing) {
   const nodes = [...$('#avStage').children]; if (!nodes.length) return;
   const turns = current && current.turns, v = turns && idx >= 0 ? turns[idx] : -1;
-  nodes.forEach((n, k) => { const on = !!playing && (turns ? idx >= 0 && (v === 2 || v === k) : true); n.classList.toggle('on', on); if (on) n.style.setProperty('--vl', fx.vl.toFixed(2)); else n.style.removeProperty('--vl'); });
+  nodes.forEach((n, k) => { const on = !!playing && (turns ? idx >= 0 && (v === TOGETHER || v === k) : true); n.classList.toggle('on', on); if (on) n.style.setProperty('--vl', fx.vl.toFixed(2)); else n.style.removeProperty('--vl'); });
 }
 function crowdBuild() {
   const box = $('#crowd'); if (!box) return; box.textContent = ''; if (!room.on || !current) return;

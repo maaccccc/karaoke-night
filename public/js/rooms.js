@@ -44,7 +44,8 @@ const singersOf = it => it.singers && it.singers.length ? it.singers : [it.singe
 const inItem = it => singersOf(it).includes(room.name);
 const whoTxt = it => singersOf(it).map(n => avTxt(n) + n).join(' & ');
 const myIdx = () => current && current.mode !== 'solo' && current.sids ? current.sids.indexOf(room.id) : -1;
-const ownLine = i => { if (!(room.on && current && current.mode !== 'solo' && current.turns)) return true; const v = current.turns[i]; return v === 2 || v === myIdx(); };
+const TOGETHER = 9;      // line marker for "everybody sings this" (singers themselves are numbered 0, 1, 2, ...)
+const ownLine = i => { if (!(room.on && current && current.mode !== 'solo' && current.turns)) return true; const v = current.turns[i]; return v === TOGETHER || v === myIdx(); };
 const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), b => (b % 36).toString(36)).join('');
 async function rpost(path, body) {
   const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
