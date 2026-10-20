@@ -31,3 +31,52 @@ body.home #landing{display:block}
 .onl i{width:9px;height:9px;border-radius:50%;background:#3be58a;box-shadow:0 0 0 0 rgba(59,229,138,.7);animation:onlp 2s infinite}
 @keyframes onlp{70%{box-shadow:0 0 0 8px rgba(59,229,138,0)}100%{box-shadow:0 0 0 0 rgba(59,229,138,0)}}
 @media (prefers-reduced-motion:reduce){.onl i{animation:none}}
+
+/* ---- Start singing card ---- */
+#cStart{display:flex;flex-direction:column}
+#cStart .lbtn{display:flex;align-items:center;gap:14px;width:100%;margin:0;padding:14px 16px;text-align:left}
+#cStart .lbtn .ic{display:grid;place-items:center;flex:none;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.2);font-size:1.5rem}
+#cStart .lbtn .tx{display:block;min-width:0}
+#cStart .lbtn .tx b{display:block;font-size:1.1rem;line-height:1.2}
+#cStart .lbtn .tx small{display:block;margin-top:2px;font-weight:400;font-size:.84rem;line-height:1.3;opacity:.9}
+
+/* "or ..." dividers */
+.odiv{display:flex;align-items:center;gap:12px;margin:18px 0 14px;color:var(--mute);font-size:.82rem;text-transform:uppercase;letter-spacing:.08em}
+.odiv::before,.odiv::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* Private / Public segmented choice */
+.vlab{margin:0 0 8px;font-weight:600;font-size:.92rem}
+.visp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.visp button.seg{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;width:100%;min-height:62px;padding:10px 12px;text-align:left;font-weight:400;border:2px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);box-shadow:none;transform:none}
+.visp button.seg b{font-weight:600;font-size:1rem}
+.visp button.seg small{display:block;font-size:.76rem;line-height:1.25;color:var(--mute)}
+.visp button.seg:hover{transform:none;border-color:rgba(255,255,255,.35)}
+.visp button.seg.on{border-color:var(--gold);background:rgba(255,200,61,.1);box-shadow:0 0 18px -6px var(--gold)}
+.visp button.seg.on small{color:var(--ink)}
+@media (max-width:420px){.visp{grid-template-columns:1fr}}
+
+/* Join row */
+#cStart .ljoin{display:flex;gap:8px;margin:0}
+#cStart .ljoin input{flex:1;min-width:0;height:46px}
+#cStart .ljoin button{flex:none;height:46px;padding:0 18px}
+#rStat{color:var(--mute)}
+
+/* ---- Room lobby ---- */
+#rLobby{margin:20px 0 0}
+#lobRooms{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.rrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"av info go" "av badge go";align-items:center;column-gap:12px;row-gap:4px;padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.05);animation:in .3s both;transition:border-color .2s,background .2s}
+.rrow:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08)}
+.rav{grid-area:av;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;font-size:1.3rem;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+.rinfo{grid-area:info;min-width:0}
+.rinfo b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rinfo small{display:block;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vb{grid-area:badge;justify-self:start;display:inline-block;padding:1px 10px;border-radius:99px;font-size:.75rem;font-weight:600;border:1px solid var(--line);white-space:nowrap}
+.vb.pub{color:#3be58a;border-color:rgba(59,229,138,.5);background:rgba(59,229,138,.08)}
+.vb.priv{color:var(--gold);border-color:rgba(255,200,61,.5);background:rgba(255,200,61,.08)}
+.rrow>button{grid-area:go;align-self:center;padding:8px 16px;white-space:nowrap}
+.rcode{font-family:Bungee,Impact,sans-serif;letter-spacing:.12em;color:var(--cyan)}
+#lobRooms>.note{margin:0;padding:18px 12px;text-align:center;border:1px dashed var(--line);border-radius:14px}
+@media (max-width:480px){
+  .rrow{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"av info" "av badge" "go go"}
+  .rrow>button{width:100%}
+}

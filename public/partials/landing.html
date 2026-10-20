@@ -14,13 +14,30 @@
       <button type="button" class="ghost" id="lMicBtn">🎤 Test my microphone</button>
       <p class="note" id="lMic">Check that your friends can hear you before the first song.</p>
     </div>
-    <div class="card">
+    <div class="card" id="cStart">
       <h2>Start singing</h2>
-      <button type="button" class="lbtn" id="lSolo">🎤 Sing solo<small>On this device, taking turns with the people next to you</small></button>
-      <button type="button" class="lbtn" id="lCreate">✨ Create a room<small>Get a room code and invite friends from anywhere</small></button>
+      <button type="button" class="lbtn" id="lSolo"><span class="ic">🎤</span><span class="tx"><b>Sing solo</b><small>On this device, taking turns with the people next to you</small></span></button>
+
+      <div class="odiv"><span>or sing online with friends</span></div>
+
+      <p class="vlab" id="visLab">Who can find your new room?</p>
+      <div class="visp" role="group" aria-labelledby="visLab">
+        <button type="button" class="ghost seg on" data-v="private" aria-pressed="true"><b>🔒 Private</b><small>Only people with the code</small></button>
+        <button type="button" class="ghost seg" data-v="public" aria-pressed="false"><b>🌐 Public</b><small>Listed in the room lobby</small></button>
+      </div>
+      <button type="button" class="lbtn" id="lCreate"><span class="ic">✨</span><span class="tx"><b>Create a room</b><small>Get a room code and invite friends from anywhere</small></span></button>
+
+      <div class="odiv"><span>or join a friend's room</span></div>
+
       <div class="ljoin"><input id="rCode" maxlength="12" placeholder="ROOM CODE" autocapitalize="characters" aria-label="Room code"><button type="button" id="lJoin">Join a room</button></div>
-      <p id="rStat" class="note" style="min-height:1.3em;margin:8px 0 0"></p>
+      <p id="rStat" class="note" role="status" style="min-height:1.3em;margin:8px 0 0"></p>
     </div>
+  </div>
+  <div class="card" id="rLobby">
+    <h2>🚪 Room lobby</h2>
+    <p class="note">Rooms open right now. Join a public room with one tap. Private rooms need the room code from the host.</p>
+    <div id="lobRooms" aria-live="polite"><p class="note">Looking for rooms…</p></div>
+    <p class="note" id="lobNote" style="min-height:1.3em;margin:8px 0 0"></p>
   </div>
   <div class="card" id="gChat">
     <h2>💬 Global chat</h2>
