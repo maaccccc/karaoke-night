@@ -29,6 +29,16 @@ function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>>
 function makeTurns(seed, n, mode, k) {        // 0..k-1 = which singer, 2 = together (duet only, k = 2). Same seed, same turns on every device.
   if (mode === 'solo') return Array(n).fill(0);
   k = Math.max(2, k || 2);
+  if (k > 2) {                                 // 3+ singers: deal the lines out fairly, so everybody gets an equal share in a random order
+    const r = rng(seed), deal = [];
+    while (deal.length < n) {
+      const bag = [...Array(k).keys()];
+      for (let i = k - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+      if (deal.length && bag[0] === deal[deal.length - 1]) { const j = 1 + Math.floor(r() * (k - 1)); [bag[0], bag[j]] = [bag[j], bag[0]]; }
+      bag.forEach(v => { if (deal.length < n) deal.push(v); });
+    }
+    return deal;
+  }
   const r = rng(seed), out = []; let prev = -1, run = 0;
   for (let i = 0; i < n; i++) {
     let v = Math.floor(r() * k); const tog = r();
