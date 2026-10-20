@@ -1,1 +1,4 @@
 ytmusicapi
+pykakasi
+pypinyin
+unidecode

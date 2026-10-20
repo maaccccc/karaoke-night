@@ -51,5 +51,14 @@ function romanize(text) {
   if (/[\u3040-\u30FF]/.test(t)) t = kanaToRomaji(t);
   return t === text ? null : t.charAt(0).toUpperCase() + t.slice(1);
 }
+// ---- server-side romanization: Japanese kanji, Chinese pinyin and other scripts (needs the libraries in requirements.txt)
+const NEEDS_SERVER = /[\u3400-\u9FFF\u0370-\u058F\u0590-\u08FF\u0900-\u0EFF\u1000-\u109F\u10A0-\u10FF]/;
+async function serverRomanize(texts) {
+  if (!texts.some(t => NEEDS_SERVER.test(t))) return null;
+  try {
+    const r = await fetch('/api/romanize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lines: texts }) });
+    const d = await r.json(); return r.ok ? d : null;
+  } catch (e) { return null; }
+}
 /*ROM_END*/
 

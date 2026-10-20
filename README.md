@@ -118,3 +118,8 @@ All the extra visuals live in three new files, so the app's own code is untouche
 
 ### Countdown in the lyrics area
 A big 3 · 2 · 1 appears over the lyrics so everyone knows when to come in: "Song starting…" while the music loads, "First line in 3, 2, 1" before the first lyric, and "Next line in…" after a long instrumental break (9 seconds or more between lines). It shows on every screen in the room, in fullscreen too. The styles are in `public/css/countdown.css` and the timing is in `public/js/singing.js` (`lyShow`).
+
+## Romanized lyrics (Japanese kanji, Chinese, Russian, etc.)
+Korean and Japanese kana are romanized in the browser. Kanji, Chinese pinyin and other scripts (Cyrillic, Greek, Arabic, Thai, Hindi...) are romanized by the server through `/api/romanize`, using the libraries in `requirements.txt`: `pip install -r requirements.txt`, then restart `server.py`. If one is missing, the page tells you which to install.
+- Japanese: uses `cutlet` when installed (best: real word spacing and particles like は -> wa; `pip install cutlet unidic-lite`), otherwise `pykakasi`.
+- A song with any kana is treated as Japanese; a song with only Han characters is treated as Chinese (pinyin with tone marks).

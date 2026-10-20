@@ -75,6 +75,20 @@ $('#lyrics').onclick = e => {
 };
 $('#spd').oninput = e => setScale(parseFloat(e.target.value));
 $('#spdAuto').onclick = () => setScale(autoScale);
+async function upgradeRomaji(forLines) {
+  const d = await serverRomanize(forLines.map(l => l.text));
+  if (!d || forLines !== lines) return;                       // song or lyrics changed while waiting
+  let got = false;
+  (d.lines || []).forEach((t, i) => {
+    if (!t) return;
+    const ln = document.getElementById('l' + i); if (!ln) return;
+    let r = ln.querySelector('.r'); if (!r) { r = el('span', '', 'r'); ln.appendChild(r); }
+    r.textContent = t.charAt(0).toUpperCase() + t.slice(1); ln.classList.add('hasr'); got = true;
+  });
+  const note = $('#romNote');
+  if (d.missing && d.missing.length) { note.textContent = 'To romanize kanji and other scripts, run: pip install ' + d.missing.join(' ') + ' (then restart server.py).'; note.style.display = 'block'; }
+  else if (got) note.style.display = 'block';
+}
 function buildLyrics() {
   const box = $('#lyrics'); box.textContent = ''; let anyRom = false, anyHan = false;
   lines.forEach((l, i) => {
@@ -83,7 +97,7 @@ function buildLyrics() {
     if (/[\u4E00-\u9FFF]/.test(l.text)) anyHan = true;
     box.appendChild(d);
   });
-  box.className = 'm-' + $('#romMode').value; $('#romNote').style.display = anyRom || anyHan ? 'block' : 'none';
+  box.className = 'm-' + $('#romMode').value; $('#romNote').style.display = anyRom || anyHan ? 'block' : 'none'; upgradeRomaji(lines);
 }
 async function loadVersions() {
   const sel = $('#ver'), s = current.song; sel.textContent = '';
@@ -118,7 +132,7 @@ async function runSong() {
     if (/[\u4E00-\u9FFF]/.test(l.text)) anyHan = true;
     box.appendChild(d);
   });
-  box.className = 'm-' + $('#romMode').value; $('#romNote').style.display = anyRom || anyHan ? 'block' : 'none';
+  box.className = 'm-' + $('#romMode').value; $('#romNote').style.display = anyRom || anyHan ? 'block' : 'none'; upgradeRomaji(lines);
   box.scrollTop = 0; frames = 0; active = true; drawMeter(0, 0); renderNow();
   labelTurns(); fxStart();
   S = { voiced: 0, rms: 0, clear: 0, clip: 0, lf: lines.map(() => 0), lv: lines.map(() => 0), hit: lines.map(() => 0) };

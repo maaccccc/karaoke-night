@@ -135,6 +135,83 @@ def find_page():
             return f
     return None
 
+# ---- Romanization of lyrics: Japanese (including kanji), Chinese (pinyin) and other scripts.
+# All libraries are optional; whatever is missing is reported to the page instead of crashing the server.
+_ja = _zh = _any = None
+_ja_name = ''
+try:                                   # best Japanese: real dictionary + particles (は -> wa)
+    import cutlet
+    _k = cutlet.Cutlet(); _k.use_foreign_spelling = False
+    _k.romaji('テスト')               # fails here (not later) if the dictionary is missing
+    _ja, _ja_name = (lambda t: _k.romaji(t)), 'cutlet'
+except Exception:
+    pass
+if _ja is None:
+    try:                               # good fallback: pure Python, handles kanji
+        import pykakasi
+        _kks = pykakasi.kakasi()
+        def _ja(text):
+            out, prev = [], ''
+            for t in _kks.convert(text):
+                o, r = t.get('orig', ''), t.get('hepburn') or t.get('orig', '')
+                if prev and o in ('\u306f', '\u30cf'): r = 'wa'                 # particle
+                elif prev and o in ('\u3078', '\u30d8'): r = 'e'
+                elif o in ('\u3092', '\u30f2'): r = 'o'
+                elif prev and re.search(r'[\u4E00-\u9FFF]$', prev) and o.startswith('\u306f') and len(o) > 1:
+                    r = 'wa ' + _kks.convert(o[1:])[0].get('hepburn', '') + ''.join(x.get('hepburn', '') for x in _kks.convert(o[1:])[1:])
+                out.append(r); prev = o
+            return ' '.join(x for x in out if x.strip())
+        _ja_name = 'pykakasi'
+    except Exception:
+        _ja = None
+try:
+    from pypinyin import lazy_pinyin, Style
+    _zh = lambda t: ' '.join(lazy_pinyin(t, style=Style.TONE))
+except Exception:
+    _zh = None
+try:
+    from unidecode import unidecode as _any
+except Exception:
+    _any = None
+
+_KANA = re.compile(r'[\u3040-\u30FF\u31F0-\u31FF]')
+_HAN = re.compile(r'[\u3400-\u4DBF\u4E00-\u9FFF]')
+_HANGUL = re.compile(r'[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]')
+_OTHER = re.compile(r'[\u0370-\u03FF\u0400-\u058F\u0590-\u08FF\u0900-\u0EFF\u1000-\u109F\u10A0-\u10FF]')
+_MACRON = str.maketrans({'ā': 'aa', 'ī': 'ii', 'ū': 'uu', 'ē': 'ee', 'ō': 'ou', 'Ā': 'Aa', 'Ī': 'Ii', 'Ū': 'Uu', 'Ē': 'Ee', 'Ō': 'Ou'})
+
+def _tidy(s):
+    s = s.translate(_MACRON)
+    s = re.sub(r'\s+([,.!?;:)\]」』”’])', r'\1', s)       # no space before punctuation
+    s = re.sub(r'([(\[「『“‘])\s+', r'\1', s)
+    return re.sub(r'\s+', ' ', s).strip()
+
+def romanize_lines(lines):
+    """Return (romanized lines or None where nothing to do, list of missing libraries)."""
+    lines = [str(x or '')[:300] for x in lines[:600]]
+    joined = '\n'.join(lines)
+    japanese = bool(_KANA.search(joined))        # kanji-only lines in a song with kana are Japanese, not Chinese
+    missing, out = set(), []
+    for t in lines:
+        r = None
+        try:
+            if _HANGUL.search(t):
+                r = None                          # Korean is handled in the browser
+            elif _KANA.search(t) or (_HAN.search(t) and japanese):
+                if _ja: r = _ja(t)
+                else: missing.add('pykakasi')
+            elif _HAN.search(t):
+                if _zh: r = _zh(t)
+                else: missing.add('pypinyin')
+            elif _OTHER.search(t):
+                if _any: r = _any(t)
+                else: missing.add('unidecode')
+        except Exception:
+            r = None
+        r = _tidy(r) if r else None
+        out.append(r if r and r != t else None)
+    return out, sorted(missing)
+
 # ---- Auto-align: listen to a song and time each lyric line (optional, needs stable-ts + ffmpeg)
 JOBS, _model, _lock = {}, {}, threading.Lock()
 
@@ -730,6 +807,9 @@ class Handler(BaseHTTPRequestHandler):
                 msg = room_send(clean_code(data.get('room')), clean_id(data.get('id')), str(data.get('type')),
                                 data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None)
                 return self.send_json(200, {'ok': True, 'msg': msg})
+            if u.path == '/api/romanize':
+                rl, miss = romanize_lines(data.get('lines') if isinstance(data.get('lines'), list) else [])
+                return self.send_json(200, {'lines': rl, 'missing': miss, 'japanese': _ja_name})
             if u.path == '/api/align/start':
                 code, obj = start_align(data)
                 return self.send_json(code, obj)
