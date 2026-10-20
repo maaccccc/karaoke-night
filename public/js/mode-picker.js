@@ -211,7 +211,7 @@ addEventListener('pagehide', () => { if (room.on) navigator.sendBeacon('/api/roo
     if (create) code = Array.from(crypto.getRandomValues(new Uint8Array(4)), b => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[b % 24]).join('');
     else if (!code) { $('#rStat').textContent = 'Type the room code your friend gave you, or press Create a room.'; $('#rCode').focus(); return; }
     $('#rStat').textContent = 'Joining…';
-    try { try { localStorage.setItem('karaokeName', name); } catch (e) {} await roomJoin(code, name); $('#rStat').textContent = ''; enter(create); }
+    try { try { localStorage.setItem('karaokeName', name); } catch (e) {} await roomJoin(code, name, create ? roomVis : undefined); $('#rStat').textContent = ''; enter(create); }
     catch (e) { $('#rStat').textContent = 'Could not join: ' + e.message; }
   };
   try {
