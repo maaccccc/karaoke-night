@@ -1,3 +1,6 @@
+// Public / Private choice for newly created rooms. Lives here (not in lobbies.js) so Create a room always works.
+let roomVis = 'private';
+try { if (localStorage.getItem('karaokeVis') === 'public') roomVis = 'public'; } catch (e) {}
 // ---- online rooms (shared queue + live voice from the singer)
 const room = { on: false, code: '', id: '', name: '', skew: 0, peers: [], startAt: 0, mic: 'untested' };
 function setMic(m) { room.mic = m; if (room.on) roomOp({ op: 'mic', mic: m }); }
@@ -61,9 +64,9 @@ async function claimId() {
   try { sessionStorage.setItem('karaokeId', id); } catch (e) {}
   return id;
 }
-async function roomJoin(code, name) {
+async function roomJoin(code, name, vis) {   // vis ('public' | 'private') only matters when this join creates the room
   room.id = room.id || await claimId(); try { sessionStorage.setItem('karaokeRoom', code); } catch (e) {}
-  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv });
+  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis });
   room.skew = d.now - (t0 + Date.now()) / 2; room.code = code; room.name = d.name; room.on = true;
   document.body.classList.add('inroom'); say('You are in room ' + code + ' as ' + d.name + '. Share the invite link with friends.');
   const b = $('#roomBtn'); b.style.display = ''; $('#chatBtn').style.display = ''; $('#skipBtn2').style.display = ''; pollLoop(); syncClock(); if (room.mic !== 'untested') roomOp({ op: 'mic', mic: room.mic });
