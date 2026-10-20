@@ -95,6 +95,7 @@ function handleMsg(m) {
   else if (m.type === 'rtc') (m.data && m.data.vc ? onVc : onRtc)(m.from, m.data);
 }
 function applyState(m) {
+  joinToast(m.peers);
   room.peers = m.peers;
   players.length = 0; players.push(...m.players);
   queue.length = 0; m.queue.forEach(q => queue.push({ id: q.id, song: q.song, singer: q.singer, singer2: q.singer2, mode: q.mode, file: null }));
