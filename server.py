@@ -498,10 +498,10 @@ def room_prune():
         if not r['clients'] and now - r['empty'] > 600:
             del ROOMS[code]
 
-def room_join(code, cid, name, av=None):
+def room_join(code, cid, name, av=None, vis=None):
     with RLOCK:
         room_prune()
-        r = ROOMS.setdefault(code, {'code': code, 'timer': None, 'clients': {}, 'queue': [], 'chat': [], 'hist': [], 'sung': {}, 'turn': 0, 'tv': {}, 'scores': {}, 'now': None, 'ready': None, 'pick': None, 'nid': 0, 'empty': time.time()})
+        r = ROOMS.setdefault(code, {'code': code, 'public': vis == 'public', 'timer': None, 'clients': {}, 'queue': [], 'chat': [], 'hist': [], 'sung': {}, 'turn': 0, 'tv': {}, 'scores': {}, 'now': None, 'ready': None, 'pick': None, 'nid': 0, 'empty': time.time()})
         inherit = None
         # same person coming back (refresh / new tab id): take over their old seat by name
         for i, c in list(r['clients'].items()):
@@ -790,6 +790,22 @@ def gchat_poll(since, wait=20):
             GCOND.wait(left)
         return {'msgs': [m for m in GCHAT if m['id'] > since][-60:], 'last': GSEQ[0], 'reset': False}
 
+def rooms_list():
+    """Open rooms for the home-page lobby. Private rooms are listed too, but never reveal their code or what is being sung."""
+    now = time.time(); out = []
+    with RLOCK:
+        room_prune()
+        for r in ROOMS.values():
+            act = [c for c in r['clients'].values() if not c.get('leaving') and now - c['seen'] < 30]
+            if not act:
+                continue
+            pub = bool(r.get('public'))
+            song = (((r['now'] or {}).get('song') or {}).get('title') or '') if pub else ''
+            out.append({'public': pub, 'code': r['code'] if pub else '', 'host': act[0]['name'], 'av': act[0].get('av') or clean_av(None),
+                        'n': len(act), 'singing': bool(r['now']), 'song': str(song)[:60]})
+    out.sort(key=lambda x: (not x['public'], -x['n']))
+    return out[:30]
+
 class Handler(BaseHTTPRequestHandler):
     def send_json(self, code, obj):
         body = json.dumps(obj).encode()
@@ -804,6 +820,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, search_songs(term) if len(term) >= 2 else [])
             if u.path == '/api/online':
                 return self.send_json(200, online_stats())
+            if u.path == '/api/rooms':
+                return self.send_json(200, {'rooms': rooms_list()})
             if u.path == '/api/gchat':
                 sv = (q.get('since', [''])[0]).strip()
                 return self.send_json(200, gchat_poll(int(sv) if sv.lstrip('-').isdigit() else None))
@@ -885,7 +903,7 @@ class Handler(BaseHTTPRequestHandler):
                 code, cid = clean_code(data.get('room')), clean_id(data.get('id'))
                 if not code or not cid:
                     raise RuntimeError('Enter a room code.')
-                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av')))
+                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis')))
             if u.path == '/api/room/leave':
                 room_leave(clean_code(data.get('room')), clean_id(data.get('id')))
                 return self.send_json(200, {'ok': True})
