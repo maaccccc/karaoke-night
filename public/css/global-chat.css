@@ -1,0 +1,6 @@
+#gChat{margin:20px 0 0}
+#gLog{height:clamp(200px,32vh,340px);overflow:auto;padding:8px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.25)}
+#gLog .cm{animation:in .25s both}
+#gLog .cm small{color:var(--mute);margin-left:6px;font-size:.75rem}
+#gForm{margin-top:10px;flex-wrap:nowrap}
+#gIn{min-width:0}

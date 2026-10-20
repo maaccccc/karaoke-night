@@ -754,6 +754,42 @@ def online_stats(touch='', leave=False):
                 in_rooms += c; rooms += 1
     return {'online': max(n, in_rooms), 'inRooms': in_rooms, 'rooms': rooms}
 
+# ---- Global chat on the home page (public to everyone visiting; kept in memory, last 100 messages)
+GCHAT, GCOND, GSEQ, GLAST = [], threading.Condition(), [0], {}
+GMAX, GGAP = 100, 1.0      # messages kept, and seconds a visitor must wait between messages
+
+def gchat_post(cid, name, av, text):
+    text = re.sub(r'[\x00-\x1f\x7f]+', ' ', str(text or '')).strip()[:200]
+    if not text or not cid:
+        return None
+    now = time.time()
+    with GCOND:
+        if now - GLAST.get(cid, 0) < GGAP:
+            raise RuntimeError('Slow down a little.')
+        GLAST[cid] = now
+        if len(GLAST) > 2000:
+            for k in [k for k, t in GLAST.items() if now - t > 60]:
+                del GLAST[k]
+        GSEQ[0] += 1
+        m = {'id': GSEQ[0], 'from': clean_name(name), 'av': clean_av(av), 'text': text, 'at': int(now * 1000)}
+        GCHAT.append(m)
+        del GCHAT[:-GMAX]
+        GCOND.notify_all()
+    return m
+
+def gchat_poll(since, wait=20):
+    """since=None -> the latest messages right away; otherwise wait (long-poll) for anything newer than `since`."""
+    with GCOND:
+        if since is None or since > GSEQ[0]:      # first load, or the server restarted and numbering began again
+            return {'msgs': GCHAT[-40:], 'last': GSEQ[0], 'reset': since is not None}
+        end = time.time() + wait
+        while GSEQ[0] <= since:
+            left = end - time.time()
+            if left <= 0:
+                break
+            GCOND.wait(left)
+        return {'msgs': [m for m in GCHAT if m['id'] > since][-60:], 'last': GSEQ[0], 'reset': False}
+
 class Handler(BaseHTTPRequestHandler):
     def send_json(self, code, obj):
         body = json.dumps(obj).encode()
@@ -768,6 +804,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, search_songs(term) if len(term) >= 2 else [])
             if u.path == '/api/online':
                 return self.send_json(200, online_stats())
+            if u.path == '/api/gchat':
+                sv = (q.get('since', [''])[0]).strip()
+                return self.send_json(200, gchat_poll(int(sv) if sv.lstrip('-').isdigit() else None))
             if u.path == '/api/ice':          # STUN, plus an optional TURN relay for strict networks (set TURN_URL / TURN_USER / TURN_PASS)
                 ice = [{'urls': 'stun:stun.l.google.com:19302'}, {'urls': 'stun:stun1.l.google.com:19302'}]
                 turn = [x.strip() for x in os.getenv('TURN_URL', '').split(',') if x.strip()]
@@ -839,6 +878,9 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(n) or b'{}')
             if u.path == '/api/online':
                 return self.send_json(200, online_stats(clean_id(data.get('id')), bool(data.get('leave'))))
+            if u.path == '/api/gchat':
+                m = gchat_post(clean_id(data.get('id')), data.get('name'), data.get('av'), data.get('text'))
+                return self.send_json(200, {'ok': bool(m), 'msg': m})
             if u.path == '/api/room/join':
                 code, cid = clean_code(data.get('room')), clean_id(data.get('id'))
                 if not code or not cid:
