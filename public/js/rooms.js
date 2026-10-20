@@ -40,7 +40,9 @@ function floatReact(m) {      // the reaction floats up from the reactor's own e
 let lastRx = 0;
 document.querySelectorAll('#reactBar button').forEach(b => b.onclick = () => { const n = Date.now(); if (n - lastRx < 150) return; lastRx = n; roomOp({ op: 'react', e: b.dataset.e }); });
 const modeName = { solo: 'Solo', duet: 'Duet', tournament: 'Tournament' };
-const whoTxt = it => avTxt(it.singer) + it.singer + (it.singer2 ? ' & ' + avTxt(it.singer2) + it.singer2 : '');
+const singersOf = it => it.singers && it.singers.length ? it.singers : [it.singer].concat(it.singer2 ? [it.singer2] : []);
+const inItem = it => singersOf(it).includes(room.name);
+const whoTxt = it => singersOf(it).map(n => avTxt(n) + n).join(' & ');
 const myIdx = () => current && current.mode !== 'solo' && current.sids ? current.sids.indexOf(room.id) : -1;
 const ownLine = i => { if (!(room.on && current && current.mode !== 'solo' && current.turns)) return true; const v = current.turns[i]; return v === 2 || v === myIdx(); };
 const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), b => (b % 36).toString(36)).join('');
@@ -98,7 +100,7 @@ function applyState(m) {
   joinToast(m.peers);
   room.peers = m.peers;
   players.length = 0; players.push(...m.players);
-  queue.length = 0; m.queue.forEach(q => queue.push({ id: q.id, song: q.song, singer: q.singer, singer2: q.singer2, mode: q.mode, file: null }));
+  queue.length = 0; m.queue.forEach(q => queue.push({ id: q.id, song: q.song, singer: q.singer, singer2: q.singer2, singers: q.singers || [], mode: q.mode, file: null }));
   Object.keys(scores).forEach(k => delete scores[k]); Object.assign(scores, m.scores);
   renderPlayers(); renderQueue(); renderScores(); renderWho(m); vcSync();
   if (active) crowdBuild();

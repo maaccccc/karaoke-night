@@ -26,21 +26,25 @@ setInterval(() => { if (room.on) syncClock(); }, 60000);
 
 // ---- random line turns (duet + tournament), mic gate, and voice/music sync
 function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-function makeTurns(seed, n, mode) {        // 0 = first singer, 1 = second singer, 2 = together. Same seed, same turns on every device.
+function makeTurns(seed, n, mode, k) {        // 0..k-1 = which singer, 2 = together (duet only, k = 2). Same seed, same turns on every device.
   if (mode === 'solo') return Array(n).fill(0);
+  k = Math.max(2, k || 2);
   const r = rng(seed), out = []; let prev = -1, run = 0;
   for (let i = 0; i < n; i++) {
-    let v = r() < .5 ? 0 : 1; const tog = r();
+    let v = Math.floor(r() * k); const tog = r();
     if (mode === 'duet' && i > 0 && out[i - 1] !== 2 && tog < .16) v = 2;
-    else if (v === prev && run >= 2) v = 1 - v;
+    else if (v === prev && run >= 2) v = k === 2 ? 1 - v : (v + 1 + Math.floor(r() * (k - 1))) % k;
     run = v === prev ? run + 1 : 1; prev = v; out.push(v);
   }
-  if (n > 1) { if (!out.includes(0)) out[0] = 0; if (!out.includes(1)) out[1] = 1; }
+  for (let s = 0; s < k && s < n; s++) if (!out.includes(s)) {      // everybody gets at least one line
+    const cnt = {}; out.forEach(x => { cnt[x] = (cnt[x] || 0) + 1; });
+    const j = out.findIndex(x => x !== 2 && cnt[x] > 1); out[j >= 0 ? j : s] = s;
+  }
   return out;
 }
 function labelTurns() {
   if (!current) return;
-  current.turns = room.on && current.mode !== 'solo' ? makeTurns(current.seed || 1, lines.length, current.mode) : null;
+  current.turns = room.on && current.mode !== 'solo' ? makeTurns(current.seed || 1, lines.length, current.mode, (current.singers || []).length || 2) : null;
   const sing = isSinger();
   lines.forEach((_, i) => {
     const d = $('#l' + i); if (!d) return;
@@ -48,7 +52,7 @@ function labelTurns() {
     if (!current.turns) return;
     const v = current.turns[i];
     if (v === 2) { d.dataset.who = '👥 Together'; d.style.setProperty('--wc', 'var(--gold)'); }
-    else { const nm = [current.singer, current.singer2][v]; d.dataset.who = avTxt(nm) + nm; const a = avOf(nm); if (a) d.style.setProperty('--wc', a.c); }
+    else { const nm = (current.singers && current.singers.length ? current.singers : [current.singer, current.singer2])[v]; d.dataset.who = avTxt(nm) + nm; const a = avOf(nm); if (a) d.style.setProperty('--wc', a.c); }
     d.classList.toggle('mine', ownLine(i)); d.classList.toggle('dim', sing && !ownLine(i));
   });
 }

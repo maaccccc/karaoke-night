@@ -377,7 +377,11 @@ def fair_sort(r):
         last[it['singer']] = turn; turn += 1
         if it.get('singer2'):
             last[it['singer2']] = turn
+        for n in it.get('singers') or []:
+            last[n] = turn
     r['queue'] = head + out
+
+MAX_FIGHTERS = 8   # most people in one tournament, including whoever started it
 
 AUTO_DELAY = 8   # seconds between songs before the next one starts by itself
 
@@ -405,14 +409,14 @@ def force_go(code, token):
 def begin_song(r, item):
     """Start a queue item for everyone. Only the named singer(s) are allowed to sing and score it."""
     names, sids = [], []
-    for n in [item['singer']] + ([item['singer2']] if item.get('singer2') else []):
+    for n in (item.get('singers') or ([item['singer']] + ([item['singer2']] if item.get('singer2') else []))):
         for i, c in r['clients'].items():
             if c['name'] == n and n not in names:
                 names.append(n); sids.append(i)
     if not names:
         room_push(r, {'type': 'readycancel', 'name': '', 'reason': item['singer'] + ' is not in the room, so the song was skipped.'})
         schedule_next(r, 3); return
-    mode = item.get('mode') if len(names) == 2 else 'solo'
+    mode = item.get('mode') if len(names) >= 2 and (item.get('mode') == 'tournament' or len(names) == 2) else 'solo'
     r['now'] = {'singers': names, 'singer': names[0], 'sids': sids, 'mode': mode, 'got': {},
                 'ends': time.time() + max(60, item['song']['duration']) + 45}
     r['last'] = None
@@ -428,7 +432,7 @@ def begin_song(r, item):
     r['tv'] = {}
     nw = r['now']; nw.update(need=set(r['clients']), loaded=set(), went=False, song=item['song'])
     t = threading.Timer(PREP_MAX, force_go, args=(r['code'], id(nw))); t.daemon = True; nw['prep_t'] = t; t.start()
-    item = dict(item, mode=mode, singer2=names[1] if len(names) == 2 else '', theme=theme)
+    item = dict(item, mode=mode, singer2=names[1] if len(names) >= 2 else '', singers=names if len(names) >= 2 else [], theme=theme)
     # 'prep': every browser loads lyrics + video first and reports 'loaded'; the countdown ('go') starts when all have
     room_push(r, {'type': 'start', 'item': item, 'sids': sids, 'seed': random.getrandbits(31), 'at': 0, 'prep': True})
 
@@ -443,8 +447,11 @@ def song_done(r, quiet=False):
         x['bonus'] = cbo.get('bonus', 0)
     tot = lambda x: x['pts'] + x['bonus']
     winner = ''
-    if nw['mode'] == 'tournament' and len(res) == 2 and tot(res[0]) != tot(res[1]):
-        winner = max(res, key=tot)['name']
+    if nw['mode'] == 'tournament' and len(res) >= 2:
+        top = max(tot(x) for x in res)
+        leaders = [x for x in res if tot(x) == top]
+        if len(leaders) == 1:                      # a shared top score is a tie: no bonus
+            winner = leaders[0]['name']
     for x in res:
         r['scores'][x['name']] = r['scores'].get(x['name'], 0) + tot(x) + (10 if x['name'] == winner else 0)
     r['now'] = None
@@ -664,15 +671,26 @@ def room_send(code, cid, typ, data, to=None):
             if not pk or not r['queue'] or r['queue'][0]['id'] != pk['item']['id'] or pk['item']['singer'] != me['name']:
                 return 'It is not your turn to choose a mode.'
             item = r['queue'][0]
-            s2 = clean_name(data.get('singer2')) if data.get('singer2') else ''
             mode = data.get('mode')
             names = {c['name'] for c in r['clients'].values()}
+            raw = data.get('singers') if isinstance(data.get('singers'), list) else []
+            if data.get('singer2'):
+                raw = [data.get('singer2')] + raw
+            opp = []                                # the people you chose to sing against (tournament) or with (duet)
+            for x in raw:
+                x = clean_name(x) if x else ''
+                if x and x not in opp and x != item['singer']:
+                    opp.append(x)
+            s2 = ''
+            if mode == 'duet':
+                opp = opp[:1]
             if mode in ('duet', 'tournament'):
-                if s2 not in names or s2 == item['singer']:
-                    return 'Pick a partner who is in the lobby.'
+                if not opp or len(opp) > MAX_FIGHTERS - 1 or any(x not in names for x in opp):
+                    return 'Pick who you want to sing with from the lobby.' if mode == 'duet' else 'Pick who you want to fight from the lobby.'
+                s2 = opp[0]
             else:
-                s2, mode = '', 'solo'
-            item['mode'], item['singer2'] = mode, s2
+                opp, mode = [], 'solo'
+            item['mode'], item['singer2'], item['singers'] = mode, s2, ([item['singer']] + opp if opp else [])
             item['theme'] = data.get('theme') if data.get('theme') in THEMES_OK else 'neon'
             r['tv'] = {}
             r['pick'] = None

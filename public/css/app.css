@@ -104,3 +104,4 @@ summary{cursor:pointer;color:var(--mute);margin-top:6px}
 .ln.now .o::after{content:"";position:absolute;top:-6px;left:var(--fill,0%);width:12px;height:12px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);transform:translate(-50%,0);animation:ball .45s ease-in-out infinite alternate;pointer-events:none}
 @keyframes ball{to{transform:translate(-50%,-10px)}}
 @media (prefers-reduced-motion:reduce){.ln.now .o::after{animation:none}}
+#pkPartners{max-height:34vh;overflow:auto}

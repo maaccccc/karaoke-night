@@ -1,30 +1,36 @@
 // ---- mode picker: the owner of the next song chooses Solo / Duet / Tournament + partner BEFORE the ready check
-let pkIn = null, pkTimer = 0, pkSel = { mode: 'solo', p2: '' };
-const modeDesc = { solo: 'Just you on the mic.', duet: 'You and a partner share the song. The lines are shuffled at random, with a few sung together, and your mic is only live on your lines. Each gets their own score.', tournament: 'A head-to-head. The lines are shuffled at random and your mic is only live on your lines. Higher score wins a 10-point bonus.' };
+let pkIn = null, pkTimer = 0, pkSel = { mode: 'solo', ops: [] };
+const modeDesc = { solo: 'Just you on the mic.', duet: 'You and a partner share the song. The lines are shuffled at random, with a few sung together, and your mic is only live on your lines. Each gets their own score.', tournament: 'Choose who you want to fight, one person or several. The lines are shuffled at random and your mic is only live on your lines. The highest score wins a 10-point bonus.' };
 function renderPick() {
   const mb = $('#pkModes'); mb.textContent = '';
   const others = room.peers.filter(p => p.id !== room.id && !p.away);
   Object.keys(modeName).forEach(k => {
     const b = el('button', modeName[k], 'ghost' + (pkSel.mode === k ? ' on' : '')); b.type = 'button';
     b.disabled = k !== 'solo' && !others.length;
-    b.onclick = () => { pkSel.mode = k; if (k === 'solo') pkSel.p2 = ''; renderPick(); };
+    b.onclick = () => { pkSel.mode = k; if (k === 'solo') pkSel.ops = []; else if (k === 'duet') pkSel.ops = pkSel.ops.slice(0, 1); renderPick(); };
     mb.appendChild(b);
   });
   $('#pkDesc').textContent = others.length || pkSel.mode === 'solo' ? modeDesc[pkSel.mode] : 'Duet and Tournament need another person in the lobby.';
-  const two = pkSel.mode !== 'solo'; $('#pkPartnerBox').style.display = two ? 'block' : 'none';
-  if (two && !others.some(p => p.name === pkSel.p2)) pkSel.p2 = '';
+  const two = pkSel.mode !== 'solo', multi = pkSel.mode === 'tournament'; $('#pkPartnerBox').style.display = two ? 'block' : 'none';
+  pkSel.ops = pkSel.ops.filter(n => others.some(p => p.name === n));
+  $('#pkWho').textContent = multi ? 'Choose who you want to fight (tap one or more):' : 'Choose your partner from the lobby:';
   const pl = $('#pkPartners'); pl.textContent = '';
+  if (multi && others.length > 1) {
+    const all = pkSel.ops.length === others.length, b = el('button', all ? 'Clear all' : '⚔️ Fight everyone', 'ghost'); b.type = 'button';
+    b.onclick = () => { pkSel.ops = all ? [] : others.map(p => p.name); renderPick(); }; pl.appendChild(b);
+  }
   if (two) others.forEach(p => {
-    const b = el('button', '', 'ghost' + (pkSel.p2 === p.name ? ' on' : '')); b.type = 'button';
+    const on = pkSel.ops.includes(p.name), b = el('button', '', 'ghost' + (on ? ' on' : '')); b.type = 'button';
     const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888';
-    b.append(av, el('span', p.name)); b.onclick = () => { pkSel.p2 = p.name; renderPick(); }; pl.appendChild(b);
+    b.append(av, el('span', (on && multi ? '✓ ' : '') + p.name));
+    b.onclick = () => { pkSel.ops = multi ? (on ? pkSel.ops.filter(n => n !== p.name) : pkSel.ops.concat(p.name)) : [p.name]; renderPick(); }; pl.appendChild(b);
   });
-  $('#pkGo').disabled = two && !pkSel.p2;
+  $('#pkGo').disabled = two && !pkSel.ops.length;
 }
 function showPick(m) {
   pkIn = m; clearInterval(pkTimer);
   if (m.item.singer !== room.name) { say(m.item.singer + ' is choosing how to sing “' + m.item.song.title + '”…'); return; }
-  pkSel = { mode: 'solo', p2: '' }; $('#pkSong').textContent = m.item.song.title + ' · ' + m.item.song.artist;
+  pkSel = { mode: 'solo', ops: [] }; $('#pkSong').textContent = m.item.song.title + ' · ' + m.item.song.artist;
   renderPick(); $('#pickdlg').classList.add('show'); say('Your song is next. Choose how you want to sing it.');
   pkTimer = setInterval(() => {
     const s = Math.ceil((m.until - (Date.now() + room.skew)) / 1000);
@@ -33,7 +39,7 @@ function showPick(m) {
   }, 250);
 }
 function hidePick() { clearInterval(pkTimer); pkIn = null; $('#pickdlg').classList.remove('show'); }
-$('#pkGo').onclick = () => { if (!pkIn) return; roomOp({ op: 'mode', mode: pkSel.mode, singer2: pkSel.p2 }); };
+$('#pkGo').onclick = () => { if (!pkIn) return; roomOp({ op: 'mode', mode: pkSel.mode, singer2: pkSel.ops[0] || '', singers: pkSel.ops }); };
 $('#pkNo').onclick = () => { hidePick(); roomOp({ op: 'unpick' }); };
 
 let rdIn = null, rdTimer = 0;
@@ -51,14 +57,14 @@ function showReady(m) {
     $('#rdLeft').textContent = s > 0 ? 'Cancels in ' + s + 's if someone is not ready.' : '';
     if (s <= 0) { hideReady(); say('Not everyone was ready, so the song did not start.'); }
   }, 250);
-  if ([m.item.singer, m.item.singer2].includes(room.name)) say('You are up next! Put your headphones on.');
+  if (inItem(m.item)) say('You are up next! Put your headphones on.');
 }
 function hideReady() { clearInterval(rdTimer); rdIn = null; $('#rdy').classList.remove('show'); }
 $('#rdYes').onclick = () => { if (rdIn) { rdIn.yes = rdIn.yes.concat(room.name); renderReady(); } roomOp({ op: 'ready' }); };
 $('#rdNo').onclick = () => { hideReady(); roomOp({ op: 'unready' }); };
 function runCountdown(m) {
   const cd = $('#cd'), num = $('#cdNum');
-  $('#cdWho').textContent = ([m.item.singer, m.item.singer2].includes(room.name) ? 'You’re up! ' : whoTxt(m.item) + (m.item.singer2 ? ' are up: ' : ' is up: ')) + m.item.song.title;
+  $('#cdWho').textContent = (inItem(m.item) ? 'You’re up! ' : whoTxt(m.item) + (m.item.singer2 ? ' are up: ' : ' is up: ')) + m.item.song.title;
   cd.classList.add('show');
   const t = setInterval(() => {
     const ms = m.at - (Date.now() + room.skew);
@@ -72,13 +78,13 @@ function onStart(m) {
   room.prep = !!m.prep; room.startAt = m.prep ? 0 : m.at; loadedSent = false; prebuf = false; holding = false;
   if (m.prep) { $('#cdWho').textContent = 'Getting the song ready for everyone…'; $('#cdNum').textContent = '…'; $('#cd').classList.add('show'); }
   else runCountdown(m);
-  current = { song: m.item.song, singer: m.item.singer, singer2: m.item.singer2 || '', mode: m.item.mode || 'solo', sids: m.sids, seed: m.seed || 1, theme: m.item.theme || 'neon', file: null };
+  current = { song: m.item.song, singer: m.item.singer, singer2: m.item.singer2 || '', singers: m.item.singers || [], mode: m.item.mode || 'solo', sids: m.sids, seed: m.seed || 1, theme: m.item.theme || 'neon', file: null };
   pendingResult = null; awaiting = false; say('Loading lyrics…'); loadAndRun();
 }
 function onGo(m) {          // everybody has loaded: count down together, then start on the shared clock
   if (!current) return;
   room.prep = false; room.startAt = m.at; say('');
-  runCountdown({ at: m.at, item: { singer: current.singer, singer2: current.singer2, song: current.song } });
+  runCountdown({ at: m.at, item: { singer: current.singer, singer2: current.singer2, singers: current.singers, song: current.song } });
   if (active && player) startSync();
   setTimeout(() => {
     const st = player && player.getPlayerState ? player.getPlayerState() : -1;

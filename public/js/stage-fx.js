@@ -15,7 +15,7 @@ const hashAv = n => { const h = [...n].reduce((s, c) => (s * 31 + c.charCodeAt(0
 const avFor = n => avOf(n) || hashAv(n);
 function avBuild() {
   const box = $('#avStage'); box.textContent = ''; if (!current) return;
-  [current.singer].concat(current.singer2 ? [current.singer2] : []).forEach(n => {
+  singersOf(current).forEach(n => {
     const a = avFor(n), d = el('div', null, 'avs'), big = el('div', null, 'big');
     big.style.background = a.c; big.style.setProperty('--ac', a.c); big.appendChild(el('span', a.e, 'em')); d.append(big, el('div', n, 'nm')); box.appendChild(d);
   });

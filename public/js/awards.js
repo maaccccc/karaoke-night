@@ -36,14 +36,16 @@ function ovl(id) { let o = document.getElementById(id); if (!o) { o = el('div', 
 function podiumEl(entries, tie) {   // entries sorted best first; shown 2nd, 1st, 3rd
   const pod = el('div', null, 'pod'), cols = ['#ffd75e,#c9940f', '#e4e8f0,#8d96a8', '#e0a070,#9a5b2e'], hs = [150, 112, 84], order = entries.length > 1 ? [1, 0, 2] : [0];
   order.forEach(i => { const e = entries[i]; if (!e) return; const a = avFor(e.name), col = el('div', null, 'pcol' + (i === 0 ? ' first' : '')), av = el('div', a.e, 'pav'); av.style.background = a.c;
-    const rank = tie ? 0 : i, st = el('div', ['🥇', '🥈', '🥉'][rank], 'pstep'); st.style.height = hs[rank] + 'px'; st.style.background = 'linear-gradient(' + cols[rank] + ')'; st.style.animationDelay = (rank === 0 ? .5 : .2) + 's';
-    col.append(el('div', i === 0 || tie ? '👑' : '', 'crown'), av, el('b', e.name), el('small', e.val + ' pts'), st); pod.appendChild(col); });
+    const rank = e.rank !== undefined ? e.rank : tie ? 0 : i, st = el('div', ['🥇', '🥈', '🥉'][rank], 'pstep'); st.style.height = hs[rank] + 'px'; st.style.background = 'linear-gradient(' + cols[rank] + ')'; st.style.animationDelay = (rank === 0 ? .5 : .2) + 's';
+    col.append(el('div', rank === 0 ? '👑' : '', 'crown'), av, el('b', e.name), el('small', e.val + ' pts'), st); pod.appendChild(col); });
   return pod;
 }
 function showPodium(m) {
   const res = (m.results || []).map(x => ({ name: x.name, val: x.pts + ((x.combo && x.combo.bonus) || 0) + (x.name === m.winner ? 10 : 0) })).sort((a, b) => b.val - a.val);
   if (res.length < 2) return; const tie = !m.winner, o = ovl('podium'), box = o.firstChild; box.textContent = '';
-  box.append(el('h2', '🏆 Tournament result'), el('p', tie ? 'It’s a tie! Both singers share the top step.' : avTxt(m.winner) + m.winner + ' wins the tournament (+10 bonus)!', 'note'), podiumEl(res, tie));
+  res.forEach(e => { e.rank = Math.min(2, res.filter(x => x.val > e.val).length); });      // shared scores share a step
+  box.append(el('h2', '🏆 Tournament result'), el('p', tie ? 'It’s a tie at the top!' : avTxt(m.winner) + m.winner + ' wins the tournament (+10 bonus)!', 'note'), podiumEl(res, tie));
+  if (res.length > 3) { const rest = el('div', null, 'note'); rest.textContent = res.slice(3).map((e, i) => (i + 4) + '. ' + e.name + ' ' + e.val + ' pts').join(' · '); box.append(rest); }
   const b = el('button', 'Continue'); b.onclick = () => o.classList.remove('show'); box.appendChild(b);
   setTimeout(() => { o.classList.add('show'); confetti(tie ? 85 : 100); }, 1500);
 }
