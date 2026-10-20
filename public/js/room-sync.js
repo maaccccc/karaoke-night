@@ -87,15 +87,36 @@ function gateTurns(t) {
     a.muted = !openAt(k, t - (sing ? (rtc.lat[pid] || 0) : 0));
   });
 }
+// Adaptive voice buffer: start small (low delay), grow only when the voice starts breaking up, shrink again when the connection is calm.
+const JB_START = 100, JB_MIN = 40, JB_MAX = 300;      // milliseconds
+function setJb(pc, ms) {
+  pc.getReceivers().forEach(rx => {
+    if (!rx.track || rx.track.kind !== 'audio') return;
+    try { rx.jitterBufferTarget = ms; } catch (e) {}
+    try { rx.playoutDelayHint = ms / 1000; } catch (e) {}
+  });
+}
+function tuneJb(pid, pc, c, t) {            // c = concealed samples so far, t = all samples received so far
+  const a = rtc.jb[pid] || (rtc.jb[pid] = { tgt: JB_START, c, t, calm: 0 }), dc = c - a.c, dt = t - a.t; a.c = c; a.t = t;
+  if (dt < 24000) return;                   // wait for about half a second of audio
+  const bad = dc / dt;
+  if (bad > .02) { a.tgt = Math.min(JB_MAX, a.tgt + 60); a.calm = 0; setJb(pc, a.tgt); }
+  else if (bad < .004) { if (++a.calm >= 3 && a.tgt > JB_MIN) { a.tgt = Math.max(JB_MIN, a.tgt - 20); a.calm = 0; setJb(pc, a.tgt); } }
+  else a.calm = 0;
+}
 async function measureLatency() {          // how late each voice arrives, so the music can be held back to match
   if (!room.on) return; let worst = 0;
   for (const [pid, pc] of Object.entries(rtc.pcs)) {
     try {
-      const st = await pc.getStats(); let rtt = 0, jb = 0;
+      const st = await pc.getStats(); let rtt = 0, jb = 0, conc = -1, tot = 0;
       st.forEach(x => {
         if (x.type === 'candidate-pair' && (x.nominated || x.state === 'succeeded') && x.currentRoundTripTime) rtt = Math.max(rtt, x.currentRoundTripTime);
-        if (x.type === 'inbound-rtp' && x.kind === 'audio' && x.jitterBufferEmittedCount) jb = x.jitterBufferDelay / x.jitterBufferEmittedCount;
+        if (x.type === 'inbound-rtp' && x.kind === 'audio') {
+          if (x.jitterBufferEmittedCount) jb = x.jitterBufferDelay / x.jitterBufferEmittedCount;
+          if (x.totalSamplesReceived) { conc = x.concealedSamples || 0; tot = x.totalSamplesReceived; }
+        }
       });
+      if (conc >= 0) tuneJb(pid, pc, conc, tot);
       const lat = Math.min(1.2, rtt / 2 + jb + 0.04);
       rtc.lat[pid] = rtc.lat[pid] ? rtc.lat[pid] * 0.6 + lat * 0.4 : lat; worst = Math.max(worst, rtc.lat[pid]);
     } catch (e) {}

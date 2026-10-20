@@ -1,9 +1,9 @@
 // ---- online rooms (shared queue + live voice from the singer)
 const room = { on: false, code: '', id: '', name: '', skew: 0, peers: [], startAt: 0, mic: 'untested' };
 function setMic(m) { room.mic = m; if (room.on) roomOp({ op: 'mic', mic: m }); }
-const rtc = { pcs: {}, stream: null, remote: null, pend: {}, rctx: null, rems: {}, audio: {}, hooked: new Set(), dly: {}, lat: {} };
+const rtc = { pcs: {}, stream: null, remote: null, pend: {}, rctx: null, rems: {}, audio: {}, hooked: new Set(), dly: {}, lat: {}, jb: {} };
 let pendingResult = null, awaiting = false;
-const micC = () => room.on ? { echoCancellation: !prefs.hp, noiseSuppression: false } : { echoCancellation: true, noiseSuppression: false };
+const micC = () => room.on ? { echoCancellation: !prefs.hp, noiseSuppression: false, latency: { ideal: 0 } } : { echoCancellation: true, noiseSuppression: false };
 const isSinger = () => !room.on || (current && (current.sids ? current.sids.includes(room.id) : current.singer === room.name));
 const EMOJI = ['🎤', '😎', '🦄', '🐱', '🐶', '🦊', '🐼', '🐸', '🤖', '👽', '🎸', '🍕', '🌟', '🔥', '👑', '🦖'];
 const COLORS = ['#ff3d8b', '#35e0ff', '#ffc83d', '#3be58a', '#b388ff', '#ff8a3d', '#ff5252', '#7cb7ff'];

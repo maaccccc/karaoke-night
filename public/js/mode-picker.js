@@ -130,7 +130,7 @@ fetch('/api/ice').then(r => r.json()).then(d => { if (d.iceServers && d.iceServe
 function newPc(peer) {
   const pc = new RTCPeerConnection(ICE); rtc.pcs[peer] = pc;
   pc.onicecandidate = e => { if (e.candidate) roomRtc(peer, { kind: 'ice', cand: e.candidate }); };
-  pc.ontrack = e => { try { e.receiver.jitterBufferTarget = 250; } catch (x) {} rtc.remote = e.streams[0]; rtc.rems[peer] = rtc.remote; const a = rtc.audio[peer] || (rtc.audio[peer] = new Audio()); a.srcObject = rtc.remote; a.volume = $('#rvol').value / 100; a.play().catch(() => {}); if (active) hookRemote(); };   // both sides play what the other sends
+  pc.ontrack = e => { setJb(pc, JB_START); rtc.remote = e.streams[0]; rtc.rems[peer] = rtc.remote; const a = rtc.audio[peer] || (rtc.audio[peer] = new Audio()); a.srcObject = rtc.remote; a.volume = $('#rvol').value / 100; a.play().catch(() => {}); if (active) hookRemote(); };   // both sides play what the other sends
   return pc;
 }
 async function connectPeers() {
@@ -177,7 +177,7 @@ function hookRemote() {   // drive the volume meter from the singer's voice
   } catch (e) {}
 }
 function closeRtc() {
-  Object.values(rtc.pcs).forEach(pc => { try { pc.close(); } catch (e) {} }); rtc.pcs = {}; rtc.pend = {}; rtc.stream = null; rtc.remote = null; Object.values(rtc.audio).forEach(a => { a.srcObject = null; }); rtc.rems = {}; rtc.audio = {}; rtc.hooked = new Set(); rtc.dly = {}; gate = null; gateState = -1; rtc.lat = {}; listenDelay = 0; clearInterval(latIv);
+  Object.values(rtc.pcs).forEach(pc => { try { pc.close(); } catch (e) {} }); rtc.pcs = {}; rtc.pend = {}; rtc.stream = null; rtc.remote = null; Object.values(rtc.audio).forEach(a => { a.srcObject = null; }); rtc.rems = {}; rtc.audio = {}; rtc.hooked = new Set(); rtc.dly = {}; rtc.jb = {}; gate = null; gateState = -1; rtc.lat = {}; listenDelay = 0; clearInterval(latIv);
   const a = $('#rv'); a.srcObject = null;
 }
 $('#rvol').oninput = e => { $('#rv').volume = e.target.value / 100; Object.values(rtc.audio).forEach(a => { a.volume = e.target.value / 100; }); };
