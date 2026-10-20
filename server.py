@@ -732,6 +732,28 @@ def room_send(code, cid, typ, data, to=None):
         room_push(r, room_state(r))
         return reply
 
+# ---- Live visitor count shown on the home page (counts only, no names)
+VISITORS, VLOCK, VISIT_TTL = {}, threading.Lock(), 50
+
+def online_stats(touch='', leave=False):
+    now = time.time()
+    with VLOCK:
+        if touch:
+            if leave:
+                VISITORS.pop(touch, None)
+            else:
+                VISITORS[touch] = now
+        for k in [k for k, t in VISITORS.items() if now - t > VISIT_TTL]:
+            del VISITORS[k]
+        n = len(VISITORS)
+    in_rooms = rooms = 0
+    with RLOCK:
+        for r in ROOMS.values():
+            c = sum(1 for x in r['clients'].values() if not x.get('leaving') and now - x['seen'] < 30)
+            if c:
+                in_rooms += c; rooms += 1
+    return {'online': max(n, in_rooms), 'inRooms': in_rooms, 'rooms': rooms}
+
 class Handler(BaseHTTPRequestHandler):
     def send_json(self, code, obj):
         body = json.dumps(obj).encode()
@@ -744,6 +766,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/search':
                 term = (q.get('q', [''])[0]).strip()
                 return self.send_json(200, search_songs(term) if len(term) >= 2 else [])
+            if u.path == '/api/online':
+                return self.send_json(200, online_stats())
             if u.path == '/api/ice':          # STUN, plus an optional TURN relay for strict networks (set TURN_URL / TURN_USER / TURN_PASS)
                 ice = [{'urls': 'stun:stun.l.google.com:19302'}, {'urls': 'stun:stun1.l.google.com:19302'}]
                 turn = [x.strip() for x in os.getenv('TURN_URL', '').split(',') if x.strip()]
@@ -813,6 +837,8 @@ class Handler(BaseHTTPRequestHandler):
                 JOBS[job] = {'state': 'uploaded', 'path': fp, 'message': 'Uploaded'}
                 return self.send_json(200, {'ok': True})
             data = json.loads(self.rfile.read(n) or b'{}')
+            if u.path == '/api/online':
+                return self.send_json(200, online_stats(clean_id(data.get('id')), bool(data.get('leave'))))
             if u.path == '/api/room/join':
                 code, cid = clean_code(data.get('room')), clean_id(data.get('id'))
                 if not code or not cid:
