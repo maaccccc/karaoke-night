@@ -255,7 +255,8 @@ def room_state(r):
     return {'type': 'state', 'players': [p['name'] for p in peers], 'peers': peers,
             'queue': r['queue'], 'scores': r['scores'], 'busy': bool(r['now']), 'picking': pick_live(r)['item']['singer'] if pick_live(r) else '',
             'singer': r['now']['singer'] if r['now'] else '',
-            'singers': r['now']['singers'] if r['now'] else []}
+            'singers': r['now']['singers'] if r['now'] else [],
+            'public': bool(r.get('public')), 'host': r.get('host'), 'bans': [b['name'] for b in r.get('bans', [])]}
 
 def room_push(r, msg, to=None):
     for i, c in r['clients'].items():
@@ -264,6 +265,10 @@ def room_push(r, msg, to=None):
 
 def room_drop(r, cid):
     gone = r['clients'].pop(cid, None)
+    if r.get('host') == cid:             # the host left: the longest-present person takes over
+        live = [i for i, c in r['clients'].items() if not c.get('leaving')]
+        r['host'] = (live or list(r['clients']) or [None])[0]
+        if r['host']: room_push(r, {'type': 'notice', 'text': r['clients'][r['host']]['name'] + ' is now the host.'})
     nw = r['now']
     if gone and nw and gone['name'] in nw['singers'] and gone['name'] not in nw['got']:
         nw['got'][gone['name']] = {'pts': 0, 'parts': dict(ZP), 'hasMic': False}
@@ -446,18 +451,29 @@ def room_prune():
             room_drop(r, i)
         if dead and r['clients']:
             room_push(r, room_state(r))
+        for k in [k for k, v in r.get('kicked', {}).items() if now - v['t'] > 300]:
+            del r['kicked'][k]
         if not r['clients'] and now - r['empty'] > 600:
             del ROOMS[code]
 
-def room_join(code, cid, name, av=None, vis=None):
+def room_join(code, cid, name, av=None, vis=None, key=None):
     with RLOCK:
         room_prune()
-        r = ROOMS.setdefault(code, {'code': code, 'public': vis == 'public', 'timer': None, 'clients': {}, 'queue': [], 'chat': [], 'hist': [], 'sung': {}, 'turn': 0, 'tv': {}, 'scores': {}, 'now': None, 'ready': None, 'pick': None, 'nid': 0, 'empty': time.time()})
+        r = ROOMS.setdefault(code, {'code': code, 'public': vis == 'public', 'timer': None, 'clients': {}, 'queue': [], 'chat': [], 'hist': [], 'sung': {}, 'turn': 0, 'tv': {}, 'scores': {}, 'now': None, 'ready': None, 'pick': None, 'nid': 0, 'empty': time.time(), 'host': cid, 'bans': [], 'kicked': {}})
+        r.setdefault('bans', []); r.setdefault('kicked', {})
+        for b in r['bans']:
+            if b['id'] == cid or b['name'].lower() == name.lower():
+                raise RuntimeError('You have been banned from this room by the host.')
+        r['kicked'].pop(cid, None)           # joining on purpose again (a plain kick only removes you)
+        cur = r['clients'].get(cid)
+        if cur and not cur.get('leaving') and time.time() - cur['seen'] < 25 and key != cur.get('key'):
+            raise RuntimeError('That seat is already in use.')   # someone else cannot take over your seat (or the host role) by copying your id
         inherit = None
         # same person coming back (refresh / new tab id): take over their old seat by name
         for i, c in list(r['clients'].items()):
             if i != cid and c['name'] == name and (c.get('leaving') or time.time() - c['seen'] > 25):
                 inherit = r['clients'].pop(i).get('mic')
+                if r.get('host') == i: r['host'] = cid
                 if r['ready'] and i in r['ready']['yes']: r['ready']['yes'].discard(i); r['ready']['yes'].add(cid)
         taken = {c['name'] for i, c in r['clients'].items() if i != cid}
         base, n = name, 2
@@ -465,9 +481,11 @@ def room_join(code, cid, name, av=None, vis=None):
         while name in taken:
             name = '%s %d' % (base[:17], n); n += 1
         old = r['clients'].get(cid)
-        r['clients'][cid] = {'name': name, 'q': _queue.Queue(), 'seen': time.time(), 'mic': (old or {}).get('mic') or inherit or 'untested',
+        mykey = os.urandom(8).hex()
+        r['clients'][cid] = {'name': name, 'key': mykey, 'q': _queue.Queue(), 'seen': time.time(), 'mic': (old or {}).get('mic') or inherit or 'untested',
                                 'av': clean_av(av) if av else (old or {}).get('av') or clean_av(None)}
         r['scores'].setdefault(name, 0)
+        if r.get('host') not in r['clients']: r['host'] = cid
         room_push(r, room_state(r))
         if r['ready'] and time.time() < r['ready']['until']:
             r['clients'][cid]['q'].put(ready_msg(r))
@@ -478,7 +496,7 @@ def room_join(code, cid, name, av=None, vis=None):
             r['clients'][cid]['q'].put({'type': 'chatlog', 'msgs': r['chat'][-40:]})
         if r.get('hist'):
             r['clients'][cid]['q'].put({'type': 'hist', 'hist': r['hist']})
-        return {'id': cid, 'name': name, 'now': int(time.time() * 1000)}
+        return {'id': cid, 'name': name, 'key': mykey, 'now': int(time.time() * 1000)}
 
 def room_leave(code, cid):
     with RLOCK:
@@ -492,7 +510,8 @@ def room_poll(code, cid, wait=20):
         room_prune()
         r = ROOMS.get(code); c = r and r['clients'].get(cid)
         if not c:
-            return None
+            k = r and r.get('kicked', {}).get(cid)
+            return [{'type': 'kicked', 'ban': k['ban']}] if k else None
         c['seen'] = time.time(); c.pop('leaving', None); q = c['q']
     msgs = []
     try:
@@ -559,6 +578,32 @@ def room_send(code, cid, typ, data, to=None):
             r['scores'] = {}; r['hist'] = []; r['sung'] = {}; r['turn'] = 0
             fair_sort(r)
             room_push(r, {'type': 'hist', 'hist': []})
+        elif op in ('kick', 'ban', 'unban', 'vis', 'host'):     # host-only tools; the secret key proves it is really the host
+            if r.get('host') != cid or not data.get('key') or data.get('key') != me.get('key'):
+                return 'Only the host can do that.'
+            tid = clean_id(data.get('id')); tc = r['clients'].get(tid)
+            if op in ('kick', 'ban', 'host') and (not tc or tid == cid):
+                return 'Pick someone else in the lobby.'
+            if op in ('kick', 'ban'):
+                if op == 'ban':
+                    if len(r['bans']) >= 50: return 'The ban list is full.'
+                    r['bans'].append({'id': tid, 'name': tc['name']})
+                r['kicked'][tid] = {'ban': op == 'ban', 't': time.time()}
+                tc['q'].put({'type': 'kicked', 'ban': op == 'ban'})
+                room_push(r, {'type': 'notice', 'text': tc['name'] + (' was banned' if op == 'ban' else ' was kicked') + ' by the host.'})
+                room_drop(r, tid)
+            elif op == 'unban':
+                nm = str(data.get('name') or '').lower()
+                r['bans'] = [b for b in r['bans'] if b['name'].lower() != nm]
+                room_push(r, {'type': 'notice', 'text': str(data.get('name') or '')[:20] + ' can join again.'})
+            elif op == 'host':
+                r['host'] = tid
+                room_push(r, {'type': 'notice', 'text': tc['name'] + ' is now the host.'})
+            elif op == 'vis':
+                pub = bool(data.get('public'))
+                if pub and is_blocked(code): return "That room code isn't allowed to be public."
+                r['public'] = pub
+                room_push(r, {'type': 'notice', 'text': 'The host made the room ' + ('public: it is listed on the home page with its code.' if pub else 'private: it is hidden from the list and needs the code.')})
         elif op == 'chat':         # room chat, kept for the last 60 messages so late joiners see the conversation
             text = re.sub(r'[\x00-\x1f\x7f]+', ' ', str(data.get('text') or '')).strip()[:200]
             now = time.time()
@@ -754,7 +799,8 @@ def rooms_list():
                 continue
             pub = bool(r.get('public'))
             song = (((r['now'] or {}).get('song') or {}).get('title') or '') if pub else ''
-            out.append({'public': pub, 'code': r['code'] if pub else '', 'host': act[0]['name'], 'av': act[0].get('av') or clean_av(None),
+            hc = r['clients'].get(r.get('host')); hc = hc if hc in act else act[0]
+            out.append({'public': pub, 'code': r['code'] if pub else '', 'host': hc['name'], 'av': hc.get('av') or clean_av(None),
                         'n': len(act), 'singing': bool(r['now']), 'song': str(song)[:60]})
     out.sort(key=lambda x: (not x['public'], -x['n']))
     return out[:30]
@@ -844,7 +890,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise RuntimeError('Enter a room code.')
                 check_name(data.get('name'))
                 if data.get('vis') == 'public' and is_blocked(code): raise RuntimeError("That room code isn't allowed.")
-                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis')))
+                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis'), data.get('key')))
             if u.path == '/api/room/leave':
                 room_leave(clean_code(data.get('room')), clean_id(data.get('id')))
                 return self.send_json(200, {'ok': True})

@@ -84,7 +84,7 @@ function gateTurns(t) {
   const sing = isSinger();                 // other singers: only played while it is their line
   (current.sids || []).forEach((pid, k) => {
     if (pid === room.id) return; const a = rtc.audio[pid]; if (!a) return;
-    a.muted = !openAt(k, t - (sing ? (rtc.lat[pid] || 0) : 0));
+    a.muted = isMutedId(pid) || !openAt(k, t - (sing ? (rtc.lat[pid] || 0) : 0));
   });
 }
 // Adaptive voice buffer: start small (low delay), grow only when the voice starts breaking up, shrink again when the connection is calm.

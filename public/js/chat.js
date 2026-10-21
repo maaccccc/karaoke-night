@@ -1,6 +1,7 @@
 // ---- chat
 let chatUnread = 0, toastT = 0;
 function addChat(m, quiet) {
+  if (isMuted(m.from)) return;   // you muted this person
   const log = $('#chatLog'), d = el('div', null, 'cm' + (m.from === room.name ? ' me' : ''));
   const b = el('b', (m.av ? m.av.e + ' ' : '') + m.from + ': '); if (m.av) b.style.setProperty('--wc', m.av.c);
   d.append(b, document.createTextNode(m.text)); log.appendChild(d);

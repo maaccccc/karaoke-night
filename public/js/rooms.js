@@ -55,7 +55,7 @@ async function rpost(path, body) {
   const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Server error');
   return d;
 }
-function roomOp(data) { return rpost('/api/room/send', { room: room.code, id: room.id, type: 'op', data }).then(d => { if (d.msg) say(d.msg); }).catch(e => say(e.message)); }
+function roomOp(data) { if (HOSTOPS.includes(data.op)) data = Object.assign({ key: roomKey() }, data); return rpost('/api/room/send', { room: room.code, id: room.id, type: 'op', data }).then(d => { if (d.msg) say(d.msg); }).catch(e => say(e.message)); }
 function roomRtc(to, data) { return rpost('/api/room/send', { room: room.code, id: room.id, type: 'rtc', to, data }).catch(() => {}); }
 async function claimId() {
   let id = ''; try { id = sessionStorage.getItem('karaokeId') || ''; } catch (e) {}
@@ -66,7 +66,7 @@ async function claimId() {
 }
 async function roomJoin(code, name, vis) {   // vis ('public' | 'private') only matters when this join creates the room
   room.id = room.id || await claimId(); try { sessionStorage.setItem('karaokeRoom', code); } catch (e) {}
-  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis });
+  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis, key: roomKey() }); setRoomKey(d.key);
   room.skew = d.now - (t0 + Date.now()) / 2; room.code = code; room.name = d.name; room.on = true;
   document.body.classList.add('inroom'); say('You are in room ' + code + ' as ' + d.name + '. Share the invite link with friends.');
   const b = $('#roomBtn'); b.style.display = ''; $('#chatBtn').style.display = ''; $('#skipBtn2').style.display = ''; pollLoop(); syncClock(); if (room.mic !== 'untested') roomOp({ op: 'mic', mic: room.mic });
@@ -75,13 +75,15 @@ async function pollLoop() {
   while (room.on) {
     try {
       const r = await fetch('/api/room/poll?' + new URLSearchParams({ room: room.code, id: room.id }));
-      if (r.status === 410) { await rpost('/api/room/join', { room: room.code, id: room.id, name: room.name, av: myAv }); continue; }
+      if (r.status === 410) { const j = await rpost('/api/room/join', { room: room.code, id: room.id, name: room.name, av: myAv, key: roomKey() }); setRoomKey(j.key); continue; }
       const d = await r.json(); (d.msgs || []).forEach(handleMsg);
-    } catch (e) { await new Promise(r => setTimeout(r, 1500)); }
+    } catch (e) { if (/banned/.test(e.message)) return kickedOut(true); await new Promise(r => setTimeout(r, 1500)); }
   }
 }
 function handleMsg(m) {
   if (m.type === 'state') applyState(m);
+  else if (m.type === 'kicked') kickedOut(m.ban);
+  else if (m.type === 'notice') say(m.text);
   else if (m.type === 'pick') showPick(m);
   else if (m.type === 'pickcancel') { hidePick(); nextStop(); say(m.reason || 'The start was cancelled.'); }
   else if (m.type === 'ready') { hidePick(); showReady(m); }
@@ -106,9 +108,9 @@ function applyState(m) {
   players.length = 0; players.push(...m.players);
   queue.length = 0; m.queue.forEach(q => queue.push({ id: q.id, song: q.song, singer: q.singer, singer2: q.singer2, singers: q.singers || [], mode: q.mode, file: null }));
   Object.keys(scores).forEach(k => delete scores[k]); Object.assign(scores, m.scores);
-  renderPlayers(); renderQueue(); renderScores(); renderWho(m); vcSync();
+  room.last = m; room.host = m.host; room.pub = !!m.public; renderPlayers(); renderQueue(); renderScores(); renderVis(m); renderWho(m); vcSync();
   if (active) crowdBuild();
-  $('#roomBtn').textContent = '🌐 Room ' + room.code + ' · ' + m.peers.length;
+  $('#roomBtn').textContent = (m.public ? '🌐 Room ' : '🔒 Room ') + room.code + ' · ' + m.peers.length;
   if (pkIn && $('#pickdlg').classList.contains('show')) renderPick();
   if (active && room.on && isSinger() && rtc.stream) connectPeers();
 }
@@ -117,13 +119,58 @@ function renderWho(m) {
   const mic = { untested: ['mic untested', ''], tested: ['mic OK', 'ok'], blocked: ['mic blocked', 'bad'], none: ['no mic', 'bad'], error: ['mic problem', 'bad'] };
   m.peers.forEach(p => {
     const row = el('div', '', 'pr' + (p.away ? ' away' : '')); const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; row.appendChild(av); row.appendChild(el('b', p.name + (p.id === room.id ? ' (you)' : '') + ((m.singers || []).includes(p.name) ? ' 🎤' : ''), p.id === room.id ? 'me' : ''));
+    if (p.id === m.host) row.appendChild(el('span', '👑 host', 'tg ok'));
     const [t, c] = mic[p.mic] || mic.untested; row.appendChild(el('span', t, 'tg ' + c));
     if (p.vc) row.appendChild(el('span', p.vcm ? '🔇 muted' : '🎧 voice', 'tg' + (p.vcm ? '' : ' ok')));
     if (m.picking === p.name) row.appendChild(el('span', 'choosing mode…', 'tg ok'));
     if (p.away) row.appendChild(el('span', 'reconnecting…', 'tg'));
     else if (rdIn || p.ready) row.appendChild(el('span', p.ready ? 'ready' : 'not ready', 'tg ' + (p.ready ? 'ok' : '')));
+    if (p.id !== room.id) {
+      const acts = el('span', null, 'acts'), btn = (txt, tip, fn) => { const b = el('button', txt, 'ghost mini'); b.type = 'button'; b.title = tip; b.onclick = fn; acts.appendChild(b); };
+      btn(isMuted(p.name) ? '🔊 Unmute' : '🔇 Mute', 'Only you stop hearing and seeing ' + p.name, () => toggleMute(p.name));
+      if (m.host === room.id) {
+        btn('👑 Make host', 'Hand the host role to ' + p.name, () => { if (confirm('Make ' + p.name + ' the host? You will lose the host tools.')) roomOp({ op: 'host', id: p.id }); });
+        btn('Kick', 'Remove ' + p.name + ' (they can join again)', () => { if (confirm('Kick ' + p.name + ' out of the room? They can join again.')) roomOp({ op: 'kick', id: p.id }); });
+        btn('Ban', 'Remove ' + p.name + ' and block them from rejoining', () => { if (confirm('Ban ' + p.name + '? They will not be able to rejoin this room.')) roomOp({ op: 'ban', id: p.id }); });
+      }
+      row.appendChild(acts);
+    }
     box.appendChild(row);
   });
   $('#skipBtn').disabled = $('#skipBtn2').disabled = !m.busy && !rdIn && !m.picking;
 }
 $('#skipBtn').onclick = $('#skipBtn2').onclick = () => roomOp({ op: 'skip' });
+
+// ---- host tools, public/private, and muting people just for you
+const HOSTOPS = ['kick', 'ban', 'unban', 'vis', 'host'];
+function roomKey() { if (room.key) return room.key; try { return sessionStorage.getItem('karaokeKey') || undefined; } catch (e) { return undefined; } }   // secret that proves you are you (needed for host tools)
+function setRoomKey(k) { room.key = k; try { sessionStorage.setItem('karaokeKey', k || ''); } catch (e) {} }
+function kickedOut(banned) {
+  room.on = false; try { sessionStorage.removeItem('karaokeRoom'); } catch (e) {}
+  alert(banned ? 'The host banned you from this room.' : 'The host removed you from the room.'); location.href = location.pathname;
+}
+function renderVis(m) {
+  const t = $('#visTag'), b = $('#visBtn'), host = m.host === room.id;
+  t.textContent = m.public ? '🌐 Public room' : '🔒 Private room'; t.className = 'vb ' + (m.public ? 'pub' : 'priv');
+  $('#visNote').textContent = m.public ? 'Listed on the home page with its code, so anyone can find and join it.' : 'Shown on the home page as private, without its code. Only people with your link or code can join.';
+  b.style.display = host ? '' : 'none'; b.textContent = m.public ? 'Make private' : 'Make public'; b.onclick = () => roomOp({ op: 'vis', public: !m.public });
+  const bl = $('#banList'); bl.textContent = ''; bl.style.display = host && (m.bans || []).length ? '' : 'none';
+  if (host && (m.bans || []).length) {
+    bl.appendChild(el('b', 'Banned', 'note'));
+    m.bans.forEach(n => { const r = el('div', null, 'bn'); r.appendChild(el('span', n)); const u = el('button', 'Unban', 'ghost mini'); u.type = 'button'; u.onclick = () => roomOp({ op: 'unban', name: n }); r.appendChild(u); bl.appendChild(r); });
+  }
+}
+const mutedNames = new Set(); try { JSON.parse(sessionStorage.getItem('karaokeMuted') || '[]').forEach(n => mutedNames.add(n)); } catch (e) {}
+const isMuted = n => mutedNames.has(n);
+const isMutedId = id => { const p = (room.peers || []).find(x => x.id === id); return !!p && isMuted(p.name); };
+function toggleMute(name) {   // local only: you stop hearing (voice chat and singing) and seeing (chat) this person; nobody else is affected
+  if (mutedNames.has(name)) mutedNames.delete(name); else mutedNames.add(name);
+  try { sessionStorage.setItem('karaokeMuted', JSON.stringify([...mutedNames])); } catch (e) {}
+  applyMutes(); if (room.last) renderWho(room.last); say(isMuted(name) ? 'You muted ' + name + '. Only you stop hearing and seeing them.' : 'You unmuted ' + name + '.');
+}
+function applyMutes() {
+  Object.entries(vc.audio || {}).forEach(([id, a]) => { a.muted = isMutedId(id); });
+  Object.entries(rtc.audio || {}).forEach(([id, a]) => { a.muted = isMutedId(id); });
+  const rv = $('#rv'); if (rv) rv.muted = Object.entries(rtc.rems || {}).some(([id, s]) => s === rv.srcObject && isMutedId(id));
+}
+

@@ -7,7 +7,7 @@ const vcSinging = () => room.on && active && isSinger();                 // sing
 const vcVol = () => (room.on && active ? vc.duck : 100) / 100;           // lowered while a song is playing
 
 function vcApply() {
-  Object.values(vc.audio).forEach(a => { a.volume = vcVol(); });
+  Object.entries(vc.audio).forEach(([id, a]) => { a.volume = vcVol(); a.muted = isMutedId(id); });
   if (vc.stream) vc.stream.getAudioTracks().forEach(t => { t.enabled = !vc.muted && !vcSinging(); });
 }
 function vcRender() {
@@ -61,7 +61,7 @@ function vcPc(peer) {
   const pc = new RTCPeerConnection(ICE); vc.pcs[peer] = pc; vc.since[peer] = Date.now();
   vc.stream.getAudioTracks().forEach(t => pc.addTrack(t, vc.stream));
   pc.onicecandidate = e => { if (e.candidate) roomRtc(peer, { vc: 1, kind: 'ice', cand: e.candidate }); };
-  pc.ontrack = e => { const a = vc.audio[peer] || (vc.audio[peer] = new Audio()); a.srcObject = e.streams[0]; a.volume = vcVol(); a.play().catch(() => {}); };
+  pc.ontrack = e => { const a = vc.audio[peer] || (vc.audio[peer] = new Audio()); a.srcObject = e.streams[0]; a.volume = vcVol(); a.muted = isMutedId(peer); a.play().catch(() => {}); };
   pc.onconnectionstatechange = () => {
     if (vc.pcs[peer] !== pc) return; vc.since[peer] = Date.now();
     if (pc.connectionState === 'connected') { vc.tries[peer] = 0; delete vc.gaveUp[peer]; }
