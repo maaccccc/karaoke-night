@@ -73,6 +73,7 @@ function runCountdown(m) {
   }, 100);
 }
 function onStart(m) {
+  room.live = null; room.watch = false; refreshLive();
   nextStop(); nextInfo = null; hideReady(); aud = { avg: 0, n: 0, mine: 0 };
   if (active) leaveSong();
   room.prep = !!m.prep; room.startAt = m.prep ? 0 : m.at; loadedSent = false; prebuf = false; holding = false;
@@ -82,6 +83,7 @@ function onStart(m) {
   pendingResult = null; awaiting = false; say('Loading lyrics…'); loadAndRun();
 }
 function onGo(m) {          // everybody has loaded: count down together, then start on the shared clock
+  if (room.live && !room.watch) { room.live.at = m.at; room.live.prep = false; return; }   // joined mid-song, not watching (yet)
   if (!current) return;
   room.prep = false; room.startAt = m.at; say('');
   runCountdown({ at: m.at, item: { singer: current.singer, singer2: current.singer2, singers: current.singers, song: current.song } });
@@ -109,10 +111,10 @@ function onResultShow(m) {
   $('#scoreNote').textContent = m.results ? resultNote(m) : m.name + ' scored ' + m.pts + '.';
 }
 function leaveSong() {   // stop watching a song locally (listeners only)
-  active = false; cancelAnimationFrame(raf); stopMedia(); closeRtc(); awaiting = false; room.prep = false;
+  active = false; cancelAnimationFrame(raf); stopMedia(); closeRtc(); awaiting = false; room.prep = false; room.watch = false;
   $('#ytcard').classList.remove('show'); drawMeter(0, 0); refreshTheme();
   if (actx) { try { actx.close(); } catch (e) {} actx = null; } an = null;
-  document.body.classList.remove('aud'); $('#stage').style.display = 'none'; $('#home').style.display = 'block'; renderNow();
+  document.body.classList.remove('aud'); $('#stage').style.display = 'none'; $('#home').style.display = 'block'; renderNow(); refreshLive();
 }
 // clearer voice: full-band mono Opus, no silence suppression, error correction, higher bitrate
 function tuneOpus(sdp) {
@@ -130,7 +132,7 @@ fetch('/api/ice').then(r => r.json()).then(d => { if (d.iceServers && d.iceServe
 function newPc(peer) {
   const pc = new RTCPeerConnection(ICE); rtc.pcs[peer] = pc;
   pc.onicecandidate = e => { if (e.candidate) roomRtc(peer, { kind: 'ice', cand: e.candidate }); };
-  pc.ontrack = e => { setJb(pc, JB_START); rtc.remote = e.streams[0]; rtc.rems[peer] = rtc.remote; const a = rtc.audio[peer] || (rtc.audio[peer] = new Audio()); a.srcObject = rtc.remote; a.volume = $('#rvol').value / 100; a.play().catch(() => {}); if (active) hookRemote(); };   // both sides play what the other sends
+  pc.ontrack = e => { setJb(pc, JB_START); rtc.remote = e.streams[0]; rtc.rems[peer] = rtc.remote; const a = rtc.audio[peer] || (rtc.audio[peer] = new Audio()); a.srcObject = rtc.remote; a.volume = $('#rvol').value / 100; if (room.live && !room.watch) a.muted = true; a.play().catch(() => {}); if (active) hookRemote(); };   // both sides play what the other sends
   return pc;
 }
 async function connectPeers() {

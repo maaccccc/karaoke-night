@@ -98,8 +98,9 @@ function handleMsg(m) {
   else if (m.type === 'react') { floatReact(m); fxReact(); }
   else if (m.type === 'stars') { aud.avg = m.avg; aud.n = m.n; if ($('#rate').style.display === 'block') { renderAud(); renderAwards(); } }
   else if (m.type === 'next') { nextInfo = { item: m.item, end: Date.now() + m.in * 1000, secs: m.in }; if ($('#rate').style.display === 'block') nextCountdown(m.in, m.item, false); else say('Next up: ' + m.item.song.title + ' (' + whoTxt(m.item) + ').'); }
-  else if (m.type === 'skip') { hideReady(); hidePick(); nextStop(); nextInfo = null; room.prep = false; $('#cd').classList.remove('show'); if (active) leaveSong(); current = null; room.startAt = 0; say(m.reason || ((m.by === room.name ? 'You' : m.by) + ' skipped the song.')); }
-  else if (m.type === 'result') onResult(m);
+  else if (m.type === 'live') { room.live = m; refreshLive(); }
+  else if (m.type === 'skip') { room.live = null; refreshLive(); hideReady(); hidePick(); nextStop(); nextInfo = null; room.prep = false; $('#cd').classList.remove('show'); if (active) leaveSong(); current = null; room.startAt = 0; say(m.reason || ((m.by === room.name ? 'You' : m.by) + ' skipped the song.')); }
+  else if (m.type === 'result') { room.live = null; refreshLive(); onResult(m); }
   else if (m.type === 'rtc') (m.data && m.data.vc ? onVc : onRtc)(m.from, m.data);
 }
 function applyState(m) {
@@ -108,12 +109,30 @@ function applyState(m) {
   players.length = 0; players.push(...m.players);
   queue.length = 0; m.queue.forEach(q => queue.push({ id: q.id, song: q.song, singer: q.singer, singer2: q.singer2, singers: q.singers || [], mode: q.mode, file: null }));
   Object.keys(scores).forEach(k => delete scores[k]); Object.assign(scores, m.scores);
+  if (!m.busy && room.live) room.live = null; refreshLive();
   room.last = m; room.host = m.host; room.pub = !!m.public; renderPlayers(); renderQueue(); renderScores(); renderVis(m); renderWho(m); vcSync();
+  renderSkip(m);
   if (active) crowdBuild();
   $('#roomBtn').textContent = (m.public ? '🌐 Room ' : '🔒 Room ') + room.code + ' · ' + m.peers.length;
   if (pkIn && $('#pickdlg').classList.contains('show')) renderPick();
   if (active && room.on && isSinger() && rtc.stream) connectPeers();
 }
+// ---- joined while a song is already playing: show a button that opens the karaoke only if the person wants to see it
+function refreshLive() {
+  const bar = $('#liveBar'); if (!bar) return;
+  const m = room.live, show = !!(room.on && m && !active && !room.watch);
+  bar.style.display = show ? '' : 'none';
+  if (show) $('#liveTxt').textContent = '🎤 ' + whoTxt(m.item) + (singersOf(m.item).length > 1 ? ' are singing: ' : ' is singing: ') + m.item.song.title;
+}
+function watchLive() {
+  const m = room.live; if (!m || active || !room.on) return;
+  room.watch = true; refreshLive(); applyMutes();          // from now on the singer's voice is allowed to play
+  nextStop(); nextInfo = null; aud = { avg: 0, n: 0, mine: 0 };
+  room.prep = !!m.prep && !m.at; room.startAt = m.at || 0; loadedSent = true; prebuf = false; holding = false;   // loadedSent: the room did not wait for us, so do not report "ready"
+  current = { song: m.item.song, singer: m.item.singer, singer2: m.item.singer2 || '', singers: m.item.singers || [], mode: m.item.mode || 'solo', sids: m.sids, seed: m.seed || 1, theme: m.item.theme || 'neon', file: null };
+  pendingResult = null; awaiting = false; say('Loading lyrics…'); loadAndRun();
+}
+$('#watchBtn').onclick = watchLive;
 function renderWho(m) {
   const box = $('#lobList'); box.textContent = ''; $('#lobN').textContent = '(' + m.peers.length + ')';
   const mic = { untested: ['mic untested', ''], tested: ['mic OK', 'ok'], blocked: ['mic blocked', 'bad'], none: ['no mic', 'bad'], error: ['mic problem', 'bad'] };
@@ -139,10 +158,17 @@ function renderWho(m) {
   });
   $('#skipBtn').disabled = $('#skipBtn2').disabled = !m.busy && !rdIn && !m.picking;
 }
-$('#skipBtn').onclick = $('#skipBtn2').onclick = () => roomOp({ op: 'skip' });
+// Skip: the host skips for everyone at once; everybody else votes, and the song is skipped when more than half agree.
+function renderSkip(m) {
+  const host = m.host === room.id, v = m.skipVotes || [], mine = v.includes(room.id);
+  const txt = host ? 'Skip for everyone (host)' : (mine ? '✓ Voted to skip ' : '🗳 Vote to skip ') + '(' + v.length + '/' + (m.skipNeed || 1) + ')';
+  const tip = host ? 'You are the host: this skips the song for everybody right away' : 'The song is skipped when more than half of the room votes. Press again to take your vote back';
+  [$('#skipBtn'), $('#skipBtn2')].forEach(b => { if (b) { b.textContent = txt; b.title = tip; } });
+}
+$('#skipBtn').onclick = $('#skipBtn2').onclick = () => roomOp({ op: room.host === room.id ? 'skip' : 'skipvote' });
 
 // ---- host tools, public/private, and muting people just for you
-const HOSTOPS = ['kick', 'ban', 'unban', 'vis', 'host'];
+const HOSTOPS = ['kick', 'ban', 'unban', 'vis', 'host', 'skip'];
 function roomKey() { if (room.key) return room.key; try { return sessionStorage.getItem('karaokeKey') || undefined; } catch (e) { return undefined; } }   // secret that proves you are you (needed for host tools)
 function setRoomKey(k) { room.key = k; try { sessionStorage.setItem('karaokeKey', k || ''); } catch (e) {} }
 function kickedOut(banned) {
@@ -169,8 +195,9 @@ function toggleMute(name) {   // local only: you stop hearing (voice chat and si
   applyMutes(); if (room.last) renderWho(room.last); say(isMuted(name) ? 'You muted ' + name + '. Only you stop hearing and seeing them.' : 'You unmuted ' + name + '.');
 }
 function applyMutes() {
+  const hold = !!room.live && !room.watch;                  // joined mid-song and not watching: do not play the singer's voice without the music
   Object.entries(vc.audio || {}).forEach(([id, a]) => { a.muted = isMutedId(id); });
-  Object.entries(rtc.audio || {}).forEach(([id, a]) => { a.muted = isMutedId(id); });
+  Object.entries(rtc.audio || {}).forEach(([id, a]) => { a.muted = hold || isMutedId(id); });
   const rv = $('#rv'); if (rv) rv.muted = Object.entries(rtc.rems || {}).some(([id, s]) => s === rv.srcObject && isMutedId(id));
 }
 

@@ -248,6 +248,34 @@ def start_pick(r, by):
     r['pick'] = {'item': item, 'by': by, 'until': time.time() + PICK_SECS}
     room_push(r, {'type': 'pick', 'item': item, 'by': by, 'until': int(r['pick']['until'] * 1000)})
 
+def skip_cur(r):
+    return r['now'] or r['ready'] or pick_live(r)
+
+def skip_votes(r):
+    """Ids of the people (still here) who voted to skip what is happening right now."""
+    sv, cur = r.get('skipv'), skip_cur(r)
+    if not sv or not cur or sv['obj'] is not cur:      # votes only count for the very song / step they were cast on
+        return []
+    return [i for i in sv['ids'] if i in r['clients']]
+
+def skip_need(r):
+    """More than half of the people in the room must agree (everyone, when there are two)."""
+    return max(1, len([c for c in r['clients'].values() if not c.get('leaving')]) // 2 + 1)
+
+def do_skip(r, by, reason=''):
+    was_playing = bool(r['now'])
+    r['now'] = None; r['ready'] = None; r['pick'] = None; r['skipv'] = None
+    room_push(r, {'type': 'skip', 'by': by, 'reason': reason})
+    if was_playing: schedule_next(r, 3)
+
+def skip_check(r):
+    """Skip once enough people voted (also after someone leaves, which lowers the number needed)."""
+    v = skip_votes(r)
+    if v and len(v) >= skip_need(r):
+        do_skip(r, '', 'The room voted to skip this song.')
+        return True
+    return False
+
 def room_state(r):
     rd = r['ready']; yes = rd['yes'] if rd else set()
     peers = [{'id': i, 'name': c['name'], 'mic': c.get('mic', 'untested'), 'ready': i in yes, 'av': c.get('av') or clean_av(None), 'vc': bool(c.get('vc')), 'vcm': bool(c.get('vcm')),
@@ -256,6 +284,7 @@ def room_state(r):
             'queue': r['queue'], 'scores': r['scores'], 'busy': bool(r['now']), 'picking': pick_live(r)['item']['singer'] if pick_live(r) else '',
             'singer': r['now']['singer'] if r['now'] else '',
             'singers': r['now']['singers'] if r['now'] else [],
+            'skipVotes': skip_votes(r), 'skipNeed': skip_need(r),
             'public': bool(r.get('public')), 'host': r.get('host'), 'bans': [b['name'] for b in r.get('bans', [])]}
 
 def room_push(r, msg, to=None):
@@ -281,6 +310,7 @@ def room_drop(r, cid):
     if not r['clients']:
         r['ready'] = None; r['pick'] = None
     else:
+        skip_check(r)       # fewer people now, so the votes may already be enough
         room_launch(r)      # the last person we were waiting for may have just left
         maybe_go(r)         # ...or the last device we were waiting to load
 
@@ -354,7 +384,8 @@ def maybe_go(r, force=False):
         nw['went'] = True
         if nw.get('prep_t'):
             nw['prep_t'].cancel()
-        room_push(r, {'type': 'go', 'at': int(time.time() * 1000) + GO_DELAY})
+        nw['at'] = int(time.time() * 1000) + GO_DELAY      # remembered, so someone who joins mid-song can sync to the same clock
+        room_push(r, {'type': 'go', 'at': nw['at']})
 
 def force_go(code, token):
     with RLOCK:
@@ -390,7 +421,9 @@ def begin_song(r, item):
     t = threading.Timer(PREP_MAX, force_go, args=(r['code'], id(nw))); t.daemon = True; nw['prep_t'] = t; t.start()
     item = dict(item, mode=mode, singer2=names[1] if len(names) >= 2 else '', singers=names if len(names) >= 2 else [], theme=theme)
     # 'prep': every browser loads lyrics + video first and reports 'loaded'; the countdown ('go') starts when all have
-    room_push(r, {'type': 'start', 'item': item, 'sids': sids, 'seed': random.getrandbits(31), 'at': 0, 'prep': True})
+    smsg = {'type': 'start', 'item': item, 'sids': sids, 'seed': random.getrandbits(31), 'at': 0, 'prep': True}
+    nw['startmsg'] = smsg                            # kept so a late joiner can be offered the running song
+    room_push(r, smsg)
 
 def song_done(r, quiet=False):
     """Called when a singer reports (or leaves). Once every singer is in, publish results and line up the next song."""
@@ -496,6 +529,10 @@ def room_join(code, cid, name, av=None, vis=None, key=None):
             r['clients'][cid]['q'].put({'type': 'chatlog', 'msgs': r['chat'][-40:]})
         if r.get('hist'):
             r['clients'][cid]['q'].put({'type': 'hist', 'hist': r['hist']})
+        nw = r.get('now')
+        if nw and nw.get('startmsg') and r['clients'][cid]['name'] not in nw.get('singers', []):
+            sm = nw['startmsg']   # a song is already running: tell the newcomer, who can press "Watch the karaoke" if they want to see it
+            r['clients'][cid]['q'].put({'type': 'live', 'item': sm['item'], 'sids': sm['sids'], 'seed': sm['seed'], 'at': nw.get('at', 0), 'prep': not nw.get('went')})
         return {'id': cid, 'name': name, 'key': mykey, 'now': int(time.time() * 1000)}
 
 def room_leave(code, cid):
@@ -556,12 +593,27 @@ def room_send(code, cid, typ, data, to=None):
             return None
         elif op == 'mic':
             if data.get('mic') in ('untested', 'tested', 'blocked', 'none', 'error'): me['mic'] = data['mic']
-        elif op == 'skip':         # anyone can unstick a song whose video is blocked or whose singer dropped out
-            if r['now'] or r['ready'] or pick_live(r):
-                was_playing = bool(r['now'])
-                r['now'] = None; r['ready'] = None; r['pick'] = None
-                room_push(r, {'type': 'skip', 'by': me['name'], 'reason': str(data.get('reason') or '')[:160]})
-                if was_playing: schedule_next(r, 3)
+        elif op == 'skip':         # skip for everyone: only the host, or a singer whose song cannot load (no synced lyrics)
+            if skip_cur(r):
+                reason, nw = str(data.get('reason') or '')[:160], r['now']
+                auto = bool(reason) and bool(nw) and me['name'] in nw['singers']
+                host = r.get('host') == cid and data.get('key') and data.get('key') == me.get('key')
+                if auto or host:
+                    do_skip(r, me['name'], reason)
+                else:
+                    return 'Only the host can skip for everyone. Use “Vote to skip” instead.'
+        elif op == 'skipvote':     # everybody else votes; the song is skipped when more than half agree
+            cur = skip_cur(r)
+            if cur:
+                sv = r.get('skipv')
+                if not sv or sv['obj'] is not cur:
+                    sv = r['skipv'] = {'obj': cur, 'ids': set()}
+                if cid in sv['ids']:
+                    sv['ids'].discard(cid)
+                else:
+                    sv['ids'].add(cid)
+                    if not skip_check(r):
+                        room_push(r, {'type': 'notice', 'text': me['name'] + ' voted to skip (' + str(len(skip_votes(r))) + '/' + str(skip_need(r)) + ').'})
         elif op == 'tvote':        # vote for the stage look during the ready check (only when the singer chose "Room votes")
             rd = r['ready']
             if rd and time.time() < rd['until'] and rd['item'].get('theme') == 'vote' and data.get('t') in THEMES_PICK:
