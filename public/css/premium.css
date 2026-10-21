@@ -92,3 +92,17 @@ body.lite::before,body.lite::after,body.lite .curtains,body.lite .vinyl,body.lit
 body.lite .card,body.lite dialog::backdrop,body.lite .top{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 body.lite .card::before{display:none}
 body.lite .mic3d .mglow,body.lite .mic3d .pedestal{filter:none}
+
+/* ===== opening curtains: closed when you arrive, they sweep open and settle into the side drapes ===== */
+.curtain-open{display:none}
+body.home .curtain-open{display:block;position:fixed;inset:0;z-index:2000;pointer-events:none;overflow:hidden;animation:curtainGone .6s ease 3.1s forwards}
+.curtain-open::before{content:"";position:absolute;left:0;right:0;top:0;height:46px;z-index:2;background:linear-gradient(#1b0610 55%,rgba(27,6,16,0));border-bottom:3px solid #d6a84a;box-shadow:0 6px 18px rgba(0,0,0,.55)}
+.curtain-open i{position:absolute;top:0;bottom:0;width:50.4%;background:
+  linear-gradient(180deg,rgba(0,0,0,.5),transparent 22%,transparent 78%,rgba(0,0,0,.4)),
+  repeating-linear-gradient(90deg,#3a0a1c 0 14px,#7a1633 14px 30px,#c02a55 30px 36px,#7a1633 36px 46px);will-change:transform}
+.curtain-open i:first-child{left:0;transform-origin:left center;box-shadow:inset -4px 0 0 #d6a84a,inset -22px 0 30px rgba(0,0,0,.55);animation:curtainL 2.5s cubic-bezier(.7,0,.2,1) .7s forwards}
+.curtain-open i:last-child{right:0;transform-origin:right center;box-shadow:inset 4px 0 0 #d6a84a,inset 22px 0 30px rgba(0,0,0,.55);animation:curtainR 2.5s cubic-bezier(.7,0,.2,1) .7s forwards}
+@keyframes curtainL{0%{transform:scaleX(1) skewX(0)}45%{transform:scaleX(.55) skewX(-3deg)}100%{transform:scaleX(.16) skewX(0)}}
+@keyframes curtainR{0%{transform:scaleX(1) skewX(0)}45%{transform:scaleX(.55) skewX(3deg)}100%{transform:scaleX(.16) skewX(0)}}
+@keyframes curtainGone{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.curtain-open{display:none!important}}
