@@ -30,7 +30,7 @@ function applyPrefs(save = true) {
   document.documentElement.style.setProperty('--fs', prefs.fs);
   document.documentElement.classList.toggle('calm', prefs.calm);
   $('#pFs').value = prefs.fs; $('#pFsV').textContent = Math.round(prefs.fs * 100) + '%';
-  $('#pVol').value = prefs.vol; $('#pVolV').textContent = prefs.vol + '%';
+  $('#sVol').value = prefs.vol; $('#sVolV').textContent = prefs.vol + '%';
   $('#sLive').value = prefs.sens; $('#sLiveV').textContent = Number(prefs.sens).toFixed(1) + '×';
   $('#pSens').value = prefs.sens; $('#pSensV').textContent = Number(prefs.sens).toFixed(1) + '×';
   $('#pDel').value = prefs.delay; $('#pDelV').textContent = Number(prefs.delay).toFixed(2) + 's';
@@ -43,7 +43,7 @@ function applyPrefs(save = true) {
   if (audio) audio.volume = prefs.vol / 100;
   if (save) { try { localStorage.setItem('karaokePrefs', JSON.stringify(prefs)); } catch (e) {} }
 }
-[['pFs', 'fs'], ['pVol', 'vol'], ['pSens', 'sens'], ['sLive', 'sens'], ['pDel', 'delay'], ['pLead', 'lead'], ['pVs', 'vsync']].forEach(([id, k]) => $('#' + id).oninput = e => { prefs[k] = parseFloat(e.target.value); applyPrefs(); });
+[['pFs', 'fs'], ['sVol', 'vol'], ['pSens', 'sens'], ['sLive', 'sens'], ['pDel', 'delay'], ['pLead', 'lead'], ['pVs', 'vsync']].forEach(([id, k]) => $('#' + id).oninput = e => { prefs[k] = parseFloat(e.target.value); applyPrefs(); });
 $('#pCalm').onchange = e => { prefs.calm = e.target.checked; applyPrefs(); };
 $('#pHp').onchange = $('#rdHp').onchange = e => { prefs.hp = e.target.checked; applyPrefs(); };
 $('#pReset').onclick = () => { Object.assign(prefs, { fs: 1, vol: 100, sens: 1, calm: false, delay: 0, lead: 0, vsync: 0, hp: true }); applyPrefs(); };   // the theme is chosen on the home page

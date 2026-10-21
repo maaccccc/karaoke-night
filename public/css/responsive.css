@@ -12,7 +12,7 @@ main{padding-bottom:max(60px,calc(env(safe-area-inset-bottom) + 24px))}
 #chatToast{bottom:max(12px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left))}
 
 /* inline fixed widths on sliders */
-#rvol,#sLive,#spd{width:min(200px,100%)!important;flex:1 1 140px}
+#rvol,#sLive,#spd,#sVol{width:min(200px,100%)!important;flex:1 1 140px}
 input[type=file]{max-width:100%}
 
 /* dialogs and overlays never taller than the screen */

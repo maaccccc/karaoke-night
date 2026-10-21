@@ -5,7 +5,7 @@
   const stage = Q('#stage'), bar = Q('#fsbar'), btn = Q('#fsBtn');
   if (!stage || !bar || !btn) return;
   const moved = [];                                   // [row, placeholder]: where each control came from, so it can go back
-  const pick = ['#tmRow', '#finRow', '#sRow', '#rvRow', '#vcMute'];
+  const pick = ['#tmRow', '#finRow', '#sRow', '#vRow', '#rvRow', '#vcMute'];
   let idleT = 0, wake = null;
   const isFs = () => B.classList.contains('fs');
   const native = () => document.fullscreenElement || document.webkitFullscreenElement;
