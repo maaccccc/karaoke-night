@@ -1,0 +1,73 @@
+/* ---- extra themes: Christmas, Spooky night, Sunset drive, Aurora, Jazz lounge ----
+   Each theme sets the three colours (--pink, --cyan, --gold), the .bg backdrop, and an animated layer (.th-<name>).
+   The layers are created in js/stage-fx.js; the picker buttons are in partials/landing.html. */
+body:not([data-theme="neon"]) .bg i{display:none}
+body[data-theme="xmas"] .th-xmas,body[data-theme="xmas"] .th-xlights,body[data-theme="spooky"] .th-spooky,body[data-theme="sunset"] .th-sunset,
+body[data-theme="aurora"] .th-aurora,body[data-theme="jazz"] .th-jazz{opacity:1}
+
+/* ===== Christmas: snow, a snowy ground, and blinking string lights ===== */
+body[data-theme="xmas"]{--pink:#ff4d5e;--cyan:#7dffb0;--gold:#ffd86b}
+body[data-theme="xmas"] .bg{background:linear-gradient(#0a2a1c,#14402b 58%,#4a0d18)}
+.th-xmas{background:radial-gradient(70% 7vh at 28% 100%,rgba(244,250,255,.95) 60%,transparent 62%),radial-gradient(60% 6vh at 76% 100%,rgba(226,240,252,.9) 60%,transparent 62%)}
+.th-xmas::before,.th-xmas::after{content:"";position:absolute;inset:0}
+.th-xmas::before{background-size:300px 300px;animation:snowA 14s linear infinite;background-image:
+ radial-gradient(4px 4px at 40px 30px,#fff,transparent),radial-gradient(3px 3px at 150px 90px,#fff,transparent),radial-gradient(5px 5px at 250px 20px,#fff,transparent),
+ radial-gradient(3px 3px at 90px 170px,#fff,transparent),radial-gradient(4px 4px at 210px 230px,#fff,transparent),radial-gradient(3px 3px at 20px 270px,#fff,transparent),radial-gradient(4px 4px at 280px 160px,#fff,transparent)}
+.th-xmas::after{background-size:200px 360px;animation:snowB 9s linear infinite;background-image:
+ radial-gradient(2px 2px at 30px 20px,#fff,transparent),radial-gradient(2px 2px at 120px 100px,#e8f3ff,transparent),radial-gradient(2px 2px at 170px 40px,#fff,transparent),
+ radial-gradient(2px 2px at 60px 200px,#fff,transparent),radial-gradient(2px 2px at 150px 300px,#e8f3ff,transparent),radial-gradient(2px 2px at 20px 340px,#fff,transparent),radial-gradient(2px 2px at 180px 250px,#fff,transparent)}
+@keyframes snowA{to{background-position:0 300px}}
+@keyframes snowB{to{background-position:200px 360px}}
+.bg .th.th-xlights{inset:0 0 auto 0;height:52px;background:linear-gradient(#06130d 0 2px,transparent 2px)}
+.th-xlights::before,.th-xlights::after{content:"";position:absolute;inset:0;background-size:112px 52px;background-repeat:repeat-x}
+.th-xlights::before{animation:xblink 1.6s ease-in-out infinite alternate;background-image:
+ radial-gradient(circle 4px at 14px 18px,#ff5b5b 0 70%,transparent 72%),radial-gradient(circle 13px at 14px 18px,rgba(255,60,60,.5),transparent),
+ radial-gradient(circle 4px at 70px 26px,#59b6ff 0 70%,transparent 72%),radial-gradient(circle 13px at 70px 26px,rgba(80,160,255,.5),transparent)}
+.th-xlights::after{animation:xblink 1.6s ease-in-out -.8s infinite alternate;background-image:
+ radial-gradient(circle 4px at 42px 26px,#5dff8a 0 70%,transparent 72%),radial-gradient(circle 13px at 42px 26px,rgba(60,255,120,.5),transparent),
+ radial-gradient(circle 4px at 98px 18px,#ffd86b 0 70%,transparent 72%),radial-gradient(circle 13px at 98px 18px,rgba(255,210,90,.5),transparent)}
+@keyframes xblink{from{opacity:.3}to{opacity:1}}
+body[data-theme="xmas"] .ln.now{filter:drop-shadow(0 0 10px rgba(255,77,94,.75)) drop-shadow(0 0 2px #ffd86b)}
+
+/* ===== Spooky night: full moon, drifting fog, flying bats ===== */
+body[data-theme="spooky"]{--pink:#ff8a1f;--cyan:#b06bff;--gold:#ffc83d}
+body[data-theme="spooky"] .bg{background:radial-gradient(circle at 80% 17%,#fff2c4 0 7vmin,rgba(255,226,150,.35) 7.2vmin 9vmin,transparent 15vmin),linear-gradient(#08040f,#1a0a2b 62%,#3b1140)}
+.th-spooky::before{content:"";position:absolute;left:-20%;right:-20%;bottom:0;height:34%;animation:fog 16s ease-in-out infinite alternate;
+ background:radial-gradient(50% 60% at 25% 80%,rgba(190,160,255,.22),transparent 70%),radial-gradient(45% 55% at 70% 90%,rgba(190,160,255,.18),transparent 70%)}
+.th-spooky::after{content:"🦇          🦇      🦇";white-space:pre;position:absolute;top:10%;left:-30%;font-size:1.8rem;opacity:.8;animation:bats 20s linear infinite}
+@keyframes fog{from{transform:translateX(-6%)}to{transform:translateX(6%)}}
+@keyframes bats{0%{transform:translate(0,0)}50%{transform:translate(70vw,26px)}100%{transform:translate(150vw,-10px)}}
+body[data-theme="spooky"] .ln.now{filter:drop-shadow(0 0 10px rgba(255,138,31,.8))}
+
+/* ===== Sunset drive: retro sun setting over a glowing grid ===== */
+body[data-theme="sunset"]{--pink:#ff5e9c;--cyan:#ffb347;--gold:#ffe66d}
+body[data-theme="sunset"] .bg{background:linear-gradient(#12062e 0,#3b0f6b 28%,#b0286f 55%,#ff6a5e 72%,#ffb347 78%,#14052b 78.2%)}
+.th-sunset{background:linear-gradient(transparent 78%,#14052b 78%)}
+.th-sunset::before{content:"";position:absolute;left:50%;bottom:12%;width:46vmin;height:46vmin;max-width:360px;max-height:360px;transform:translateX(-50%);border-radius:50%;z-index:-1;
+ background:linear-gradient(#ffe66d,#ff5e9c);
+ -webkit-mask-image:linear-gradient(#000 0 52%,transparent 52% 57%,#000 57% 68%,transparent 68% 74%,#000 74% 84%,transparent 84% 91%,#000 91%);
+ mask-image:linear-gradient(#000 0 52%,transparent 52% 57%,#000 57% 68%,transparent 68% 74%,#000 74% 84%,transparent 84% 91%,#000 91%)}
+.th-sunset::after{content:"";position:absolute;left:-50%;right:-50%;bottom:0;height:30%;transform:perspective(380px) rotateX(62deg);transform-origin:bottom;animation:grid 1.6s linear infinite;
+ background:linear-gradient(rgba(255,94,156,.6) 1px,transparent 1px) 0 0/100% 38px,linear-gradient(90deg,rgba(255,94,156,.6) 1px,transparent 1px) 0 0/60px 100%}
+body[data-theme="sunset"] .ln.now{filter:drop-shadow(0 0 12px rgba(255,94,156,.8))}
+
+/* ===== Aurora: slow northern lights over stars ===== */
+body[data-theme="aurora"]{--pink:#7cffcb;--cyan:#a78bfa;--gold:#e0ffb0}
+body[data-theme="aurora"] .bg{background:linear-gradient(#010514,#071a2e 65%,#0b2a2f)}
+.th-aurora{background-size:140% 140%;animation:aurora 16s ease-in-out infinite alternate;background-image:
+ radial-gradient(70% 38% at 25% 28%,rgba(70,255,170,.42),transparent 70%),radial-gradient(60% 34% at 72% 22%,rgba(150,100,255,.38),transparent 70%),radial-gradient(80% 30% at 50% 42%,rgba(50,210,255,.24),transparent 70%)}
+.th-aurora::before{content:"";position:absolute;inset:0;background-size:240px 180px;background-image:
+ radial-gradient(1.5px 1.5px at 30px 40px,#fff,transparent),radial-gradient(1px 1px at 120px 100px,#cfe3ff,transparent),radial-gradient(1.5px 1.5px at 190px 30px,#fff,transparent),radial-gradient(1px 1px at 70px 150px,#fff,transparent)}
+@keyframes aurora{from{background-position:0% 0%}to{background-position:100% 30%}}
+body[data-theme="aurora"] .ln.now{filter:drop-shadow(0 0 12px rgba(124,255,203,.75))}
+
+/* ===== Jazz lounge: warm spotlight and drifting dust ===== */
+body[data-theme="jazz"]{--pink:#ff9f5a;--cyan:#e8c39e;--gold:#ffd27a}
+body[data-theme="jazz"] .bg{background:radial-gradient(70% 60% at 50% 0,rgba(255,170,80,.32),transparent 70%),linear-gradient(#1a0f0a,#0b0605)}
+.th-jazz{background:conic-gradient(from 160deg at 50% -4%,transparent 0deg,rgba(255,214,150,.24) 20deg,transparent 40deg,transparent 360deg)}
+.th-jazz::before{content:"";position:absolute;inset:0;background-size:260px 260px;animation:dust 40s linear infinite;background-image:
+ radial-gradient(2px 2px at 40px 60px,rgba(255,225,170,.8),transparent),radial-gradient(1.5px 1.5px at 150px 180px,rgba(255,225,170,.7),transparent),radial-gradient(2px 2px at 220px 30px,rgba(255,225,170,.8),transparent),radial-gradient(1.5px 1.5px at 90px 230px,rgba(255,225,170,.6),transparent)}
+@keyframes dust{to{background-position:0 -260px}}
+body[data-theme="jazz"] .ln.now{font-family:Georgia,'Times New Roman',serif;font-style:italic;filter:drop-shadow(0 0 10px rgba(255,170,80,.6))}
+
+@media (prefers-reduced-motion:reduce){.th,.th::before,.th::after{animation:none!important}}

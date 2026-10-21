@@ -10,6 +10,7 @@
 body.lite .bg i{filter:none;animation:none;opacity:.6!important}
 body.lite .bgdim{display:none}
 body.lite .th-arcade::before,body.lite .th-stars::before,body.lite .th-stars::after{animation:none}
+body.lite .th,body.lite .th::before,body.lite .th::after{animation:none!important}
 body.lite .eq i{animation:none;transform:scaleY(.55)}
 
 /* glass: no backdrop blur anywhere (it re-blurs the moving background every frame); use solid-ish fills instead */

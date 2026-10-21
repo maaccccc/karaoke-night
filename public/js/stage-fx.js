@@ -1,6 +1,6 @@
 // ---- stage look: themes, bouncing lyrics, dimming lights, singer avatars, crowd energy, combo, confetti
-const THEMES = { neon: 'Neon club', arcade: 'Retro arcade', stars: 'Starry sky' };
-{ const bg = $('.bg'); ['arcade', 'stars'].forEach(k => bg.appendChild(el('b', null, 'th th-' + k))); bg.after(el('div', null, 'bgdim')); }
+const THEMES = { neon: 'Neon club', arcade: 'Retro arcade', stars: 'Starry sky', xmas: 'Christmas', spooky: 'Spooky night', sunset: 'Sunset drive', aurora: 'Aurora', jazz: 'Jazz lounge' };
+{ const bg = $('.bg'); ['arcade', 'stars', 'sunset', 'aurora', 'jazz', 'spooky', 'xmas', 'xlights'].forEach(k => bg.appendChild(el('b', null, 'th th-' + k))); bg.after(el('div', null, 'bgdim')); }
 if (!THEMES[prefs.theme]) prefs.theme = 'neon';      // older saved settings said "song's choice"; there is now one overall theme
 const themeFor = () => THEMES[prefs.theme] ? prefs.theme : 'neon';
 function applyTheme(t) { document.body.dataset.theme = THEMES[t] ? t : 'neon'; renderThemeRow(); }
