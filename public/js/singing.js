@@ -10,6 +10,7 @@ $('#startBtn').onclick = async () => {
   await loadAndRun();
 };
 async function loadAndRun() {
+  stopPreview();      // a search preview must never play over the song
   const s = current.song;
   try {
     const r = await fetch('/api/lyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration }));

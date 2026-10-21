@@ -64,7 +64,7 @@ The singer sees a **Mic level** slider on the singing page (also in Settings). I
 - **Duet:** the lines are shuffled at random between the two singers, with a few sung together, and your mic is only live on your own lines. Each gets their own score, no winner.
 - **Tournament:** you choose who to fight, one person or several (up to 8 in total, or press **Fight everyone**). The lines are shuffled at random and your mic is only live on your lines. Each person is scored only on their own lines, and the highest total (score plus combo bonus) wins a 10-point bonus and a podium. A shared top score is a tie with no bonus.
 - Only the named singer(s) can sing and score a song. Everyone else listens.
-- About 8 seconds after a song ends, the next singer is asked to choose a mode automatically, followed by the ready check and 5 second countdown. If they do not choose within 45 seconds, the start is cancelled. Use **Skip current song** to move on sooner.
+- About 8 seconds after a song ends, the next singer is asked to choose a mode automatically, followed by the ready check and 5 second countdown. If they do not choose within 45 seconds, the start is cancelled. The host can press **Skip for everyone** to move on at once; everybody else presses **Vote to skip**, and the song is skipped when more than half of the room has voted (a singer whose song has no synced lyrics is still skipped automatically).
 - Voice chat in a duet or tournament needs both singers in **headphones**.
 
 ### Looks, reactions and audience stars (rooms)

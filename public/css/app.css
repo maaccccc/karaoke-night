@@ -110,3 +110,4 @@ summary{cursor:pointer;color:var(--mute);margin-top:6px}
 button.mini{padding:2px 10px;font-size:.78rem;border-radius:99px}
 #banList{margin-top:8px}#banList .bn{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:.9rem}
 #liveBar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}#liveBar b{flex:1 1 200px;min-width:0}
+.pvact{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pvbtn.on{box-shadow:0 0 0 2px var(--gold,#ffc83d) inset}.pvwrap{padding:8px 0 12px;border-bottom:1px solid var(--line)}.pvwrap iframe{max-width:100%;border-radius:12px}

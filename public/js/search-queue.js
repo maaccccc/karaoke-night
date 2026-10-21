@@ -8,8 +8,30 @@ function runBadges() {
       .catch(() => bd.remove()).finally(() => { badgeBusy--; runBadges(); });
   }
 }
+// ---- preview a result (a short clip from the middle of the YouTube video) so you know it is the right song before you queue it
+let pvPlayer = null, pvWrap = null, pvBtn = null, pvTimer = 0;
+function stopPreview() {
+  clearTimeout(pvTimer);
+  if (pvPlayer) { try { pvPlayer.destroy(); } catch (e) {} pvPlayer = null; }
+  if (pvWrap) { pvWrap.remove(); pvWrap = null; }
+  if (pvBtn) { pvBtn.textContent = '▶ Preview'; pvBtn.classList.remove('on'); pvBtn = null; }
+}
+async function startPreview(s, btn, row) {
+  const same = pvBtn === btn; stopPreview(); if (same) return;      // pressing the same button again just stops it
+  pvBtn = btn; btn.textContent = '■ Stop'; btn.classList.add('on');
+  const wrap = el('div', null, 'pvwrap'), holder = el('div'); holder.id = 'pvyt'; wrap.appendChild(holder); row.after(wrap); pvWrap = wrap;
+  await loadYT(); if (pvWrap !== wrap) return;                        // stopped while the player was loading
+  const start = Math.max(0, Math.min(45, Math.floor((s.duration || 0) * 0.25)));   // skip the intro
+  pvPlayer = new YT.Player('pvyt', { width: 320, height: 180, videoId: s.videoId,
+    playerVars: { autoplay: 1, start, playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
+    events: {
+      onReady: e => { try { e.target.setVolume(prefs.vol); } catch (x) {} e.target.playVideo(); pvTimer = setTimeout(stopPreview, 30000); },   // a 30 second taste
+      onStateChange: e => { if (e.data === YT.PlayerState.ENDED) stopPreview(); },
+      onError: () => { say('YouTube won’t play this video here, so it can’t be previewed.'); stopPreview(); }
+    } });
+}
 async function search() {
-  const q = $('#q').value.trim(); if (q.length < 2) return; badgeQ.length = 0;
+  const q = $('#q').value.trim(); if (q.length < 2) return; badgeQ.length = 0; stopPreview();
   say('Searching…');
   try {
     const r = await fetch('/api/search?q=' + encodeURIComponent(q));
@@ -27,7 +49,9 @@ async function search() {
       const bd = el('span', 'checking lyrics…', 'bdg'); info.firstChild.appendChild(bd); badgeQ.push([s, bd]); runBadges();
       const add = el('button', room.on ? 'Add to my queue' : 'Add to queue');
       add.onclick = () => { if (room.on) { roomOp({ op: 'qadd', song: { videoId: s.videoId, title: s.title, artist: s.artist, duration: s.duration } }); say('Queued: ' + s.title); return; } queue.push({ song: s, singer: sel.value, file: null }); renderQueue(); say('Queued: ' + s.title); };
-      row.append(...(sel ? [info, sel, add] : [info, add])); box.appendChild(row);
+      const pv = el('button', '▶ Preview', 'ghost pvbtn'); pv.type = 'button'; pv.title = 'Listen to a 30 second clip to check it is the right song'; pv.onclick = () => startPreview(s, pv, row);
+      const acts = el('div', null, 'pvact'); acts.append(pv, add);
+      row.append(...(sel ? [info, sel, acts] : [info, acts])); box.appendChild(row);
     });
     say('Pick a song to add to the queue.');
   } catch (e) { say('Search failed: ' + e.message); }
