@@ -222,7 +222,7 @@ async function runSong() {
   const tick = now => {
     if (!active) { lyShow(0, ''); return; }
     const playing = isPlay(), t = playing ? getT() + offset + tweak() : -1;
-    if (playing && current.song.bpm) { const ph = (((getT() - (current.song.lead || 0)) * current.song.bpm / 60) % 1 + 1) % 1; document.body.style.setProperty('--beat', Math.pow(1 - ph, 3).toFixed(2)); }
+    if (playing && current.song.bpm) { const ph = (((getT() - (current.song.lead || 0)) * current.song.bpm / 60) % 1 + 1) % 1; fxVar('--beat', Math.pow(1 - ph, 3), .05); }
     let idx = -1; for (let i = 0; i < lines.length; i++) if (lines[i].t * scale <= t) idx = i;
     gateTurns(t);
     if (now - clkT > 250) {
@@ -232,7 +232,7 @@ async function runSong() {
         : idx < 0 ? 'Song time ' + fmt(raw) + ' · first lyric line at ' + fmt(Math.max(0, first)) + ' (in ' + Math.max(0, Math.round(first - raw)) + 's)'
         : 'Song time ' + fmt(raw) + ' · line ' + (idx + 1) + ' of ' + lines.length;
     }
-    if (idx >= 0 && playing) { const a = lines[idx].t * scale, gap = lineEnd(idx) - a, est = Math.min(gap * 0.95, Math.max(1, (lines[idx].text || '').length * 0.14)), p = Math.max(0, Math.min(1, (t - a) / Math.max(0.5, est))); const n = $('#l' + idx); if (n) n.style.setProperty('--fill', (p * 100).toFixed(1) + '%'); }
+    if (idx >= 0 && playing) { const a = lines[idx].t * scale, gap = lineEnd(idx) - a, est = Math.min(gap * 0.95, Math.max(1, (lines[idx].text || '').length * 0.14)), p = Math.max(0, Math.min(1, (t - a) / Math.max(0.5, est))); const n = $('#l' + idx), pv = Math.round(p * 200) / 2; if (n && n._pf !== pv) { n._pf = pv; n.style.setProperty('--fill', pv + '%'); } }
     { let cn = 0, cl = '';
       if (!playing) { const toGo = room.on && room.startAt ? room.startAt - (Date.now() + room.skew) : 0; if (toGo > 0 && toGo <= 9000) { cn = Math.ceil(toGo / 1000); cl = 'Song starts in'; } else cl = everPlayed ? 'Waiting for the music…' : 'Song starting…'; }
       else { everPlayed = true; const nx = lines[idx + 1];
@@ -268,7 +268,7 @@ $('#stopBtn').onclick = () => { if (room.on && !isSinger()) leaveSong(); else fi
 
 function finish() {
   if (!active) return; active = false; renderNow();
-  cancelAnimationFrame(raf); stopMedia(); $('#ytcard').classList.remove('show'); drawMeter(0, 0); document.body.style.removeProperty('--beat');
+  cancelAnimationFrame(raf); stopMedia(); $('#ytcard').classList.remove('show'); drawMeter(0, 0); fxVar.reset('--beat');
   if (stream) stream.getTracks().forEach(t => t.stop());
   if (actx) actx.close();
   const hasMic = !!an && S.voiced > 0, parts = compute(lines.length), pts = hasMic ? total(parts) : 0;

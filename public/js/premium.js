@@ -68,7 +68,8 @@
 
   // ===== one loop for everything =====
   let last = performance.now(), ds = [], judged = false;   // localStorage.karaokeLite = '1' forces lite mode, '0' forces the full look, otherwise it is decided automatically
-  try { const f = localStorage.getItem('karaokeLite'); if (f === '1') document.body.classList.add('lite'); if (f === '0' || f === '1') judged = true; } catch (e) {}
+  try { const f = localStorage.getItem('karaokeLite'); if (f === '1') document.body.classList.add('lite'); if (f === '0' || f === '1') judged = true;
+    if (f === null && ((matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) <= 820) || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4)) document.body.classList.add('lite'); } catch (e) {}   // phones and weak devices start in lite mode
   function frame(now) {
     const raw = (now - last) / 1000; const dt = Math.min(.05, raw); last = now;
     if (!judged && now > 2500) { ds.push(raw); if (ds.length >= 40) { judged = true; ds.sort((a, b) => a - b); if (ds[20] > 1 / 26) { document.body.classList.add('lite'); } } }
@@ -85,7 +86,7 @@
       if (!m.mini) { const r = m.root.querySelector('.rpm'); if (Math.abs(m.v) > 240) r.textContent = Math.round(Math.abs(m.v) / 6) + ' RPM'; }
       if (Math.abs(m.v) > 420 && Math.random() < dt * 26 * clamp(Math.abs(m.v) / 1500, .3, 1.5)) { const b = m.root.getBoundingClientRect(); window.fxBurst(b.left + b.width / 2 + (Math.random() - .5) * b.width * .5, b.top + b.height * (m.mini ? .5 : .25), m.mini ? 1 : 3); }
     });
-    drawFx(dt, now); requestAnimationFrame(frame);
+    if (!document.body.classList.contains('lite') && !document.hidden) drawFx(dt, now); requestAnimationFrame(frame);
   }
   // slow housekeeping: theme colours for the dust, calmer background while a song is on stage
   setInterval(() => {

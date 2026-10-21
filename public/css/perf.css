@@ -1,0 +1,31 @@
+/* ===== Performance layer: loaded last. Everything under body.lite is the "smooth mode" used on phones and slow devices. ===== */
+
+/* all devices: keep lyric repaints inside the lyrics box, and move the header equaliser off the layout path */
+#lyrics{contain:layout paint style}
+.ln.now{will-change:transform}
+.eq i{height:30px;transform-origin:50% 100%;animation-name:eqs}
+@keyframes eqs{from{transform:scaleY(.17)}to{transform:scaleY(1)}}
+
+/* background: no blurred rotating beams, no per-frame opacity changes */
+body.lite .bg i{filter:none;animation:none;opacity:.6!important}
+body.lite .bgdim{display:none}
+body.lite .th-arcade::before,body.lite .th-stars::before,body.lite .th-stars::after{animation:none}
+body.lite .eq i{animation:none;transform:scaleY(.55)}
+
+/* glass: no backdrop blur anywhere (it re-blurs the moving background every frame); use solid-ish fills instead */
+body.lite .card{background:rgba(40,22,62,.8);box-shadow:none;transition:none}
+body.lite .top{background:rgba(21,10,34,.95)}
+body.lite #rdy,body.lite #cd,body.lite #pickdlg,body.lite .ovl,body.lite #chatToast{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(10,4,18,.94)}
+body.lite dialog{animation:none;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+body.lite button:not(.ghost){background:linear-gradient(135deg,#ff5aa5,var(--pink) 45%,#a24bff);transition:transform .15s}
+body.lite button.ghost{transition:none}
+
+/* lyrics: the highlighted line repaints every frame, so keep it cheap (no glow layers, no filter, no scroller mask) */
+body.lite #lyrics{-webkit-mask-image:none;mask-image:none}
+body.lite .ln.now,body.lite[data-theme] .ln.now{filter:none!important;text-shadow:none!important;animation:none}
+body.lite .ln.now .o::after{box-shadow:none}
+body.lite #liveScore{text-shadow:none}
+
+/* avatars: no animated glow radius */
+body.lite .avs .big{animation:none;box-shadow:0 0 0 3px rgba(255,255,255,.18),0 0 16px var(--ac,var(--pink))}
+body.lite .cav.hit{animation:none}

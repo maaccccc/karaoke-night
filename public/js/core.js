@@ -42,3 +42,8 @@ async function loadDevices(ask) {
 $('#devBtn').onclick = () => loadDevices(true);
 
 /*ROM_START*/
+
+// Writing a CSS variable on <body> restyles the whole page, so do it only when the value really changed (and never in lite mode).
+const _fv = {};
+function fxVar(name, v, step) { if (document.body.classList.contains('lite')) return; const q = Math.round(v / step) * step; if (_fv[name] !== q) { _fv[name] = q; document.body.style.setProperty(name, q.toFixed(2)); } }
+fxVar.reset = name => { delete _fv[name]; document.body.style.removeProperty(name); };
