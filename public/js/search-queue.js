@@ -54,12 +54,9 @@ function renderQueueMain() {
   queue.forEach((it, i) => {
     const row = el('div', null, 'item');
     const info = el('div'); info.append(el('span', it.song.title + ' (' + whoTxt(it) + (it.mode && it.mode !== 'solo' ? ' · ' + modeName[it.mode] : '') + ')'),
-      el('small', it.file ? 'Using your file: ' + it.file.name : it.song.artist + ' · plays from YouTube (or attach your own audio)'));
-    const file = el('input'); file.type = 'file'; file.accept = 'audio/*'; file.setAttribute('aria-label', 'Own audio for ' + it.song.title);
-    file.onchange = () => { it.file = file.files[0] || null; renderQueue(); };
+      el('small', it.song.artist + ' · plays from YouTube'));
     const rm = el('button', 'Remove', 'ghost'); rm.onclick = () => { if (room.on) roomOp({ op: 'qrm', id: it.id }); else { queue.splice(i, 1); renderQueue(); } };
-    if (room.on) file.style.display = 'none';
-    row.append(info, file, rm); box.appendChild(row);
+    row.append(info, rm); box.appendChild(row);
   });
 }
 $('#saveBtn').onclick = async () => {

@@ -12,11 +12,6 @@ $('#startBtn').onclick = async () => {
 async function loadAndRun() {
   const s = current.song;
   try {
-    if (s.aligned) {      // timed by listening to this exact audio
-      lines = s.aligned.lines.map((text, i) => ({ t: s.aligned.times[i], text }));
-      warn = ' Lyrics were aligned to this audio automatically.'; lyricDur = 0; lyricId = null; autoScale = 1;
-      runSong(); return;
-    }
     const r = await fetch('/api/lyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration }));
     const d = await r.json(); if (!r.ok) throw new Error(d.error);
     lines = parseLrc(d.lrc); if (!lines.length) throw new Error('no timed lyrics found');
@@ -163,49 +158,38 @@ async function runSong() {
   const wrap = $('#ytwrap'); wrap.textContent = '';
   const card = $('#ytcard'); card.classList.add('show');
   (matchMedia('(min-width:1000px)').matches ? $('#sideSlot').parentNode.insertBefore(card, $('#sideSlot')) : $('#ytslot').appendChild(card));
-  if (current.file) {
-    const a = new Audio(URL.createObjectURL(current.file)); audio = a; a.volume = prefs.vol / 100;
-    const oid = $('#outSel').value;
-    if (oid && a.setSinkId) { try { await a.setSinkId(oid); } catch (e) { $('#micNote').textContent += ' Could not use that speaker.'; } }
-    a.onended = () => finish();
-    a.onpause = () => { if (active && !a.ended) a.play().catch(() => {}); };
-    getT = () => a.currentTime; isPlay = () => !a.paused && !a.ended;
-    stopMedia = () => { a.onpause = null; a.pause(); audio = null; };
-    a.play().catch(() => { $('#micNote').textContent = 'The browser blocked the audio. Tap Finish early and try again.'; });
-  } else {
-    await loadYT();
-    if (player) { try { player.destroy(); } catch (e) {} }
-    const holder = el('div'); holder.id = 'yt'; wrap.appendChild(holder);
-    player = new YT.Player('yt', { width: 200, height: 200, videoId: current.song.videoId,
-      playerVars: { autoplay: (room.on && (room.startAt || room.prep)) ? 0 : 1, playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, origin: location.origin },
-      events: {
-        onReady: e => {
-          try { e.target.setVolume(prefs.vol); } catch (x) {}
-          if (room.on && room.prep) {        // load the video silently now, so it starts the instant everyone is ready
-            prebuf = true; try { e.target.mute(); } catch (x) {} e.target.playVideo();
-            setTimeout(() => { if (prebuf) { prebuf = false; try { e.target.unMute(); } catch (x) {} loadedOnce(); } }, 9000);
-          } else if (!(room.on && room.startAt)) e.target.playVideo();
-        },
-        onError: e => { $('#micNote').textContent = 'YouTube won’t play this video here (error ' + e.data + '). Tap Finish early to skip it.'; loadedOnce(); },
-        onStateChange: e => {
-          if (prebuf && e.data === YT.PlayerState.PLAYING) {   // the video really is playable: park it at the start and tell the room we are ready
-            prebuf = false; holding = true; e.target.pauseVideo();
-            try { e.target.seekTo(0, true); e.target.unMute(); } catch (x) {}
-            setTimeout(() => { holding = false; }, 700); loadedOnce(); return;
-          }
-          if (e.data === YT.PlayerState.ENDED) finish(); else if (e.data === YT.PlayerState.PAUSED && active && !holding) e.target.playVideo();
+  await loadYT();
+  if (player) { try { player.destroy(); } catch (e) {} }
+  const holder = el('div'); holder.id = 'yt'; wrap.appendChild(holder);
+  player = new YT.Player('yt', { width: 200, height: 200, videoId: current.song.videoId,
+    playerVars: { autoplay: (room.on && (room.startAt || room.prep)) ? 0 : 1, playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, origin: location.origin },
+    events: {
+      onReady: e => {
+        try { e.target.setVolume(prefs.vol); } catch (x) {}
+        if (room.on && room.prep) {        // load the video silently now, so it starts the instant everyone is ready
+          prebuf = true; try { e.target.mute(); } catch (x) {} e.target.playVideo();
+          setTimeout(() => { if (prebuf) { prebuf = false; try { e.target.unMute(); } catch (x) {} loadedOnce(); } }, 9000);
+        } else if (!(room.on && room.startAt)) e.target.playVideo();
+      },
+      onError: e => { $('#micNote').textContent = 'YouTube won’t play this video here (error ' + e.data + '). Tap Finish early to skip it.'; loadedOnce(); },
+      onStateChange: e => {
+        if (prebuf && e.data === YT.PlayerState.PLAYING) {   // the video really is playable: park it at the start and tell the room we are ready
+          prebuf = false; holding = true; e.target.pauseVideo();
+          try { e.target.seekTo(0, true); e.target.unMute(); } catch (x) {}
+          setTimeout(() => { holding = false; }, 700); loadedOnce(); return;
         }
-      } });
-    getT = () => player.getCurrentTime();
-    isPlay = () => !!(player && player.getPlayerState && player.getPlayerState() === 1);
-    stopMedia = () => { if (player) { try { player.destroy(); } catch (e) {} player = null; } };
-    if (room.on && room.startAt) startSync();
-    if (room.on) { clearInterval(latIv); latIv = setInterval(() => { if (!active) clearInterval(latIv); else measureLatency(); }, 2000); }
-    setTimeout(() => {
-      const st = player && player.getPlayerState ? player.getPlayerState() : -1;
-      if (active && (!room.on || room.startAt) && st !== 1 && st !== 3) $('#micNote').textContent = 'The video isn’t playing. Use Chrome, Edge, or Brave, or tap Finish early to skip.';
-    }, 8000 + (room.on && room.startAt ? Math.max(0, room.startAt - (Date.now() + room.skew)) : 0));
-  }
+        if (e.data === YT.PlayerState.ENDED) finish(); else if (e.data === YT.PlayerState.PAUSED && active && !holding) e.target.playVideo();
+      }
+    } });
+  getT = () => player.getCurrentTime();
+  isPlay = () => !!(player && player.getPlayerState && player.getPlayerState() === 1);
+  stopMedia = () => { if (player) { try { player.destroy(); } catch (e) {} player = null; } };
+  if (room.on && room.startAt) startSync();
+  if (room.on) { clearInterval(latIv); latIv = setInterval(() => { if (!active) clearInterval(latIv); else measureLatency(); }, 2000); }
+  setTimeout(() => {
+    const st = player && player.getPlayerState ? player.getPlayerState() : -1;
+    if (active && (!room.on || room.startAt) && st !== 1 && st !== 3) $('#micNote').textContent = 'The video isn’t playing. Use Chrome, Edge, or Brave, or tap Finish early to skip.';
+  }, 8000 + (room.on && room.startAt ? Math.max(0, room.startAt - (Date.now() + room.skew)) : 0));
 
   const endT = () => lines[lines.length - 1].t * scale + 8, fb = new Float32Array(2048);
   const lineEnd = i => Math.min(lines[i + 1] ? lines[i + 1].t * scale : lines[i].t * scale + 4, lines[i].t * scale + 6);

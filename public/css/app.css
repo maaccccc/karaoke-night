@@ -16,7 +16,7 @@
 #rdy .box,#cd .box{width:min(440px,94vw);text-align:center;background:#1c0e2c;border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 20px 80px rgba(0,0,0,.6)}
 #cdNum{font:400 8rem/1 Bungee,Impact,sans-serif;color:var(--gold);text-shadow:0 0 30px rgba(255,200,61,.6),0 0 60px var(--pink);margin:8px 0}
 #rdy h2{margin-top:0}
-body.inroom #cSingers,body.inroom #cImport,body.inroom #saveBtn{display:none}
+body.inroom #cSingers,body.inroom #saveBtn{display:none}
 .av{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;font-size:1.05rem;flex:none}
 .pk{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.pk button{padding:2px 8px;font-size:1.15rem;border-radius:10px}.pk button.on{outline:2px solid var(--gold)}.pk i{width:24px;height:24px;border-radius:50%;cursor:pointer;display:inline-block}.pk i.on{outline:2px solid #fff;outline-offset:2px}
 #reactBar{display:none;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0}body.aud #reactBar{display:flex}#reactBar button{font-size:1.5rem;padding:6px 14px;border-radius:99px}

@@ -30,15 +30,7 @@ Keep `oauth.json` private; it gives access to your account.
 ## Syncing lyrics accurately
 - **Mark buttons (any song):** click a lyric line, press **Mark picked line** the moment you hear it start, then mark a second line near the end. The app fixes the shift and the stretch. Your result is remembered for that song.
 - **Preferences:** *Audio delay* compensates for Bluetooth and other late audio. *Show lines early* highlights each line a little before it is sung.
-- **Auto-align (imported files only):** the server listens to the song and times each lyric line, which also works for Korean and Japanese.
 
-### Auto-align setup (optional)
-1. Install ffmpeg. On Windows: `winget install Gyan.FFmpeg`, then open a new terminal.
-2. Install the aligner: `py -m pip install -r requirements-align.txt`. This pulls in PyTorch and Whisper, which are large.
-3. Restart `server.py`. In the import list, press **Auto-align lyrics** on a song (paste your own lyrics first if the lookup has none).
-
-The first run downloads a speech model (about 140 MB). Expect around a minute or more per song on a normal PC. Set `WHISPER_MODEL=small` for better accuracy, slower.
-If pip cannot install PyTorch, your Python version may be too new for it. Install Python 3.12 or 3.13 and run `py -3.12 -m pip install ...` and `py -3.12 server.py`.
 
 ## Online rooms (friends in different places)
 Everyone opens the same link, enters a name, and joins the same room code. The queue and scoreboard are shared, the song starts for everyone at the same moment (after a 5 second countdown), and the singer's microphone is streamed live to everyone else.
@@ -51,7 +43,7 @@ Notes:
 - Singers should wear **headphones**, or friends will hear the song twice (once from YouTube, once leaking into the mic).
 - Each person's browser plays the YouTube video itself, so listeners can be about a second out of step with the singer. Listeners can lower or raise "Singer voice" on the singing page.
 - Voice goes directly between browsers (WebRTC) using a public STUN server. A few strict networks (some school or office Wi-Fi, some mobile carriers) block this and would need a TURN server.
-- Room data is kept in memory and is lost when the server restarts. Imported local audio files and "Save playlist" are for solo mode only.
+- Room data is kept in memory and is lost when the server restarts. "Save playlist" is for solo mode only.
 
 ### Ready check and countdown (rooms only)
 After the singer has chosen the mode, pressing **Start the next song** in a room asks everyone "Are you ready?". The song begins, with a 5 second on-screen countdown, once every person has pressed **I'm ready!**. Anyone can press **Not yet** to cancel, and the check cancels itself after 30 seconds.
@@ -97,7 +89,7 @@ The voice list under **Join voice chat** shows each person as connected (✓), c
 ## Fair queue, stage looks, awards and end of night
 - **Fair queue:** people take turns. Whoever sang longest ago (or never) goes next, and each person's own songs stay in the order they added them, so one person queuing five songs does not block everyone else. The queue list shows the real play order. This works in rooms and on one shared device.
 - **Themes:** Neon club, Retro arcade and Starry sky, each with its own background and lyric glow. Pick one on the **home page** (the Theme card). It changes the look of the whole site, on every page and while you sing, and it is remembered on this browser. Each person uses their own theme, so friends in a room can have different ones.
-- **Lyric styling:** words fill as they are sung and bounce a little on strong beats. For imported songs the beat comes from the measured tempo. For YouTube songs the app cannot hear the music, so the bounce follows the loudest moments of the singing instead. The stage lights dim in quiet moments (instrumental gaps and soft singing). **Reduce motion** turns both off.
+- **Lyric styling:** words fill as they are sung and bounce a little on strong beats. The app cannot hear the YouTube music, so the bounce follows the loudest moments of the singing instead. The stage lights dim in quiet moments (instrumental gaps and soft singing). **Reduce motion** turns both off.
 - **Avatars on stage:** the singer's emoji is shown large and glows and pulses with the voice. In duets and tournaments, the emoji of whoever owns the current line lights up. Listeners appear as a row of emoji under the lyrics, and their reactions float up from their own emoji. A **Crowd energy** meter fills with reactions and chat.
 - **Combo:** every line you sing well in a row builds a combo. Your best streak gives up to 10 bonus points, shown on the result card.
 - **Awards:** after each song, funny titles such as Pitch Perfect, Loudest Voice, Always Early, Non-Stop Singer, Combo Machine and Crowd Favourite are picked from your score breakdown, combo, audience stars and reactions.

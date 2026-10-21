@@ -54,8 +54,7 @@
     <div class="grp"><label for="pFs">Lyrics size <b id="pFsV">100%</b></label><input type="range" id="pFs" min="0.8" max="1.8" step="0.05" value="1"></div>
     <div class="grp"><label for="pSens">Mic sensitivity <b id="pSensV">1.0×</b></label><input type="range" id="pSens" min="0.5" max="4" step="0.1" value="1"><p class="note">Raise it if the volume meter barely moves. In a room, friends hear the change live while you sing.</p></div>
     <div class="grp"><label for="micSel">Microphone (input)</label><select id="micSel"><option value="">Default microphone</option></select></div>
-    <div class="grp"><label for="outSel">Speakers (output)</label><select id="outSel"><option value="">Default speakers</option></select>
-      <p class="note">Speaker choice works for songs where you attach your own audio file. YouTube audio uses your system output (Windows: Settings, System, Sound, Volume mixer).</p></div>
+    <select id="outSel" hidden aria-hidden="true"><option value="">Default speakers</option></select>
     <div class="grp"><label for="pDel">Audio delay <b id="pDelV">0.00s</b></label><input type="range" id="pDel" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">Bluetooth speakers and some devices play sound late. Raise this until the lyrics match what you hear.</p></div>
     <div class="grp"><label for="pVs">Voice sync (when listening) <b id="pVsV">0.00s</b></label><input type="range" id="pVs" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">When you listen to someone sing, the app holds the music back a little so their voice, the music and the lyrics line up. Nudge this if their voice still feels early or late.</p></div>
     <div class="grp"><label for="pLead">Show lines early <b id="pLeadV">0.00s</b></label><input type="range" id="pLead" min="0" max="1" step="0.05" value="0"><p class="note">Highlights each line a little before it is sung, so there is time to read it.</p></div>

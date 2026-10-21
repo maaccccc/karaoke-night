@@ -57,7 +57,7 @@ function fxTick(now, t, idx, playing, lvl) {
   if (idx >= 0 && !(room.on && !isSinger()) && an) comboTick(idx);
   fx.vl += ((lvl >= 0 ? Math.min(1, lvl * 1.4) : 0) - fx.vl) * .3; avUpdate(idx, playing);
   if (prefs.calm) { if (fx.lights !== 1) { fx.lights = 1; fxVar.reset('--lights'); } return; }
-  // bounce on strong beats: the tempo for imported songs, otherwise the loudest moments of the singing
+  // bounce on strong beats: the song tempo when it is known, otherwise the loudest moments of the singing
   let hit = 0;
   if (playing && current.song.bpm) { const bt = (getT() - (current.song.lead || 0)) * current.song.bpm / 60, bi = Math.floor(bt); if (bt >= 0 && bi !== fx.lastBeat) { fx.lastBeat = bi; hit = bi % 4 === 0 ? 1 : .5; } }
   else if (lvl >= 0 && lvl - fx.prev > .16 && lvl > .25 && now - fx.lastB > 220) hit = Math.min(1, .5 + lvl);

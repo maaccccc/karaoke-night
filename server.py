@@ -1,7 +1,7 @@
 """Karaoke Night server: YouTube Music search (ytmusicapi) + timed lyrics (LRCLIB).
 Run: pip install -r requirements.txt && python server.py
 """
-import importlib.util, json, os, queue as _queue, random, re, shutil, tempfile, threading, time, urllib.request, urllib.parse
+import json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from ytmusicapi import YTMusic
 
@@ -211,60 +211,6 @@ def romanize_lines(lines):
         r = _tidy(r) if r else None
         out.append(r if r and r != t else None)
     return out, sorted(missing)
-
-# ---- Auto-align: listen to a song and time each lyric line (optional, needs stable-ts + ffmpeg)
-JOBS, _model, _lock = {}, {}, threading.Lock()
-
-def guess_lang(text):
-    for pat, lang in ((r'[\uAC00-\uD7A3]', 'ko'), (r'[\u3040-\u30FF]', 'ja'), (r'[\u4E00-\u9FFF]', 'zh'), (r'[\u0400-\u04FF]', 'ru')):
-        if re.search(pat, text):
-            return lang
-    return 'en'
-
-def run_align(job, lines):
-    j = JOBS[job]
-    try:
-        with _lock:                       # one song at a time
-            import stable_whisper
-            if 'm' not in _model:
-                j.update(state='running', message='Loading the speech model (the first run downloads it)…')
-                _model['m'] = stable_whisper.load_model(os.getenv('WHISPER_MODEL', 'base'))
-            j.update(state='running', message='Listening to the song…')
-            text = '\n'.join(lines)
-            res = _model['m'].align(j['path'], text, language=guess_lang(text), original_split=True)
-        segs = list(res.segments)
-        if len(segs) == len(lines):
-            times = [float(s.start) for s in segs]
-        else:                             # fall back to word times, split by character count
-            words = [w for s in segs for w in s.words]
-            if not words:
-                raise RuntimeError('No singing was found in the audio.')
-            lc = [len(re.sub(r'\s+', '', l)) for l in lines]; ltot = sum(lc) or 1
-            wc = [len(re.sub(r'\s+', '', w.word)) for w in words]; wtot = sum(wc) or 1
-            times, before, acc, wi = [], 0, 0, 0
-            for c in lc:
-                target = before / ltot * wtot
-                while wi < len(words) - 1 and acc + wc[wi] <= target:
-                    acc += wc[wi]; wi += 1
-                times.append(float(words[wi].start)); before += c
-        for i in range(1, len(times)):
-            times[i] = max(times[i], times[i - 1])
-        j.update(state='done', times=[round(x, 2) for x in times], message='Done')
-    except Exception as e:
-        j.update(state='error', message=str(e))
-    finally:
-        shutil.rmtree(os.path.dirname(j['path']), ignore_errors=True)
-
-def start_align(data):
-    if importlib.util.find_spec('stable_whisper') is None:
-        return 501, {'error': 'Auto-align needs the stable-ts package and ffmpeg. See the README, section "Auto-align".'}
-    job = re.sub(r'[^A-Za-z0-9]', '', str(data.get('job', '')))[:40]
-    lines = [str(l).strip() for l in data.get('lines', []) if str(l).strip()][:400]
-    if job not in JOBS or not lines:
-        return 400, {'error': 'Upload the audio first and provide the lyrics.'}
-    JOBS[job].update(state='running', message='Starting…')
-    threading.Thread(target=run_align, args=(job, lines), daemon=True).start()
-    return 200, {'ok': True}
 
 # ---- Online rooms: shared queue/scoreboard + relay for live voice (WebRTC signalling).
 # Uses long-polling (plain HTTP), so it works through any tunnel or host. State lives in memory.
@@ -806,6 +752,8 @@ def rooms_list():
     out.sort(key=lambda x: (not x['public'], -x['n']))
     return out[:30]
 
+MAX_BODY = 1_000_000   # bytes: the largest request body the server will read
+
 class Handler(BaseHTTPRequestHandler):
     def send_json(self, code, obj):
         body = json.dumps(obj).encode()
@@ -836,9 +784,6 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/room/poll':
                 msgs = room_poll(clean_code(q.get('room', [''])[0]), clean_id(q.get('id', [''])[0]))
                 return self.send_json(410, {'error': 'gone'}) if msgs is None else self.send_json(200, {'msgs': msgs})
-            if u.path == '/api/align/status':
-                j = JOBS.get(q.get('job', [''])[0])
-                return self.send_json(200, {k: v for k, v in j.items() if k != 'path'} if j else {'state': 'unknown', 'message': 'Unknown job'})
             if u.path == '/api/haslyrics':
                 g = lambda k: q.get(k, [''])[0]
                 return self.send_json(200, {'has': has_lyrics(g('title'), g('artist'), float(g('duration') or 0))})
@@ -878,21 +823,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             u = urllib.parse.urlparse(self.path); q = urllib.parse.parse_qs(u.query)
             n = int(self.headers.get('Content-Length', 0))
-            if u.path == '/api/align/upload':        # raw audio bytes
-                job = re.sub(r'[^A-Za-z0-9]', '', q.get('job', [''])[0])[:40]
-                ext = re.sub(r'[^A-Za-z0-9]', '', q.get('ext', ['mp3'])[0])[:5] or 'mp3'
-                if not job or n <= 0 or n > 300_000_000:
-                    raise RuntimeError('Bad upload (files up to 300 MB).')
-                fp = os.path.join(tempfile.mkdtemp(prefix='karaoke_'), 'song.' + ext)
-                left = n
-                with open(fp, 'wb') as f:
-                    while left > 0:
-                        chunk = self.rfile.read(min(1 << 20, left))
-                        if not chunk:
-                            break
-                        f.write(chunk); left -= len(chunk)
-                JOBS[job] = {'state': 'uploaded', 'path': fp, 'message': 'Uploaded'}
-                return self.send_json(200, {'ok': True})
+            if n < 0 or n > MAX_BODY:       # every POST is small JSON; refuse anything bigger before reading it
+                return self.send_json(413, {'error': 'Request too large.'})
             data = json.loads(self.rfile.read(n) or b'{}')
             if u.path == '/api/online':
                 return self.send_json(200, online_stats(clean_id(data.get('id')), bool(data.get('leave'))))
@@ -914,9 +846,6 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/romanize':
                 rl, miss = romanize_lines(data.get('lines') if isinstance(data.get('lines'), list) else [])
                 return self.send_json(200, {'lines': rl, 'missing': miss, 'japanese': _ja_name})
-            if u.path == '/api/align/start':
-                code, obj = start_align(data)
-                return self.send_json(code, obj)
             if u.path == '/api/playlist':
                 ids = [i for i in data.get('videoIds', []) if isinstance(i, str)]
                 if not ids:
