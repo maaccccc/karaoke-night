@@ -4,6 +4,7 @@ Run: pip install -r requirements.txt && python server.py
 import json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from ytmusicapi import YTMusic
+from wordfilter import is_blocked
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PUB = os.path.join(HERE, 'public')
@@ -221,6 +222,10 @@ STALE = 45   # seconds without polling before someone counts as gone
 def clean_code(s): return re.sub(r'[^A-Za-z0-9]', '', str(s or '')).upper()[:12]
 def clean_id(s): return re.sub(r'[^A-Za-z0-9]', '', str(s or ''))[:24]
 def clean_name(s): return re.sub(r'\s+', ' ', str(s or '')).strip()[:20] or 'Singer'
+def check_name(s):
+    if is_blocked(s): raise RuntimeError("That name isn't allowed. Please pick a different one.")
+def check_text(s):
+    if is_blocked(s): raise RuntimeError("That message contains hateful language, so it wasn't sent.")
 
 PICK_SECS = 45   # how long the singer has to choose Solo / Duet / Tournament
 
@@ -559,6 +564,7 @@ def room_send(code, cid, typ, data, to=None):
             now = time.time()
             if not text or now - me.get('ct', 0) < 0.5:
                 return None
+            check_text(text)
             me['ct'] = now
             m = {'type': 'chat', 'from': me['name'], 'av': me.get('av'), 'text': text, 'at': int(now * 1000)}
             r['chat'] = (r.get('chat') or [])[-59:] + [m]
@@ -708,6 +714,7 @@ def gchat_post(cid, name, av, text):
     text = re.sub(r'[\x00-\x1f\x7f]+', ' ', str(text or '')).strip()[:200]
     if not text or not cid:
         return None
+    check_name(name); check_text(text)
     now = time.time()
     with GCOND:
         if now - GLAST.get(cid, 0) < GGAP:
@@ -835,6 +842,8 @@ class Handler(BaseHTTPRequestHandler):
                 code, cid = clean_code(data.get('room')), clean_id(data.get('id'))
                 if not code or not cid:
                     raise RuntimeError('Enter a room code.')
+                check_name(data.get('name'))
+                if data.get('vis') == 'public' and is_blocked(code): raise RuntimeError("That room code isn't allowed.")
                 return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis')))
             if u.path == '/api/room/leave':
                 room_leave(clean_code(data.get('room')), clean_id(data.get('id')))
