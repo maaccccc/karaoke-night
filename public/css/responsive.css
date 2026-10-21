@@ -1,0 +1,173 @@
+/* ===== Responsive layer: loaded last, only overrides sizing/layout for phones, tablets and short screens ===== */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh}
+img,svg,video,iframe,canvas{max-width:100%}
+
+/* safe areas (notches, home bar) */
+.top{padding-top:max(10px,env(safe-area-inset-top));padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
+.layout{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
+main{padding-bottom:max(60px,calc(env(safe-area-inset-bottom) + 24px))}
+#joinToasts{padding-top:max(14px,env(safe-area-inset-top))}
+#rxl{height:100vh;height:100dvh}
+#chatToast{bottom:max(12px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left))}
+
+/* inline fixed widths on sliders */
+#rvol,#sLive,#spd{width:min(200px,100%)!important;flex:1 1 140px}
+input[type=file]{max-width:100%}
+
+/* dialogs and overlays never taller than the screen */
+dialog{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto}
+#rdy .box,#pickdlg .box,.ovl .box{max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto}
+#pkPartners{max-height:34vh;max-height:34dvh}
+#rate{max-width:100%}
+
+/* touch devices: bigger targets, no hover lift, no iOS zoom on focus */
+@media (hover:none){
+  button:hover{transform:none}
+  .lfeat .card:hover,#side .card:hover{transform:none}
+}
+@media (pointer:coarse){
+  button,.icon,button.icon{min-height:44px}
+  button.mini{min-height:36px;min-width:36px}
+  .stars button,#reactBar button{min-height:44px;min-width:44px}
+  input,select,textarea{font-size:max(16px,1rem)}
+  input[type=range]{height:32px}
+  .pk button{min-width:40px;min-height:40px}
+  .pk i{width:32px;height:32px}
+}
+
+/* tablets in landscape: slightly narrower side panel so the stage keeps room */
+@media (min-width:1000px) and (max-width:1199px){
+  .layout{grid-template-columns:minmax(0,1fr) 320px;gap:18px}
+}
+@media (min-width:1000px){
+  #side{height:calc(100vh - 92px);height:calc(100dvh - 92px)}
+}
+
+/* tablets and below: side panel is a drawer */
+@media (max-width:999px){
+  #side{height:100vh;height:100dvh;padding-top:max(14px,env(safe-area-inset-top));padding-bottom:max(14px,env(safe-area-inset-bottom));padding-right:max(14px,env(safe-area-inset-right));overscroll-behavior:contain}
+  #chat{height:clamp(220px,40dvh,400px)}
+  #lyrics{height:clamp(280px,50vh,520px);height:clamp(280px,50dvh,520px)}
+}
+
+/* phones */
+@media (max-width:640px){
+  .top{flex-wrap:wrap;gap:8px;padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left))}
+  .top h1{font-size:1.25rem;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top .eq,.top .grow{display:none}
+  .top button.icon{padding:6px 8px;font-size:.8rem;flex:1 1 28%;justify-content:center;text-align:center;white-space:nowrap}
+  .top #sideToggle{flex:none;order:1;padding:6px 12px}
+  .top h1{order:0}
+  .top button.icon:not(#sideToggle){order:2}
+  .layout{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right));gap:12px}
+  main{padding-top:12px}
+  .card{padding:14px;margin-bottom:12px}
+  h2{font-size:1.02rem}
+
+  /* stage */
+  #lyrics{height:clamp(240px,46vh,420px);height:clamp(240px,46dvh,420px)}
+  .ln{font-size:calc(1.02rem*var(--fs,1));padding:7px 0}
+  .ln.now{font-size:calc(1.4rem*var(--fs,1))}
+  #liveScore{font-size:2.1rem}
+  #nowRow{gap:8px}
+  #nowRow h2{flex:1 1 100%;font-size:1rem}
+  #avStage{gap:12px;min-height:96px}
+  .avs .big{width:70px;height:70px;font-size:2.5rem}
+  #crowdTxt{min-width:70px}
+  .cmeter{flex-wrap:wrap}
+  #tmRow button,#tmRow .ghost{flex:1 1 auto}
+  #stage .row{gap:6px}
+  #stage .row>label{flex:1 1 100%}
+  #stage select{width:100%}
+  #reactBar{gap:6px}
+  #reactBar button{padding:6px 12px}
+
+  /* score card, podium, dialogs */
+  .ring{width:min(190px,58vw)}
+  .ring b{font-size:2.8rem}
+  .bk{grid-template-columns:76px 1fr 46px;font-size:.82rem}
+  .pod{min-height:200px;gap:6px}
+  .pcol .pav{width:48px;height:48px;font-size:1.6rem}
+  #cdNum{font-size:clamp(5rem,32vw,8rem)}
+  #rdy .box,#cd .box,#pickdlg .box,.ovl .box{padding:18px 14px;border-radius:18px}
+  dialog{padding:16px;border-radius:20px}
+  .grp label{flex-wrap:wrap}
+  .mbtns button{flex:1 1 100%}
+
+  /* landing */
+  #landing{padding:20px 12px max(40px,calc(env(safe-area-inset-bottom) + 20px))}
+  .lbar{margin:0 0 6px}
+  .lhero{margin-bottom:20px}
+  .lhero .tag{margin-top:10px}
+  .lgrid{gap:14px}
+  .lbtn{padding:12px 14px}
+  #cStart .lbtn .ic{width:40px;height:40px}
+  #cStart .ljoin{flex-wrap:wrap}
+  #cStart .ljoin input{flex:1 1 140px}
+  #cStart .ljoin button{flex:1 1 100%}
+  .thgrid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .thsw{height:48px}
+  .lfeat{grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
+  .lsteps{flex-direction:column;align-items:flex-start;gap:8px}
+  .odiv{margin:14px 0 10px}
+  #gLog{height:clamp(180px,34dvh,300px)}
+  .item{gap:6px}
+  .row>input{min-width:0;flex:1 1 140px}
+}
+
+/* very small phones */
+@media (max-width:360px){
+  .top h1{font-size:1.05rem}
+  .top button.icon{padding:6px 8px;font-size:.75rem}
+  .ln.now{font-size:calc(1.25rem*var(--fs,1))}
+  .bk{grid-template-columns:64px 1fr 40px}
+  .rrow{padding:10px}
+  .rav{width:38px;height:38px}
+}
+
+/* phones/tablets held sideways: very little height, so give the lyrics most of it */
+@media (max-height:520px) and (orientation:landscape){
+  .top{padding-top:max(4px,env(safe-area-inset-top));padding-bottom:4px}
+  .top h1{font-size:1.2rem}
+  .top button.icon{min-height:36px;padding:4px 10px}
+  #lyrics{height:clamp(150px,52vh,320px);height:clamp(150px,52dvh,320px)}
+  #lyrics::before,#lyrics::after{height:30%}
+  .ln{padding:4px 0}
+  #avStage{min-height:70px}
+  .avs .big{width:54px;height:54px;font-size:1.9rem}
+  #side{width:min(340px,60vw)}
+  #landing{padding-top:16px}
+  .mic3d.hero,.vinyl,.discoball{display:none!important}
+  .ring{width:120px}
+  .ring b{font-size:2rem}
+  #cdNum{font-size:4.5rem}
+}
+
+/* fullscreen lyrics on short screens (phone landscape): the old 244px bottom padding left no room for lyrics */
+@media (max-height:520px){
+  body.fs #stage:not([style*="none"]){padding-bottom:64px}
+  body.fs #stage>#fsbar{flex-wrap:nowrap;overflow-x:auto;left:10px;right:10px;bottom:max(8px,env(safe-area-inset-bottom));transform:none;width:auto;max-width:none;justify-content:flex-start;-webkit-overflow-scrolling:touch}
+  body.fs #stage>#fsbar>*{flex:none}
+  body.fs #stage>#avStage{display:none}
+  body.fs #stage>#nowRow{max-width:calc(100% - 140px)}
+  body.fs #side,body.fs #stage>#ytslot{width:120px;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right))}
+  body.fs #ytwrap{width:120px;min-width:120px;min-height:120px}
+  body.fs .ln{font-size:calc(clamp(1rem,3.4vw,1.6rem)*var(--fs,1));padding:3px 0}
+  body.fs .ln.now{font-size:calc(clamp(1.5rem,5.4vw,2.6rem)*var(--fs,1))}
+  body.fs #stage>.live{display:none}
+}
+/* fullscreen on portrait phones: keep controls compact */
+@media (max-width:640px) and (min-height:521px){
+  body.fs #stage>#fsbar{max-height:38vh;overflow-y:auto;padding:6px 8px}
+  body.fs #stage:not([style*="none"]){padding-bottom:200px}
+  body.fs #stage>#reactBar{right:8px}
+  body.fs #fsbar input[type=range]{width:90px!important}
+}
+
+/* large screens / TVs: use the space */
+@media (min-width:1900px){
+  #lyrics{height:clamp(420px,56vh,760px)}
+  .ln{font-size:calc(1.45rem*var(--fs,1))}
+  .ln.now{font-size:calc(2.2rem*var(--fs,1))}
+}
