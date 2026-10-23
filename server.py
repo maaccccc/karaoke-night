@@ -102,6 +102,74 @@ def lyric_versions(title, artist, duration):
     return [{'id': x['id'], 'title': x.get('trackName') or '', 'artist': x.get('artistName') or '',
              'duration': x.get('duration') or 0, 'diff': (x.get('duration') or 0) - duration} for x in ranked[:8]]
 
+# ---- karaoke (instrumental) versions: the backing-track video that plays instead of the original recording.
+# The LYRICS are always looked up with the ORIGINAL song's title/artist/length (see /api/lyrics). Only the video that
+# plays changes. To keep the lyric timing right, candidates are ranked by how close their length is to the song the
+# lyrics were timed against, so the best pick is the one most likely to line up with no adjustment.
+KARA_WORDS = re.compile(r'karaoke|instrumental|backing track|no vocals?|without vocals?|off[- ]?vocal|minus one|sing[- ]?along', re.I)
+KARA_BAD = re.compile(r'guide vocals?|with (?:lead )?vocals?|original vocals?|\bcover\b|reaction|tutorial|lesson|slowed|sped up|nightcore|8d audio|\bremix\b|\bmashup\b|\bmedley\b|\blive\b|\bacoustic\b', re.I)
+KARA_CHANNELS = ('sing king', 'karafun', 'karaoke version', 'zoom karaoke', 'stingray karaoke', 'karaoke channel', 'sunfly', 'singsnap', 'party tyme', 'karaoke hits', 'pro karaoke', 'vocal star')
+KARA = {}
+
+def rank_karaoke(results, title, artist, refs):
+    """Pure ranking step (no network): filter + sort YouTube video results into karaoke candidates, best first.
+    refs = lengths (seconds) of the recordings the lyrics may be timed to (the original song and the LRCLIB version)."""
+    tk = {k for k in title_keys(title) if len(k) >= 2}
+    a = norm((artist or '').split(',')[0])
+    refs = [x for x in refs if x]
+    out, seen = [], set()
+    for r in results:
+        vid, t = r.get('videoId'), r.get('title') or ''
+        dur = r.get('duration_seconds') or 0
+        if not vid or vid in seen or not dur or not KARA_WORDS.search(t):
+            continue
+        nt = norm(t)
+        if not any(k in nt for k in tk):          # must really be this song
+            continue
+        chan = ', '.join(x.get('name', '') for x in (r.get('artists') or []) if isinstance(x, dict))
+        diff = min((abs(dur - x) for x in refs), default=0)
+        if refs and diff > 30:                    # a different arrangement or an extended mix: it could never line up
+            continue
+        seen.add(vid)
+        bad = bool(KARA_BAD.search(t))
+        trusted = any(c in chan.lower() for c in KARA_CHANNELS)
+        am = bool(a) and (a in nt or a in norm(chan))
+        out.append(((bad, int(diff // 3), not trusted, not am, diff), {
+            'videoId': vid, 'title': t[:200], 'channel': chan[:80], 'duration': dur, 'diff': round(diff, 1)}))
+    out.sort(key=lambda x: x[0])
+    return [x[1] for x in out]
+
+def find_karaoke(title, artist, duration):
+    k = (norm(title), norm(artist), int(duration or 0))
+    hit = KARA.get(k)
+    if hit and time.time() - hit[1] < (3600 if hit[0] else 300):
+        return hit[0]
+    refs = [float(duration or 0)]
+    try:
+        _, ld, _ = synced_lyrics(title, artist, duration)
+        if ld: refs.append(float(ld))
+    except Exception:
+        pass
+    first, res = (artist or '').split(',')[0].strip(), []
+    for q in ((title + ' ' + first + ' karaoke').strip(), (title + ' ' + first + ' instrumental').strip()):
+        try:
+            res += yt.search(q, filter='videos', limit=20)
+        except Exception:
+            pass
+        found = rank_karaoke(res, title, artist, refs)
+        if len(found) >= 3: break
+    found = rank_karaoke(res, title, artist, refs)[:5]
+    KARA[k] = (found, time.time())
+    return found
+
+def clean_kv(kv):
+    """The karaoke video chosen for a queue item (sanitised): {videoId, title, duration} or None."""
+    if not isinstance(kv, dict) or not isinstance(kv.get('videoId'), str) or not re.fullmatch(r'[A-Za-z0-9_-]{6,20}', kv['videoId']):
+        return None
+    try: d = float(kv.get('duration') or 0)
+    except Exception: d = 0
+    return {'videoId': kv['videoId'], 'title': str(kv.get('title', ''))[:200], 'duration': d}
+
 def save_playlist(name, ids):
     a = authed()
     if not a:
@@ -405,7 +473,7 @@ def begin_song(r, item):
         schedule_next(r, 3); return
     mode = item.get('mode') if len(names) >= 2 and (item.get('mode') == 'tournament' or len(names) == 2) else 'solo'
     r['now'] = {'singers': names, 'singer': names[0], 'sids': sids, 'mode': mode, 'got': {},
-                'ends': time.time() + max(60, item['song']['duration']) + 45}
+                'ends': time.time() + max(60, item['song']['duration'], (item['song'].get('kv') or {}).get('duration', 0)) + 45}
     r['last'] = None
     r['turn'] = r.get('turn', 0) + 1
     for n in names:
@@ -582,9 +650,11 @@ def room_send(code, cid, typ, data, to=None):
             try: dur = float(s.get('duration') or 0)
             except Exception: dur = 0
             r['nid'] += 1
-            r['queue'].append({'id': r['nid'], 'singer': singer, 'singer2': s2, 'mode': mode, 'song': {
-                'videoId': vid[:40], 'title': str(s.get('title', ''))[:200],
-                'artist': str(s.get('artist', ''))[:200], 'duration': dur}})
+            song = {'videoId': vid[:40], 'title': str(s.get('title', ''))[:200],
+                    'artist': str(s.get('artist', ''))[:200], 'duration': dur}
+            kv = clean_kv(s.get('kv'))
+            if kv: song['kv'] = kv            # everyone in the room then plays this same karaoke video
+            r['queue'].append({'id': r['nid'], 'singer': singer, 'singer2': s2, 'mode': mode, 'song': song})
             fair_sort(r)
         elif op == 'loaded':       # this browser has the lyrics and the video ready
             nw = r['now']
@@ -892,6 +962,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/haslyrics':
                 g = lambda k: q.get(k, [''])[0]
                 return self.send_json(200, {'has': has_lyrics(g('title'), g('artist'), float(g('duration') or 0))})
+            if u.path == '/api/karaoke':
+                g = lambda k: q.get(k, [''])[0]
+                return self.send_json(200, find_karaoke(g('title'), g('artist'), float(g('duration') or 0)))
             if u.path == '/api/versions':
                 g = lambda k: q.get(k, [''])[0]
                 return self.send_json(200, lyric_versions(g('title'), g('artist'), float(g('duration') or 0)))

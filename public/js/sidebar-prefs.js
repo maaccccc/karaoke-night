@@ -5,7 +5,7 @@ function renderSide() {
   if (!queue.length) box.appendChild(el('p', 'The queue is empty.', 'note'));
   queue.forEach((it, i) => {
     const row = el('div', null, 'qi'), info = el('div');
-    info.append(el('b', it.song.title), el('small', whoTxt(it) + ' · ' + it.song.artist));
+    info.append(el('b', it.song.title), el('small', whoTxt(it) + ' · ' + it.song.artist + (it.song.kv ? ' · 🎤 karaoke' : '')));
     const rm = el('button', '✕', 'ghost mini'); rm.setAttribute('aria-label', 'Remove ' + it.song.title);
     rm.onclick = () => { if (room.on) roomOp({ op: 'qrm', id: it.id }); else { queue.splice(i, 1); renderQueue(); } };
     row.append(el('span', String(i + 1), 'qn'), info, rm); box.appendChild(row);
@@ -25,7 +25,7 @@ $('#sideClose').onclick = () => $('#side').classList.remove('open');
 // ---- preferences
 let micGain = null, micSrc = null, vdest = null;
 let gate = null, gateState = -1, listenDelay = 0, latIv = 0;
-const prefs = Object.assign({ fs: 1, vol: 100, sens: 1, calm: false, delay: 0, lead: 0, vsync: 0, hp: true, theme: 'neon' }, (() => { try { return JSON.parse(localStorage.getItem('karaokePrefs')) || {}; } catch (e) { return {}; } })());
+const prefs = Object.assign({ fs: 1, vol: 100, sens: 1, calm: false, delay: 0, lead: 0, vsync: 0, hp: true, lowLat: true, kar: true, cover: true, theme: 'neon' }, (() => { try { return JSON.parse(localStorage.getItem('karaokePrefs')) || {}; } catch (e) { return {}; } })());
 function applyPrefs(save = true) {
   document.documentElement.style.setProperty('--fs', prefs.fs);
   document.documentElement.classList.toggle('calm', prefs.calm);
@@ -37,6 +37,8 @@ function applyPrefs(save = true) {
   $('#pLead').value = prefs.lead; $('#pLeadV').textContent = Number(prefs.lead).toFixed(2) + 's';
   $('#pVs').value = prefs.vsync; $('#pVsV').textContent = Number(prefs.vsync).toFixed(2) + 's';
   $('#pCalm').checked = prefs.calm; $('#pHp').checked = $('#rdHp').checked = prefs.hp;
+  $('#karOn').checked = !!prefs.kar; $('#pCover').checked = !!prefs.cover; document.body.classList.toggle('nocover', !prefs.cover);
+  $('#pLow').checked = $('#tLow').checked = prefs.lowLat !== false;
   if (typeof refreshTheme === 'function') refreshTheme();
   if (micGain) micGain.gain.value = prefs.sens;
   if (player && player.setVolume) { try { player.setVolume(prefs.vol); } catch (e) {} }
@@ -44,7 +46,10 @@ function applyPrefs(save = true) {
   if (save) { try { localStorage.setItem('karaokePrefs', JSON.stringify(prefs)); } catch (e) {} }
 }
 [['pFs', 'fs'], ['sVol', 'vol'], ['pSens', 'sens'], ['sLive', 'sens'], ['pDel', 'delay'], ['pLead', 'lead'], ['pVs', 'vsync']].forEach(([id, k]) => $('#' + id).oninput = e => { prefs[k] = parseFloat(e.target.value); applyPrefs(); });
+$('#pLow').onchange = $('#tLow').onchange = e => { prefs.lowLat = e.target.checked; applyPrefs(); if (typeof lowLatApply === 'function') lowLatApply(); };   // low-latency voice: applies right away
 $('#pCalm').onchange = e => { prefs.calm = e.target.checked; applyPrefs(); };
+$('#karOn').onchange = e => { prefs.kar = e.target.checked; applyPrefs(); };
+$('#pCover').onchange = e => { prefs.cover = e.target.checked; applyPrefs(); };
 $('#pHp').onchange = $('#rdHp').onchange = e => { prefs.hp = e.target.checked; applyPrefs(); };
-$('#pReset').onclick = () => { Object.assign(prefs, { fs: 1, vol: 100, sens: 1, calm: false, delay: 0, lead: 0, vsync: 0, hp: true }); applyPrefs(); };   // the theme is chosen on the home page
+$('#pReset').onclick = () => { Object.assign(prefs, { fs: 1, vol: 100, sens: 1, calm: false, delay: 0, lead: 0, vsync: 0, hp: true, lowLat: true, kar: true, cover: true }); applyPrefs(); if (typeof lowLatApply === 'function') lowLatApply(); };   // the theme is chosen on the home page
 $('#gear').onclick = $('#lSettings').onclick = () => { $('#prefs').showModal(); loadDevices(false); };   // the header gear, and the Settings button on the home page

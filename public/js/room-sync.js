@@ -1,14 +1,24 @@
 // Shared clock: in a room the video position is where the room's clock says it should be.
 let syncIv = 0, lastSeek = 0;
+// Listeners: a singer's voice reaches you a little late (network + voice buffer), so your music is held back by that amount
+// (plus the "Voice sync" setting). The lyrics follow the video, so voice, music and lyrics line up. Singers are never held back.
+let holdApplied = 0, holdStarted = false;
+const holdWant = () => (room.on && active && !isSinger()) ? Math.max(-0.5, Math.min(1.5, (listenDelay || 0) + (prefs.vsync || 0))) : 0;
 function startSync() {
-  clearInterval(syncIv); lastSeek = 0;
+  clearInterval(syncIv); lastSeek = 0; holdStarted = false; holdApplied = holdWant();
   const run = () => {
     if (!active || !player || !player.getPlayerState || !room.startAt) return;
-    const exp = (Date.now() + room.skew - room.startAt) / 1000, st = player.getPlayerState(), dur = current.song.duration || 1e9;
+    const base = (Date.now() + room.skew - room.startAt) / 1000, st = player.getPlayerState(), dur = playDur() || 1e9, want = holdWant(), now = Date.now();
+    if (!holdStarted) holdApplied = want;                                     // not playing yet: just start at the right moment, nothing to seek
+    const exp = base - holdApplied;
     if (exp < -0.3 || st === 0 || exp > dur) return;                         // not time yet, or the song is over
     if (st !== 1 && st !== 3) { try { player.playVideo(); } catch (e) {} }   // (re)start, also after the tab was hidden
-    if (st === 1 && exp > 0.5 && Math.abs(player.getCurrentTime() - exp) > 0.7 && Date.now() - lastSeek > 4000) {
-      lastSeek = Date.now(); try { player.seekTo(exp + 0.3, true); } catch (e) {}   // +0.3s: the seek takes a moment to resume
+    if (st === 1 && exp > 0) holdStarted = true;
+    if (st === 1 && holdStarted && base - want > 0.5 && Math.abs(want - holdApplied) > 0.12 && now - lastSeek > 1500) {   // the voice delay or the Voice sync slider changed: re-align now
+      holdApplied = want; lastSeek = now; try { player.seekTo(base - holdApplied + 0.3, true); } catch (e) {} return;
+    }
+    if (st === 1 && exp > 0.5 && Math.abs(player.getCurrentTime() - exp) > (prefs.lowLat !== false ? 0.35 : 0.7) && now - lastSeek > 4000) {
+      lastSeek = now; try { player.seekTo(exp + 0.3, true); } catch (e) {}   // +0.3s: the seek takes a moment to resume
     }
   };
   syncIv = setInterval(() => { if (!active) clearInterval(syncIv); else run(); }, 200);
@@ -88,7 +98,9 @@ function gateTurns(t) {
   });
 }
 // Adaptive voice buffer: start small (low delay), grow only when the voice starts breaking up, shrink again when the connection is calm.
-const JB_START = 100, JB_MIN = 40, JB_MAX = 300;      // milliseconds
+// Low-latency voice (on by default) uses a smaller buffer that grows only on real trouble and shrinks faster. Switching it applies right away.
+const JB_LOW = { start: 40, min: 0, max: 180, grow: .04, step: 40, calm: 2 }, JB_SAFE = { start: 100, min: 40, max: 300, grow: .02, step: 60, calm: 3 };   // milliseconds
+const jbc = () => prefs.lowLat !== false ? JB_LOW : JB_SAFE;
 function setJb(pc, ms) {
   pc.getReceivers().forEach(rx => {
     if (!rx.track || rx.track.kind !== 'audio') return;
@@ -96,12 +108,16 @@ function setJb(pc, ms) {
     try { rx.playoutDelayHint = ms / 1000; } catch (e) {}
   });
 }
+function lowLatApply() {                    // the Low-latency switch changed: restart every voice buffer from the new profile
+  const J = jbc();
+  Object.entries(rtc.pcs).forEach(([pid, pc]) => { delete rtc.jb[pid]; setJb(pc, J.start); });
+}
 function tuneJb(pid, pc, c, t) {            // c = concealed samples so far, t = all samples received so far
-  const a = rtc.jb[pid] || (rtc.jb[pid] = { tgt: JB_START, c, t, calm: 0 }), dc = c - a.c, dt = t - a.t; a.c = c; a.t = t;
+  const J = jbc(), a = rtc.jb[pid] || (rtc.jb[pid] = { tgt: J.start, c, t, calm: 0 }), dc = c - a.c, dt = t - a.t; a.c = c; a.t = t;
   if (dt < 24000) return;                   // wait for about half a second of audio
   const bad = dc / dt;
-  if (bad > .02) { a.tgt = Math.min(JB_MAX, a.tgt + 60); a.calm = 0; setJb(pc, a.tgt); }
-  else if (bad < .004) { if (++a.calm >= 3 && a.tgt > JB_MIN) { a.tgt = Math.max(JB_MIN, a.tgt - 20); a.calm = 0; setJb(pc, a.tgt); } }
+  if (bad > J.grow) { a.tgt = Math.min(J.max, a.tgt + J.step); a.calm = 0; setJb(pc, a.tgt); }
+  else if (bad < .004) { if (++a.calm >= J.calm && a.tgt > J.min) { a.tgt = Math.max(J.min, a.tgt - 20); a.calm = 0; setJb(pc, a.tgt); } }
   else a.calm = 0;
 }
 async function measureLatency() {          // how late each voice arrives, so the music can be held back to match
@@ -117,11 +133,11 @@ async function measureLatency() {          // how late each voice arrives, so th
         }
       });
       if (conc >= 0) tuneJb(pid, pc, conc, tot);
-      const lat = Math.min(1.2, rtt / 2 + jb + 0.04);
+      const lat = Math.min(1.2, rtt / 2 + jb + 0.06);   // + about 60 ms for capture, encoding, decoding and the sound card
       rtc.lat[pid] = rtc.lat[pid] ? rtc.lat[pid] * 0.6 + lat * 0.4 : lat; worst = Math.max(worst, rtc.lat[pid]);
     } catch (e) {}
   }
   if (!isSinger()) listenDelay = worst;
-  if (worst) $('#lat').textContent = 'Voice delay about ' + Math.round(worst * 1000) + ' ms';
+  if (worst) $('#lat').textContent = 'Voice delay about ' + Math.round(worst * 1000) + ' ms' + (!isSinger() && holdApplied > 0.05 ? ' · music held back ' + Math.round(holdApplied * 1000) + ' ms to match' : '');
 }
 

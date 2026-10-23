@@ -35,7 +35,7 @@ body.inroom #cSingers,body.inroom #saveBtn{display:none}
 .tg.ok{background:rgba(59,229,138,.2)}.tg.bad{background:rgba(255,59,80,.25)}.pr.away{opacity:.5}
 body.aud .live,body.aud #sRow{display:none}#rvRow{display:none}body.aud #rvRow{display:flex}
 #ytcard{display:none}#ytcard.show{display:block}
-#ytwrap{width:100%;aspect-ratio:1;min-width:200px;min-height:200px;pointer-events:none;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#000}
+#ytwrap{position:relative;width:100%;aspect-ratio:1;min-width:200px;min-height:200px;pointer-events:none;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#000}
 #ytwrap iframe{width:100%;height:100%;border:0}
 #rate{display:none;text-align:center;animation:in .5s both}
 .ring{--p:0;width:190px;aspect-ratio:1;border-radius:50%;margin:8px auto 4px;display:grid;place-items:center;position:relative;background:conic-gradient(var(--pink) calc(var(--p)*1%),rgba(255,255,255,.1) 0);transition:--p 1.5s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 36px rgba(255,61,139,.35)}
@@ -111,3 +111,25 @@ button.mini{padding:2px 10px;font-size:.78rem;border-radius:99px}
 #banList{margin-top:8px}#banList .bn{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:.9rem}
 #liveBar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}#liveBar b{flex:1 1 200px;min-width:0}
 .pvact{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pvbtn.on{box-shadow:0 0 0 2px var(--gold,#ffc83d) inset}.pvwrap{padding:8px 0 12px;border-bottom:1px solid var(--line)}.pvwrap iframe{max-width:100%;border-radius:12px}
+.karrow{display:flex;gap:8px;align-items:center;margin:10px 0 2px;font-size:.92rem;cursor:pointer}.karrow input{width:auto;flex:none}
+/* karaoke video: the track keeps playing (audio) but a still cover is shown instead of the moving karaoke video */
+.ytcover{position:absolute;inset:0;z-index:2;display:flex;align-items:flex-end;justify-content:center;background:#0b0714 center/cover no-repeat;color:#fff;text-align:center}
+.ytcover::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(8,4,16,.88),rgba(8,4,16,.15) 55%,rgba(8,4,16,.35))}
+.ytcover b,.ytcover small{position:relative;z-index:1;display:block;padding:0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ytcover b{font-size:.95rem}.ytcover small{opacity:.8;font-size:.78rem;padding-bottom:10px}
+.ytcover .em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3rem;z-index:0}
+body.nocover .ytcover{display:none}
+.disc{font-size:.78rem;line-height:1.5;opacity:.72;max-width:760px;margin:18px auto 6px;text-align:center}
+#helpBar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#helpdlg{width:min(640px,94vw)}
+#helpdlg details{border:1px solid var(--line);border-radius:12px;margin:8px 0;padding:0 12px;background:rgba(255,255,255,.03)}
+#helpdlg summary{cursor:pointer;font-weight:600;padding:11px 0;list-style-position:inside}
+#helpdlg details[open] summary{border-bottom:1px solid var(--line);margin-bottom:8px}
+#helpdlg details>*:not(summary){font-size:.93rem;line-height:1.6}
+#helpdlg ul,#helpdlg ol{margin:6px 0 12px;padding-left:20px}
+#helpdlg .disc{text-align:left;margin:0 0 10px;opacity:.85}
+/* queue sits at the top of the home page, so keep it compact; the sidebar copy only shows while a song is playing */
+#queue{max-height:32vh;overflow:auto}
+body:not(.instage) #upNext{display:none}
+.newhere{margin:6px 0 14px}
+.chead{cursor:pointer}#chatX{min-width:34px}

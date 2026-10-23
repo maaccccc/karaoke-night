@@ -43,6 +43,8 @@
     <div class="grp" style="margin:8px 0"><label for="tOut">Play through</label><select id="tOut"><option value="">Default speakers</option></select>
       <div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tBeep">🔊 Play test sound</button></div>
       <p class="note" style="margin:6px 0 0" id="tOutNote">Can’t hear yourself? Press the test sound. If you hear nothing, pick your headset here. Bluetooth headsets often show two entries (“Headphones” and “Headset / Hands-Free”); try the other one.</p></div>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0 2px"><input type="checkbox" id="tLow" checked><span>⚡ Low-latency voice (recommended)</span></label>
+    <p class="note" style="margin:0 0 8px">Friends hear you sooner. If your voice crackles or cuts out for them on weak Wi-Fi, untick this. You can change it any time, even during a song.</p>
     <p id="tStatus" style="margin:6px 0 14px;font-weight:600;min-height:1.4em"></p>
     <div class="row"><button type="button" id="tStart">Start mic test</button><button type="button" class="ghost" id="tAgain" style="display:none">Test again</button><button value="close" class="ghost">Close</button></div>
   </form>
@@ -58,7 +60,9 @@
     <div class="grp"><label for="pDel">Audio delay <b id="pDelV">0.00s</b></label><input type="range" id="pDel" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">Bluetooth speakers and some devices play sound late. Raise this until the lyrics match what you hear.</p></div>
     <div class="grp"><label for="pVs">Voice sync (when listening) <b id="pVsV">0.00s</b></label><input type="range" id="pVs" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">When you listen to someone sing, the app holds the music back a little so their voice, the music and the lyrics line up. Nudge this if their voice still feels early or late.</p></div>
     <div class="grp"><label for="pLead">Show lines early <b id="pLeadV">0.00s</b></label><input type="range" id="pLead" min="0" max="1" step="0.05" value="0"><p class="note">Highlights each line a little before it is sung, so there is time to read it.</p></div>
+    <div class="grp"><label><span>⚡ Low-latency voice (recommended)</span><input type="checkbox" id="pLow"></label><p class="note">Uses a smaller voice buffer and shorter audio packets so friends hear you sooner, and keeps everyone’s music closer in step. If the voice crackles or cuts out on weak Wi-Fi, turn it off. Applies right away (the shorter packets from the next song).</p></div>
     <div class="grp"><label><span>Headphones mode (clearer voice in rooms)</span><input type="checkbox" id="pHp"></label><p class="note">When you sing in a room, this keeps the echo canceller off so your voice is not chopped up. Turn it off only if you use speakers.</p></div>
+    <div class="grp"><label><span>Still cover instead of the karaoke video</span><input type="checkbox" id="pCover"></label><p class="note">On karaoke tracks, show the song’s cover picture in the video box. The music keeps playing. Turn it off to see the karaoke video.</p></div>
     <div class="grp"><label><span>Reduce motion</span><input type="checkbox" id="pCalm"></label></div>
     <div class="grp"><label><span>Smooth mode (fewer glow effects, runs better on phones)</span><input type="checkbox" id="pLite"></label></div>
     <div class="row"><button type="button" class="ghost" id="devBtn">Detect devices</button><button type="button" class="ghost" id="pReset">Reset</button><button value="close">Done</button></div>
@@ -67,17 +71,40 @@
 
 <div id="chatToast" aria-live="polite"></div>
 
+<dialog id="helpdlg" aria-labelledby="hlTitle">
+  <form method="dialog">
+    <h2 id="hlTitle">❓ How Karaoke Night works</h2>
+    <p class="note">Tap a topic to open it.</p>
+    <details open><summary>🎤 Quick start (one device)</summary>
+      <ol><li>Add the singers’ names under <b>Singers</b>.</li><li>Search a song, pick who sings it, and press <b>Add to queue</b>. Look for <b>synced lyrics ✓</b>; songs without timed lyrics are skipped. Press <b>▶ Preview</b> first if you are not sure it is the right song.</li><li>Press <b>Start the next song</b>. The lyrics follow the music and your mic scores you as you sing.</li></ol>
+      <p class="note">On one shared device people take turns: whoever sang longest ago goes next.</p></details>
+    <details><summary>🎶 Karaoke versions (no original singer)</summary>
+      <p>With <b>Karaoke versions</b> ticked under the search box, adding a song looks for a karaoke / instrumental video of it, so you hear the backing track instead of the original singer. The queue shows “🎤 karaoke version” when one was found. If none exists, the original plays (that is the sing-along style).</p>
+      <p>The video box shows a still cover while the karaoke track plays. You can switch that off in Settings.</p></details>
+    <details><summary>⏱ Lyrics out of sync?</summary>
+      <ul><li><b>Sooner / Later</b> buttons nudge the lyrics a little.</li><li><b>Mark:</b> click a lyric line, press <b>Mark picked line</b> the moment you hear it start, then mark another line near the end. The app fixes the shift and stretch, and remembers it for that video in your browser.</li><li><b>Audio delay</b> in Settings helps with Bluetooth speakers. <b>Reset timing</b> starts over.</li><li>You can also pick another lyrics version from the list on the singing page.</li></ul></details>
+    <details><summary>🌐 Sing online with friends (rooms)</summary>
+      <ul><li>On the home page choose <b>Create a room</b> (private = only people with the code, public = listed in the lobby), or <b>Join</b> with a code.</li><li>Press <b>🌐 Room</b> to copy an invite link or show a QR code.</li><li>Everyone shares one queue. Before each song the singer picks <b>Solo, Duet or Tournament</b>, then everyone presses <b>I’m ready!</b> and a 3-2-1 countdown starts the song for all at once.</li><li>Wear <b>headphones</b> when you sing, or friends will hear the song twice.</li><li>The host can skip for everyone; others can vote to skip.</li></ul></details>
+    <details><summary>⭐ Scoring and fun</summary>
+      <ul><li>Up to 50 points from your mic (tone, volume and timing), a combo bonus of up to 10 for singing lines well in a row, and up to 10 bonus points from the audience’s 1 to 5 stars.</li><li>Duets split the lines between two singers. In a tournament, whoever scores most on their own lines wins a 10-point bonus.</li><li>Listeners can send reactions, chat, and earn funny awards at the end of each song. <b>End the night</b> shows the winner and highlights.</li></ul></details>
+    <details><summary>🎧 Microphone tips</summary>
+      <ul><li>Use <b>🎤 Mic test</b> before the first song to check that you are heard.</li><li>If the meter barely moves, raise <b>Mic sensitivity</b> in Settings.</li><li>The browser must be allowed to use your microphone. Chrome, Edge and Brave work best; keep the tab visible while singing.</li></ul></details>
+    <details><summary>🎨 Looks and settings</summary>
+      <p>Pick a theme on the welcome page. Use <b>⚙ Settings</b> for lyrics size, fullscreen, reduce motion, smooth mode for slow phones, the still karaoke cover and more.</p></details>
+    <details><summary>ℹ️ About this project</summary>
+      <p class="disc" style="margin:0">Karaoke Night is a free project made for fun, not a commercial service. It is a <b>karaoke / sing-along style</b> app: songs play through YouTube’s official embedded player (nothing is downloaded or stored here), synced lyrics come from LRCLIB, and karaoke versions are other people’s YouTube uploads. All songs, lyrics and videos belong to their owners. It is not affiliated with or endorsed by YouTube, YouTube Music or LRCLIB, and availability, lyric timing and karaoke quality are not guaranteed.</p></details>
+    <div class="row" style="justify-content:center;margin-top:14px"><button value="close">Got it</button></div>
+  </form>
+</dialog>
+
 <dialog id="newdlg" aria-labelledby="nwTitle">
   <h2 id="nwTitle">✨ What’s new</h2>
   <ul id="nwList" style="margin:10px 0 14px;padding-left:20px;line-height:1.7">
-    <li>Tournaments: choose who to fight, one or many</li>
-    <li>Join alerts when friends enter the lobby</li>
-    <li>New home design with themes</li>
-    <li>Fullscreen mode</li>
-    <li>Bouncing-ball lyrics</li>
-    <li>Better lyric sync</li>
-    <li>3-2-1 countdown before lyrics</li>
-    <li>Romanized lyrics for Japanese kanji, Chinese and more</li>
+    <li>🎤 <b>Karaoke versions:</b> songs can now play a karaoke / instrumental track, so the original singer is gone</li>
+    <li>🎶 Lyrics stay synced to the karaoke track, with timing remembered separately for each video</li>
+    <li>🖼 A still cover replaces the moving karaoke video (you can turn it off in Settings)</li>
+    <li>❓ New <b>How it works</b> guide: tap the button at the top</li>
+    <li>ℹ️ Added a note that this is a free karaoke / sing-along style project</li>
   </ul>
   <div class="row" style="justify-content:center"><button type="button" id="nwOk">Got it</button></div>
 </dialog>

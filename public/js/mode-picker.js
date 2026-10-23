@@ -114,17 +114,21 @@ function leaveSong() {   // stop watching a song locally (listeners only)
   active = false; cancelAnimationFrame(raf); stopMedia(); closeRtc(); awaiting = false; room.prep = false; room.watch = false;
   $('#ytcard').classList.remove('show'); drawMeter(0, 0); refreshTheme();
   if (actx) { try { actx.close(); } catch (e) {} actx = null; } an = null;
-  document.body.classList.remove('aud'); $('#stage').style.display = 'none'; $('#home').style.display = 'block'; renderNow(); refreshLive();
+  document.body.classList.remove('aud', 'instage'); $('#stage').style.display = 'none'; $('#home').style.display = 'block'; renderNow(); refreshLive();
 }
 // clearer voice: full-band mono Opus, no silence suppression, error correction, higher bitrate
 function tuneOpus(sdp) {
   const m = sdp.match(/a=rtpmap:(\d+) opus\/48000/i); if (!m) return sdp;
+  const low = prefs.lowLat !== false;      // low-latency voice: 10 ms packets instead of 20 ms (about 10 ms sooner); applies to the next connection
   const want = { stereo: 0, 'sprop-stereo': 0, useinbandfec: 1, usedtx: 0, cbr: 1, maxaveragebitrate: 96000, maxplaybackrate: 48000 };
-  return sdp.replace(new RegExp('a=fmtp:' + m[1] + ' ([^\\r\\n]*)'), (all, params) => {
+  if (low) want.minptime = 10;
+  let out = sdp.replace(new RegExp('a=fmtp:' + m[1] + ' ([^\\r\\n]*)'), (all, params) => {
     const o = {}; params.split(';').forEach(kv => { const [k, v] = kv.trim().split('='); if (k) o[k] = v; });
     Object.assign(o, want);
     return 'a=fmtp:' + m[1] + ' ' + Object.entries(o).map(([k, v]) => k + '=' + v).join(';');
   });
+  if (low && !/a=ptime:/i.test(out)) out = out.replace(new RegExp('(a=rtpmap:' + m[1] + ' opus/48000[^\\r\\n]*\\r?\\n)', 'i'), '$1a=ptime:10\r\n');
+  return out;
 }
 // singer -> listeners: one WebRTC connection per listener
 const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -132,7 +136,7 @@ fetch('/api/ice').then(r => r.json()).then(d => { if (d.iceServers && d.iceServe
 function newPc(peer) {
   const pc = new RTCPeerConnection(ICE); rtc.pcs[peer] = pc;
   pc.onicecandidate = e => { if (e.candidate) roomRtc(peer, { kind: 'ice', cand: e.candidate }); };
-  pc.ontrack = e => { setJb(pc, JB_START); rtc.remote = e.streams[0]; rtc.rems[peer] = rtc.remote; const a = rtc.audio[peer] || (rtc.audio[peer] = new Audio()); a.srcObject = rtc.remote; a.volume = $('#rvol').value / 100; if (room.live && !room.watch) a.muted = true; a.play().catch(() => {}); if (active) hookRemote(); };   // both sides play what the other sends
+  pc.ontrack = e => { setJb(pc, jbc().start); rtc.remote = e.streams[0]; rtc.rems[peer] = rtc.remote; const a = rtc.audio[peer] || (rtc.audio[peer] = new Audio()); a.srcObject = rtc.remote; a.volume = $('#rvol').value / 100; if (room.live && !room.watch) a.muted = true; a.play().catch(() => {}); if (active) hookRemote(); };   // both sides play what the other sends
   return pc;
 }
 async function connectPeers() {

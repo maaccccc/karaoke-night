@@ -32,6 +32,13 @@ Keep `oauth.json` private; it gives access to your account.
 - **Preferences:** *Audio delay* compensates for Bluetooth and other late audio. *Show lines early* highlights each line a little before it is sung.
 
 
+## Karaoke versions (no original singer)
+Under the search box, **🎤 Karaoke versions** (on by default) swaps the original recording for a karaoke / instrumental upload from YouTube when you add a song to the queue. The queue shows "🎤 karaoke version" when one was found; if none is found the original plays and the status line says so. Rooms work too: the chosen karaoke video is stored with the queue item, so everybody plays the same one.
+- **Lyrics stay tied to the original song.** Timed lyrics are still looked up with the original title, artist and length (`/api/lyrics`), so the lyric match is exactly what it was before. Only the video that plays changes.
+- **Best-fitting track first.** `/api/karaoke` (`find_karaoke` and `rank_karaoke` in `server.py`) searches YouTube for karaoke / instrumental videos of the song and ranks them by how close their length is to the song the lyrics were timed against. It rejects tracks more than 30 seconds off, and ranks "with lead vocals", live, remix and cover uploads last.
+- **Timing is saved per video.** Shift and stretch are remembered for the karaoke video separately from the original, so fixing one never breaks the other. A karaoke track is never speed-stretched automatically (a length difference is usually extra intro or outro, which needs a shift); the page tells you when the track is more than 3 seconds longer or shorter than the lyrics' version. If the first line starts early or late, click it and press **Mark** when you hear it begin. It is remembered for that track in your browser.
+- Turn the checkbox off to play original recordings as before.
+
 ## Online rooms (friends in different places)
 Everyone opens the same link, enters a name, and joins the same room code. The queue and scoreboard are shared, the song starts for everyone at the same moment (after a 5 second countdown), and the singer's microphone is streamed live to everyone else.
 
@@ -85,6 +92,18 @@ The fix is a TURN relay, which passes the audio along when a direct link is impo
 (On macOS or Linux use `export` instead of `set`.) Everyone who opens the page then uses the relay automatically when they need it. Do not share the credentials publicly.
 
 The voice list under **Join voice chat** shows each person as connected (✓), connecting (…) or unable to connect (⚠). A stuck link is retried three times before it is reported.
+
+### Low-latency voice (on by default)
+**⚡ Low-latency voice** is in Settings and in the Mic test window, and takes effect immediately (turn it off if the voice crackles on weak Wi-Fi). It does three things:
+- A smaller voice buffer (starts at 40 ms and can grow to 180 ms, instead of 100 ms growing to 300 ms), which grows only on real trouble and shrinks faster once the connection is calm.
+- Shorter Opus packets (10 ms instead of 20 ms). This applies to the next song's connection.
+- Tighter video sync: a device is re-aligned to the room clock when it drifts 0.35 s instead of 0.7 s.
+
+### Listeners: music held back to match the singer's voice
+A singer's voice reaches listeners a little late (network + voice buffer). Listeners' music is held back by that measured delay plus **Voice sync (when listening)** in Settings, so voice, music and lyrics line up. The lyrics follow the video, so they move with the music. Singers are never held back (it would add up between two singers). The Lobby line "Voice delay about … ms" also says how much the music is held back.
+
+### Settings that apply right away
+While a song is playing, changing the **Microphone**, or toggling **Headphones mode**, swaps the live microphone without stopping the song or reconnecting anyone (`public/js/live-settings.js`). If the new microphone cannot be opened, the old one keeps working. The voice chat microphone follows the same picker. The **Lyrics** display mode (original / romanized / both) also changes at once. Sliders such as Mic sensitivity, Song volume, Audio delay, Show lines early, Voice sync and lyric size were already live.
 
 ## Fair queue, stage looks, awards and end of night
 - **Fair queue:** people take turns. Whoever sang longest ago (or never) goes next, and each person's own songs stay in the order they added them, so one person queuing five songs does not block everyone else. The queue list shows the real play order. This works in rooms and on one shared device.

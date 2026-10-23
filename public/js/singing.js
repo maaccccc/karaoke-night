@@ -3,6 +3,24 @@ let frames = 0, offset = 0, active = false, lines = [], warn = '';
 let prebuf = false, holding = false, loadedSent = false;   // pre-loading the video silently before the shared start
 let scale = 1, autoScale = 1, lyricDur = 0, lyricId = null, force = false;
 let getT = () => 0, isPlay = () => false, stopMedia = () => {};
+// Karaoke versions: lyrics are always fetched for the ORIGINAL song (current.song.title/artist/duration), but the video that
+// plays can be a karaoke track (current.song.kv). Saved timing is kept per PLAYING video, so a karaoke track never inherits
+// (or overwrites) the shift you fixed for the original recording.
+const pvid = () => (current.song.kv && current.song.kv.videoId) || current.song.videoId;
+const playDur = () => (current.song.kv && current.song.kv.duration) || current.song.duration;
+function calcScale() {      // -> { scale, warn } for the video that will play
+  const pd = playDur(); let sc = 1, w = '';
+  if (current.song.kv) {
+    // A karaoke track is the same arrangement, so the speed is the same. A length difference is almost always extra intro/outro,
+    // which needs a SHIFT (one Mark click), never a stretch, so the lyrics are not stretched here.
+    if (lyricDur && pd && Math.abs(pd - lyricDur) > 3) w = ' This karaoke track is ' + Math.round(Math.abs(pd - lyricDur)) + 's ' + (pd > lyricDur ? 'longer' : 'shorter') + ' than the lyrics’ version, so the lyrics may start a little early or late. Click the first lyric line and press Mark when you hear it begin; it is remembered for this track.';
+  } else {
+    const diff = lyricDur && pd ? pd / lyricDur : 1;
+    if (Math.abs(diff - 1) > .02 && Math.abs(diff - 1) < .12) { sc = diff; w = ' Lyrics were stretched ' + ((diff - 1) * 100).toFixed(1) + '% to fit the song’s speed.'; }
+    else if (lyricDur && pd && Math.abs(lyricDur - pd) > 3) w = ' These lyrics are for a version ' + Math.round(Math.abs(lyricDur - pd)) + 's different in length. Try another lyrics version below.';
+  }
+  return { scale: sc, warn: w };
+}
 $('#startBtn').onclick = async () => {
   if (!queue.length) { say('Queue a song first.'); return; }
   if (room.on) { roomOp({ op: 'start' }); return; }
@@ -16,10 +34,8 @@ async function loadAndRun() {
     const r = await fetch('/api/lyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration }));
     const d = await r.json(); if (!r.ok) throw new Error(d.error);
     lines = parseLrc(d.lrc); if (!lines.length) throw new Error('no timed lyrics found');
-    warn = ''; lyricDur = d.lyricDuration || 0; lyricId = d.id || null; autoScale = 1;
-    const diff = lyricDur && s.duration ? s.duration / lyricDur : 1;
-    if (Math.abs(diff - 1) > .02 && Math.abs(diff - 1) < .12) { autoScale = diff; warn = ' Lyrics were stretched ' + ((diff - 1) * 100).toFixed(1) + '% to fit the song’s speed.'; }
-    else if (lyricDur && s.duration && Math.abs(lyricDur - s.duration) > 3) warn = ' These lyrics are for a version ' + Math.round(Math.abs(lyricDur - s.duration)) + 's different in length. Try another lyrics version below.';
+    lyricDur = d.lyricDuration || 0; lyricId = d.id || null;
+    const cs = calcScale(); autoScale = cs.scale; warn = cs.warn;
   } catch (e) {
     const msg = 'Skipped “' + s.title + '”: ' + e.message + '.';
     $('#cd').classList.remove('show'); room.prep = false; room.startAt = 0; leaveSong();   // never leave an empty stage or the countdown on screen
@@ -32,10 +48,10 @@ async function loadAndRun() {
 function loadedOnce() { if (room.on && room.prep && !loadedSent) { loadedSent = true; roomOp({ op: 'loaded' }); } }
 function setOffset(v) {
   offset = Math.round(v * 10) / 10; $('#off').textContent = (offset > 0 ? '+' : '') + offset.toFixed(1) + 's';
-  try { localStorage.setItem('off:' + current.song.videoId, String(offset)); } catch (e) {}
+  try { localStorage.setItem('off:' + pvid(), String(offset)); } catch (e) {}
 }
 $('#rstTiming').onclick = () => {
-  try { localStorage.removeItem('off:' + current.song.videoId); localStorage.removeItem('spd:' + current.song.videoId); } catch (e) {}
+  try { localStorage.removeItem('off:' + pvid()); localStorage.removeItem('spd:' + pvid()); } catch (e) {}
   offset = 0; $('#off').textContent = '0.0s'; setScale(autoScale, false); anchor = null; force = true;
   $('#markHint').textContent = 'Timing reset. If the lyrics are still off, click a line and press Mark when you hear it.';
 };
@@ -44,7 +60,7 @@ $('#rstTiming').onclick = () => {
 function setScale(v, save = true) {
   scale = Math.min(1.12, Math.max(.88, v)); $('#spd').value = scale;
   $('#spdv').textContent = (scale >= 1 ? '+' : '') + ((scale - 1) * 100).toFixed(1) + '%';
-  if (save) { try { localStorage.setItem('spd:' + current.song.videoId, String(scale)); } catch (e) {} }
+  if (save) { try { localStorage.setItem('spd:' + pvid(), String(scale)); } catch (e) {} }
 }
 const tweak = () => (prefs.lead || 0) - (prefs.delay || 0);
 let anchor = null, pick = -1;
@@ -111,14 +127,13 @@ $('#ver').onchange = async () => {
     const r = await fetch('/api/lyrics?id=' + encodeURIComponent(id)), d = await r.json(); if (!r.ok) throw new Error(d.error);
     const nl = parseLrc(d.lrc); if (!nl.length) throw new Error('that version has no timed lyrics');
     lines = nl; lyricId = id; lyricDur = d.lyricDuration || 0;
-    const diff = lyricDur && current.song.duration ? current.song.duration / lyricDur : 1;
-    autoScale = Math.abs(diff - 1) > .02 && Math.abs(diff - 1) < .12 ? diff : 1;
+    const cs = calcScale(); autoScale = cs.scale; warn = cs.warn; $('#micNote').textContent = $('#micNote').textContent.replace(/ (Lyrics were stretched|These lyrics are for a version|This karaoke track is).*$/, '') + warn;
     S.lf = lines.map(() => 0); S.lv = lines.map(() => 0); S.hit = lines.map(() => 0);
     buildLyrics(); labelTurns(); setScale(autoScale); force = true;
   } catch (e) { say('Could not switch lyrics: ' + e.message); }
 };
 async function runSong() {
-  $('#home').style.display = 'none'; $('#stage').style.display = 'block'; $('#rate').style.display = 'none';
+  $('#home').style.display = 'none'; $('#stage').style.display = 'block'; $('#rate').style.display = 'none'; document.body.classList.add('instage');
   $('#now').textContent = whoTxt(current) + (current.singer2 ? ' are singing' : ' is singing') + ': ' + current.song.title + (current.mode && current.mode !== 'solo' ? ' (' + modeName[current.mode] + ')' : ''); $('#liveScore').textContent = '0';
   const box = $('#lyrics'); box.textContent = '';
   let anyRom = false, anyHan = false;
@@ -132,10 +147,10 @@ async function runSong() {
   box.scrollTop = 0; frames = 0; active = true; drawMeter(0, 0); renderNow();
   labelTurns(); fxStart();
   S = { voiced: 0, rms: 0, clear: 0, clip: 0, lf: lines.map(() => 0), lv: lines.map(() => 0), hit: lines.map(() => 0) };
-  let saved = 0; try { saved = parseFloat(localStorage.getItem('off:' + current.song.videoId)) || 0; } catch (e) {}
+  let saved = 0; try { saved = parseFloat(localStorage.getItem('off:' + pvid())) || 0; } catch (e) {}
   setOffset(saved);
   if (Math.abs(saved) >= 2) $('#markHint').textContent = 'This song still has a saved timing shift of ' + saved.toFixed(1) + 's from an earlier try. Press Reset timing if the lyrics do not match.';
-  let sv = NaN; try { sv = parseFloat(localStorage.getItem('spd:' + current.song.videoId)); } catch (e) {}
+  let sv = NaN; try { sv = parseFloat(localStorage.getItem('spd:' + pvid())); } catch (e) {}
   setScale(isNaN(sv) ? autoScale : sv, false); loadVersions();
 
   an = null; document.body.classList.toggle('aud', room.on && !isSinger());
@@ -162,7 +177,11 @@ async function runSong() {
   await loadYT();
   if (player) { try { player.destroy(); } catch (e) {} }
   const holder = el('div'); holder.id = 'yt'; wrap.appendChild(holder);
-  player = new YT.Player('yt', { width: 200, height: 200, videoId: current.song.videoId,
+  if (current.song.kv) {      // karaoke track: show a still cover (the original single's artwork) instead of the moving karaoke video; the audio still plays
+    const cv = el('div', null, 'ytcover'); cv.style.backgroundImage = 'url("https://i.ytimg.com/vi/' + encodeURIComponent(current.song.videoId) + '/hqdefault.jpg")';
+    cv.append(el('span', '🎤', 'em'), el('b', current.song.title), el('small', current.song.artist)); wrap.appendChild(cv);
+  }
+  player = new YT.Player('yt', { width: 200, height: 200, videoId: pvid(),
     playerVars: { autoplay: (room.on && (room.startAt || room.prep)) ? 0 : 1, playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, origin: location.origin },
     events: {
       onReady: e => {
@@ -212,7 +231,7 @@ async function runSong() {
     gateTurns(t);
     if (now - clkT > 250) {
       clkT = now; const raw = playing ? getT() : 0, first = lines[0].t * scale - offset - tweak();
-      const pr = $('#prog'); if (pr && current.song.duration) pr.style.width = Math.min(100, raw / current.song.duration * 100) + '%';
+      const pr = $('#prog'); if (pr && playDur()) pr.style.width = Math.min(100, raw / playDur() * 100) + '%';
       $('#clock').textContent = !playing ? 'Waiting for the music to start…'
         : idx < 0 ? 'Song time ' + fmt(raw) + ' · first lyric line at ' + fmt(Math.max(0, first)) + ' (in ' + Math.max(0, Math.round(first - raw)) + 's)'
         : 'Song time ' + fmt(raw) + ' · line ' + (idx + 1) + ' of ' + lines.length;
@@ -301,7 +320,7 @@ function nextCountdown(secs, item, solo) {
   nextFail = setTimeout(nextStop, (secs + 75) * 1000);   // safety net: the menu button always comes back if nothing starts
 }
 $('#nextCancel').onclick = () => nextStop();
-$('#back').onclick = () => { refreshTheme(); document.body.classList.remove('aud'); $('#stage').style.display = 'none'; $('#home').style.display = 'block'; say('Pick the next song when you’re ready.'); };
+$('#back').onclick = () => { refreshTheme(); document.body.classList.remove('aud', 'instage'); $('#stage').style.display = 'none'; $('#home').style.display = 'block'; say('Pick the next song when you’re ready.'); };
 
 function renderScores() {
   const box = $('#sideScores'); box.textContent = '';

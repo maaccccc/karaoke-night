@@ -48,7 +48,21 @@ async function search() {
       }
       const bd = el('span', 'checking lyrics…', 'bdg'); info.firstChild.appendChild(bd); badgeQ.push([s, bd]); runBadges();
       const add = el('button', room.on ? 'Add to my queue' : 'Add to queue');
-      add.onclick = () => { if (room.on) { roomOp({ op: 'qadd', song: { videoId: s.videoId, title: s.title, artist: s.artist, duration: s.duration } }); say('Queued: ' + s.title); return; } queue.push({ song: s, singer: sel.value, file: null }); renderQueue(); say('Queued: ' + s.title); };
+      add.onclick = async () => {
+        const song = { videoId: s.videoId, title: s.title, artist: s.artist, duration: s.duration }, singer = sel ? sel.value : '';
+        let note = '';
+        if (prefs.kar) {      // swap in a karaoke (instrumental) video; the lyrics still come from the original song
+          add.disabled = true; say('Finding a karaoke version of ' + s.title + '…');
+          try {
+            const r = await fetch('/api/karaoke?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration || 0 })), list = await r.json();
+            if (r.ok && list.length) { song.kv = { videoId: list[0].videoId, title: list[0].title, duration: list[0].duration }; note = ' (karaoke version)'; }
+            else note = ' (no karaoke version found, so the original will play)';
+          } catch (e) { note = ' (could not look for a karaoke version, so the original will play)'; }
+          add.disabled = false;
+        }
+        if (room.on) { roomOp({ op: 'qadd', song }); say('Queued: ' + s.title + note); return; }
+        queue.push({ song, singer, file: null }); renderQueue(); say('Queued: ' + s.title + note);
+      };
       const pv = el('button', '▶ Preview', 'ghost pvbtn'); pv.type = 'button'; pv.title = 'Listen to a 30 second clip to check it is the right song'; pv.onclick = () => startPreview(s, pv, row);
       const acts = el('div', null, 'pvact'); acts.append(pv, add);
       row.append(...(sel ? [info, sel, acts] : [info, acts])); box.appendChild(row);
@@ -78,7 +92,7 @@ function renderQueueMain() {
   queue.forEach((it, i) => {
     const row = el('div', null, 'item');
     const info = el('div'); info.append(el('span', it.song.title + ' (' + whoTxt(it) + (it.mode && it.mode !== 'solo' ? ' · ' + modeName[it.mode] : '') + ')'),
-      el('small', it.song.artist + ' · plays from YouTube'));
+      el('small', it.song.artist + (it.song.kv ? ' · 🎤 karaoke version' : ' · original recording (has the singer’s vocals)')));
     const rm = el('button', 'Remove', 'ghost'); rm.onclick = () => { if (room.on) roomOp({ op: 'qrm', id: it.id }); else { queue.splice(i, 1); renderQueue(); } };
     row.append(info, rm); box.appendChild(row);
   });
