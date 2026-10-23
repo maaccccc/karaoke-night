@@ -36,8 +36,35 @@ async function findKaraoke(s, fresh) {   // a karaoke video {videoId, title, dur
     return r.ok && list.length ? { videoId: list[0].videoId, title: list[0].title, duration: list[0].duration } : null;
   } catch (e) { return undefined; }
 }
+// ---- duplicate detection: the same song cannot be queued twice (or while it is playing), so nobody can spam one song.
+// (The server applies the same rule in rooms, see song_key / same_song in server.py.)
+function songKey(title, artist) {
+  const norm = t => String(t || '').toLowerCase().replace(/[(\[{][^)\]}]*[)\]}]/g, ' ').split(/\b(?:feat|ft|featuring)\b\.?/)[0].replace(/[^\p{L}\p{N}_]+/gu, ' ').trim().replace(/\s+/g, ' ');
+  return norm(title) + '|' + norm(String(artist || '').split(/\s*(?:,|&|;| x | and )\s*/)[0]);
+}
+function sameSong(a, b) {
+  if (!a || !b) return false;
+  if (a.videoId && a.videoId === b.videoId) return true;
+  const ka = songKey(a.title, a.artist);
+  if (ka.startsWith('|') || ka !== songKey(b.title, b.artist)) return false;
+  const da = +a.duration || 0, db = +b.duration || 0;
+  return !(da && db && Math.abs(da - db) > 30);      // same name but a very different length = a different arrangement
+}
+const song0 = s => ({ videoId: s.videoId, title: s.title, artist: s.artist, duration: s.duration });
+function dupeOf(song) {                              // the queued (or playing) song this one duplicates, or null
+  const q = queue.find(it => sameSong(it.song, song));
+  if (q) return q.song;
+  return (active && current && sameSong(current.song, song)) ? current.song : null;
+}
+const dupeBtns = [];                                 // [song, button] of the current search results
+function markDupes() {
+  dupeBtns.forEach(([song, btn, label]) => {
+    const d = !!dupeOf(song);
+    btn.disabled = d || btn.dataset.busy === '1'; btn.textContent = d ? '✓ Already queued' : label; btn.title = d ? 'This song is already in the queue (or playing now)' : '';
+  });
+}
 async function search() {
-  const q = $('#q').value.trim(); if (q.length < 2) return; badgeQ.length = 0; stopPreview();
+  const q = $('#q').value.trim(); if (q.length < 2) return; badgeQ.length = 0; dupeBtns.length = 0; stopPreview();
   say('Searching…');
   try {
     const r = await fetch('/api/search?q=' + encodeURIComponent(q));
@@ -56,22 +83,25 @@ async function search() {
       const add = el('button', room.on ? 'Add to my queue' : 'Add to queue');
       add.onclick = async () => {
         const song = { videoId: s.videoId, title: s.title, artist: s.artist, duration: s.duration }, singer = sel ? sel.value : '';
+        if (dupeOf(song)) { markDupes(); say('“' + s.title + '” is already in the queue, so it was not added again.'); return; }
         let note = '';
         if (prefs.kar) {      // swap in a karaoke (instrumental) video; the lyrics still come from the original song
-          add.disabled = true; say('Finding a karaoke version of ' + s.title + '…');
+          add.disabled = true; add.dataset.busy = '1'; say('Finding a karaoke version of ' + s.title + '…');
           const kv = await findKaraoke(song);
           if (kv) { song.kv = kv; note = ' (karaoke version)'; }
           else note = kv === null ? ' ⚠ no karaoke version found, so the ORIGINAL (with the singer) will play. Press “🎤 Find karaoke” on it in the queue to try again.' : ' ⚠ could not look for a karaoke version, so the original will play. Press “🎤 Find karaoke” on it in the queue to try again.';
-          add.disabled = false;
+          add.disabled = false; add.dataset.busy = '';
+          if (dupeOf(song)) { markDupes(); say('“' + s.title + '” was just added by someone else, so it was not added again.'); return; }   // queued while the karaoke lookup ran
         }
         if (room.on) { roomOp({ op: 'qadd', song }); say('Queued: ' + s.title + note); return; }
         queue.push({ song, singer, file: null }); renderQueue(); say('Queued: ' + s.title + note);
       };
+      dupeBtns.push([song0(s), add, add.textContent]);
       const pv = el('button', '▶ Preview', 'ghost pvbtn'); pv.type = 'button'; pv.title = 'Listen to a 30 second clip to check it is the right song'; pv.onclick = () => startPreview(s, pv, row);
       const acts = el('div', null, 'pvact'); acts.append(pv, add);
       row.append(...(sel ? [info, sel, acts] : [info, acts])); box.appendChild(row);
     });
-    say('Pick a song to add to the queue.');
+    markDupes(); say('Pick a song to add to the queue.');
   } catch (e) { say('Search failed: ' + e.message); }
 }
 $('#searchBtn').onclick = search;
@@ -89,7 +119,7 @@ function fairOrder(items, sung) {
   }
   return out;
 }
-function renderQueue() { if (!room.on) queue.splice(0, queue.length, ...fairOrder(queue, localSung)); renderQueueMain(); renderSide(); }
+function renderQueue() { if (!room.on) queue.splice(0, queue.length, ...fairOrder(queue, localSung)); renderQueueMain(); renderSide(); markDupes(); }
 function renderQueueMain() {
   const box = $('#queue'); box.textContent = '';
   if (!queue.length) { box.appendChild(el('p', 'Nothing queued yet.', 'note')); return; }

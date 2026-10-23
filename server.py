@@ -244,6 +244,40 @@ def timing_set(v, l, o, sc):
         except Exception:
             pass                    # a read-only folder just means the fix is remembered until the server restarts
 
+def song_key(title, artist):
+    """A loose identity for a song (title + first artist) so the same song uploaded twice, or with '(Remastered)' / 'feat.' tacked on, still counts as the same."""
+    def norm(t):
+        t = re.sub(r'[\(\[\{][^\)\]\}]*[\)\]\}]', ' ', str(t or '').lower())       # drop (Remastered), [Official Video], ...
+        t = re.split(r'\b(?:feat|ft|featuring)\b\.?', t)[0]
+        t = re.sub(r'[^\w]+', ' ', t, flags=re.UNICODE)
+        return ' '.join(t.split())
+    return norm(title) + '|' + norm(re.split(r'\s*(?:,|&|;| x | and )\s*', str(artist or ''))[0])
+
+def same_song(a, b):
+    """True when two song dicts ({videoId, title, artist, duration}) are the same song."""
+    if not a or not b:
+        return False
+    if a.get('videoId') and a.get('videoId') == b.get('videoId'):
+        return True
+    ka, kb = song_key(a.get('title'), a.get('artist')), song_key(b.get('title'), b.get('artist'))
+    if ka.startswith('|') or ka != kb:
+        return False
+    try:
+        da, db = float(a.get('duration') or 0), float(b.get('duration') or 0)
+    except Exception:
+        da = db = 0
+    return not (da and db and abs(da - db) > 30)     # same name but a very different length = a different arrangement
+
+def find_dupe(r, song):
+    """The queued (or currently playing) song that `song` duplicates, or None."""
+    for q in r['queue']:
+        if same_song(q['song'], song):
+            return q['song']
+    nw = r.get('now')
+    if nw and same_song(nw.get('song'), song):
+        return nw['song']
+    return None
+
 def clean_kv(kv):
     """The karaoke video chosen for a queue item (sanitised): {videoId, title, duration} or None."""
     if not isinstance(kv, dict) or not isinstance(kv.get('videoId'), str) or not re.fullmatch(r'[A-Za-z0-9_-]{6,20}', kv['videoId']):
@@ -734,6 +768,10 @@ def room_send(code, cid, typ, data, to=None):
             r['nid'] += 1
             song = {'videoId': vid[:40], 'title': str(s.get('title', ''))[:200],
                     'artist': str(s.get('artist', ''))[:200], 'duration': dur}
+            dup = find_dupe(r, song)
+            if dup:
+                r['nid'] -= 1
+                return '“' + dup.get('title', 'That song') + '” is already in the queue (or playing now), so it was not added again.'
             kv = clean_kv(s.get('kv'))
             if kv: song['kv'] = kv            # everyone in the room then plays this same karaoke video
             r['queue'].append({'id': r['nid'], 'singer': singer, 'singer2': s2, 'mode': mode, 'song': song})
