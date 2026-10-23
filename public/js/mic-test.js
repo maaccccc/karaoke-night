@@ -37,9 +37,11 @@ async function tStart() {
     tStream = await navigator.mediaDevices.getUserMedia({ audio: Object.assign(micC(), mid ? { deviceId: { exact: mid } } : {}) });
     loadDevices(false);   // device names are available now
     const an2 = tCtx.createAnalyser(); an2.fftSize = 2048; const g = tCtx.createGain(); g.gain.value = prefs.sens;
-    tCtx.createMediaStreamSource(tStream).connect(g); g.connect(an2);
+    tCtx.createMediaStreamSource(tStream).connect(g);
+    let tSp = null; try { tSp = await makeSuppressor(tCtx, prefs.sup, prefs.thr); } catch (e) {}   // so you can hear and see what Mic suppression does
+    const gout = tSp ? (g.connect(tSp.in), tSp.out) : g; gout.connect(an2);
     const lim = tCtx.createDynamicsCompressor(); lim.threshold.value = -12; lim.knee.value = 6; lim.ratio.value = 12;   // limiter: keeps a sudden feedback squeal from being painfully loud
-    tMonGain = tCtx.createGain(); g.connect(lim); lim.connect(tMonGain); tMonGain.connect(tCtx.destination); tMonApply();   // what you hear
+    tMonGain = tCtx.createGain(); gout.connect(lim); lim.connect(tMonGain); tMonGain.connect(tCtx.destination); tMonApply();   // what you hear
     await tSink(tCtx);
     const label = (tStream.getAudioTracks()[0] || {}).label || 'your microphone'; setMic('tested');   // tells the Lobby this mic works
     st.textContent = 'Listening on "' + label + '". Say something!';

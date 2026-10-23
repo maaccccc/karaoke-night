@@ -133,3 +133,10 @@ body.nocover .ytcover{display:none}
 body:not(.instage) #upNext{display:none}
 .newhere{margin:6px 0 14px}
 .chead{cursor:pointer}#chatX{min-width:34px}
+
+#prefs details.sgrp{border:1px solid var(--line);border-radius:14px;margin:10px 0;padding:0 14px;background:rgba(255,255,255,.03)}
+#prefs summary{cursor:pointer;font-weight:700;padding:12px 0;color:var(--ink);margin:0;list-style-position:inside}
+#prefs summary small{display:block;font-weight:400;font-size:.8rem;color:var(--mute);margin:2px 0 0 1.2em}
+#prefs details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:4px}
+#prefs details>.grp:last-child{margin-bottom:14px}
+#prefs .grp>label>input[type=checkbox]{flex:none}

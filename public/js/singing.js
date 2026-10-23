@@ -161,10 +161,12 @@ async function runSong() {
     stream = await navigator.mediaDevices.getUserMedia({ audio: Object.assign(micC(), mid ? { deviceId: { exact: mid } } : {}) });
     actx = new (window.AudioContext || window.webkitAudioContext)(); actx.resume().catch(() => {}); vdest = null;
     an = actx.createAnalyser(); an.fftSize = 2048; micGain = actx.createGain(); micGain.gain.value = prefs.sens;
-    micSrc = actx.createMediaStreamSource(stream); micSrc.connect(micGain); micGain.connect(an);
+    micSrc = actx.createMediaStreamSource(stream); micSrc.connect(micGain);
+    micSup = null; try { micSup = await makeSuppressor(actx, prefs.sup, prefs.thr); } catch (e) { micSup = null; }   // mic suppression (a straight pass-through unless set to Strong or Maximum)
+    const mout = micSup ? (micGain.connect(micSup.in), micSup.out) : micGain; mout.connect(an);
     if (room.on) {   // what friends hear = your mic after the sensitivity gain, with a limiter so loud notes do not crackle
       const lim = actx.createDynamicsCompressor(); lim.threshold.value = -10; lim.knee.value = 8; lim.ratio.value = 12; lim.attack.value = .003; lim.release.value = .2;
-      vdest = actx.createMediaStreamDestination(); gate = actx.createGain(); gate.gain.value = current.mode === 'solo' ? 1 : 0; gateState = -1; micGain.connect(lim); lim.connect(gate); gate.connect(vdest);
+      vdest = actx.createMediaStreamDestination(); gate = actx.createGain(); gate.gain.value = current.mode === 'solo' ? 1 : 0; gateState = -1; mout.connect(lim); lim.connect(gate); gate.connect(vdest);
     }
     $('#micNote').textContent = 'Mic is on. Headphones keep the music out of your score.';
     if (room.on && stream) { rtc.stream = vdest ? vdest.stream : stream; connectPeers(); }

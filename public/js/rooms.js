@@ -6,7 +6,7 @@ const room = { on: false, code: '', id: '', name: '', skew: 0, peers: [], startA
 function setMic(m) { room.mic = m; if (room.on) roomOp({ op: 'mic', mic: m }); }
 const rtc = { pcs: {}, stream: null, remote: null, pend: {}, rctx: null, rems: {}, audio: {}, hooked: new Set(), dly: {}, lat: {}, jb: {} };
 let pendingResult = null, awaiting = false;
-const micC = () => room.on ? { echoCancellation: !prefs.hp, noiseSuppression: false, latency: { ideal: 0 } } : { echoCancellation: true, noiseSuppression: false };
+const micC = () => Object.assign(room.on ? { echoCancellation: !prefs.hp, latency: { ideal: 0 } } : { echoCancellation: true }, supCons(prefs.sup, 'sing'));   // Mic suppression decides the browser's noise suppression (Standard = off while singing, as before)
 const isSinger = () => !room.on || (current && (current.sids ? current.sids.includes(room.id) : current.singer === room.name));
 const EMOJI = ['🎤', '😎', '🦄', '🐱', '🐶', '🦊', '🐼', '🐸', '🤖', '👽', '🎸', '🍕', '🌟', '🔥', '👑', '🦖'];
 const COLORS = ['#ff3d8b', '#35e0ff', '#ffc83d', '#3be58a', '#b388ff', '#ff8a3d', '#ff5252', '#7cb7ff'];
@@ -137,7 +137,7 @@ function renderWho(m) {
   const box = $('#lobList'); box.textContent = ''; $('#lobN').textContent = '(' + m.peers.length + ')';
   const mic = { untested: ['mic untested', ''], tested: ['mic OK', 'ok'], blocked: ['mic blocked', 'bad'], none: ['no mic', 'bad'], error: ['mic problem', 'bad'] };
   m.peers.forEach(p => {
-    const row = el('div', '', 'pr' + (p.away ? ' away' : '')); const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; row.appendChild(av); row.appendChild(el('b', p.name + (p.id === room.id ? ' (you)' : '') + ((m.singers || []).includes(p.name) ? ' 🎤' : ''), p.id === room.id ? 'me' : ''));
+    const row = el('div', '', 'pr' + (p.away ? ' away' : '')); row.dataset.pid = p.id; const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; row.appendChild(av); row.appendChild(el('b', p.name + (p.id === room.id ? ' (you)' : '') + ((m.singers || []).includes(p.name) ? ' 🎤' : ''), p.id === room.id ? 'me' : ''));
     if (p.id === m.host) row.appendChild(el('span', '👑 host', 'tg ok'));
     const [t, c] = mic[p.mic] || mic.untested; row.appendChild(el('span', t, 'tg ' + c));
     if (p.vc) row.appendChild(el('span', p.vcm ? '🔇 muted' : '🎧 voice', 'tg' + (p.vcm ? '' : ' ok')));
@@ -196,7 +196,7 @@ function toggleMute(name) {   // local only: you stop hearing (voice chat and si
 }
 function applyMutes() {
   const hold = !!room.live && !room.watch;                  // joined mid-song and not watching: do not play the singer's voice without the music
-  Object.entries(vc.audio || {}).forEach(([id, a]) => { a.muted = isMutedId(id); });
+  if (typeof vcApply === 'function') vcApply();             // voice chat (volume, mute and threshold live there)
   Object.entries(rtc.audio || {}).forEach(([id, a]) => { a.muted = hold || isMutedId(id); });
   const rv = $('#rv'); if (rv) rv.muted = Object.entries(rtc.rems || {}).some(([id, s]) => s === rv.srcObject && isMutedId(id));
 }

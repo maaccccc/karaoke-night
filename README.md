@@ -137,3 +137,17 @@ A big 3 · 2 · 1 appears over the lyrics so everyone knows when to come in: "So
 Korean and Japanese kana are romanized in the browser. Kanji, Chinese pinyin and other scripts (Cyrillic, Greek, Arabic, Thai, Hindi...) are romanized by the server through `/api/romanize`, using the libraries in `requirements.txt`: `pip install -r requirements.txt`, then restart `server.py`. If one is missing, the page tells you which to install.
 - Japanese: uses `cutlet` when installed (best: real word spacing and particles like は -> wa; `pip install cutlet unidic-lite`), otherwise `pykakasi`.
 - A song with any kana is treated as Japanese; a song with only Han characters is treated as Chinese (pinyin with tone marks).
+
+### Voice chat volume and mic threshold
+- **Per person (Discord style):** right-click someone in the Lobby or the voice chat list (press and hold on a phone) and drag **User volume** from 0 to 100%. The same menu has Mute. It only changes what *you* hear and is remembered in your browser by the person's name.
+- **Everyone:** the **Voice chat volume (everyone)** slider at the bottom of the voice chat panel goes from 0 to 200% (100% is normal; double-click resets it). Above 100% the sound goes through a limiter so it does not crackle. The "while someone sings" slider still ducks voice chat on top of this.
+- **Meters:** each person in the voice chat list has a live level meter.
+- **Mic threshold (Settings → Sound, and Mic test):** like Discord's input sensitivity. Your mic is muted while the live meter is left of the white line. 0 = off. It works together with Mic suppression and applies right away, even during a song.
+
+### Mic suppression (Settings → Sound, also in Mic test)
+For people with a TV, fans or family on other computers in the same room. It works for both singing and voice chat, takes effect straight away, and only changes what *your* mic sends (and what scores you).
+- **Off:** raw microphone, no processing.
+- **Standard (default):** how the app always worked.
+- **Strong:** the browser's noise suppression, a voice-range filter, and a noise gate that learns the background and turns the mic down about 14 dB while you are not clearly louder than it.
+- **Maximum:** a stricter gate (about 30 dB down) and a tighter filter.
+The gate runs in an AudioWorklet (`public/js/suppress-worklet.js`, logic in `public/js/suppress.js`) and needs https or localhost, like the microphone itself. It cannot tell your voice from someone else's voice, so keep the mic close or wear headphones. If the start of words is clipped, use Strong instead of Maximum.

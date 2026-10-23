@@ -43,6 +43,10 @@
     <div class="grp" style="margin:8px 0"><label for="tOut">Play through</label><select id="tOut"><option value="">Default speakers</option></select>
       <div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tBeep">🔊 Play test sound</button></div>
       <p class="note" style="margin:6px 0 0" id="tOutNote">Can’t hear yourself? Press the test sound. If you hear nothing, pick your headset here. Bluetooth headsets often show two entries (“Headphones” and “Headset / Hands-Free”); try the other one.</p></div>
+    <div class="grp" style="margin:10px 0 2px"><label for="tSup">Mic suppression</label><select id="tSup"><option value="off">Off</option><option value="std">Standard</option><option value="strong">Strong</option><option value="max">Maximum</option></select>
+      <p class="note" style="margin:6px 0 8px" id="tSupNote"></p></div>
+    <div class="grp" style="margin:10px 0 2px"><label for="tThr">Mic threshold <b id="tThrV">Off</b></label><div class="thrmeter" aria-hidden="true"><i class="f"></i><i class="m"></i></div><input type="range" id="tThr" min="0" max="100" step="1" value="0">
+      <p class="note" style="margin:6px 0 8px">Your mic is muted while the meter is left of the white line. Same setting as in Settings.</p></div>
     <label style="display:flex;gap:8px;align-items:center;margin:10px 0 2px"><input type="checkbox" id="tLow" checked><span>⚡ Low-latency voice (recommended)</span></label>
     <p class="note" style="margin:0 0 8px">Friends hear you sooner. If your voice crackles or cuts out for them on weak Wi-Fi, untick this. You can change it any time, even during a song.</p>
     <p id="tStatus" style="margin:6px 0 14px;font-weight:600;min-height:1.4em"></p>
@@ -52,19 +56,27 @@
 
 <dialog id="prefs" aria-labelledby="prefsTitle">
   <form method="dialog">
-    <h2 id="prefsTitle">Preferences</h2>
-    <div class="grp"><label for="pFs">Lyrics size <b id="pFsV">100%</b></label><input type="range" id="pFs" min="0.8" max="1.8" step="0.05" value="1"></div>
-    <div class="grp"><label for="pSens">Mic sensitivity <b id="pSensV">1.0×</b></label><input type="range" id="pSens" min="0.5" max="4" step="0.1" value="1"><p class="note">Raise it if the volume meter barely moves. In a room, friends hear the change live while you sing.</p></div>
-    <div class="grp"><label for="micSel">Microphone (input)</label><select id="micSel"><option value="">Default microphone</option></select></div>
-    <select id="outSel" hidden aria-hidden="true"><option value="">Default speakers</option></select>
-    <div class="grp"><label for="pDel">Audio delay <b id="pDelV">0.00s</b></label><input type="range" id="pDel" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">Bluetooth speakers and some devices play sound late. Raise this until the lyrics match what you hear.</p></div>
-    <div class="grp"><label for="pVs">Voice sync (when listening) <b id="pVsV">0.00s</b></label><input type="range" id="pVs" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">When you listen to someone sing, the app holds the music back a little so their voice, the music and the lyrics line up. Nudge this if their voice still feels early or late.</p></div>
-    <div class="grp"><label for="pLead">Show lines early <b id="pLeadV">0.00s</b></label><input type="range" id="pLead" min="0" max="1" step="0.05" value="0"><p class="note">Highlights each line a little before it is sung, so there is time to read it.</p></div>
-    <div class="grp"><label><span>⚡ Low-latency voice (recommended)</span><input type="checkbox" id="pLow"></label><p class="note">Uses a smaller voice buffer and shorter audio packets so friends hear you sooner, and keeps everyone’s music closer in step. If the voice crackles or cuts out on weak Wi-Fi, turn it off. Applies right away (the shorter packets from the next song).</p></div>
-    <div class="grp"><label><span>Headphones mode (clearer voice in rooms)</span><input type="checkbox" id="pHp"></label><p class="note">When you sing in a room, this keeps the echo canceller off so your voice is not chopped up. Turn it off only if you use speakers.</p></div>
-    <div class="grp"><label><span>Still cover instead of the karaoke video</span><input type="checkbox" id="pCover"></label><p class="note">On karaoke tracks, show the song’s cover picture in the video box. The music keeps playing. Turn it off to see the karaoke video.</p></div>
-    <div class="grp"><label><span>Reduce motion</span><input type="checkbox" id="pCalm"></label></div>
-    <div class="grp"><label><span>Smooth mode (fewer glow effects, runs better on phones)</span><input type="checkbox" id="pLite"></label></div>
+    <h2 id="prefsTitle">⚙ Settings</h2>
+    <details class="sgrp" open><summary>🔊 Sound <small>microphone, suppression, headphones, voice</small></summary>
+      <div class="grp"><label for="micSel">Microphone (input)</label><select id="micSel"><option value="">Default microphone</option></select></div>
+      <select id="outSel" hidden aria-hidden="true"><option value="">Default speakers</option></select>
+      <div class="grp"><label for="pSens">Mic sensitivity <b id="pSensV">1.0×</b></label><input type="range" id="pSens" min="0.5" max="4" step="0.1" value="1"><p class="note">Raise it if the volume meter barely moves. In a room, friends hear the change live while you sing.</p></div>
+      <div class="grp"><label for="pSup">Mic suppression</label><select id="pSup"><option value="off">Off</option><option value="std">Standard</option><option value="strong">Strong</option><option value="max">Maximum</option></select><p class="note" id="pSupNote"></p><p class="note">Try it in <b>🎤 Mic test</b> first: stay quiet for 2 to 3 seconds so it learns the background, then talk. Applies right away, even during a song.</p></div>
+      <div class="grp"><label for="pThr">Mic threshold <b id="pThrV">Off</b></label><div class="thrmeter" aria-hidden="true"><i class="f"></i><i class="m"></i></div><input type="range" id="pThr" min="0" max="100" step="1" value="0"><p class="note">Like Discord’s input sensitivity: your mic is muted while the meter stays left of the white line, so keyboard clicks, breathing and TV hiss are not sent. Drag it just past your background level. Off = 0. The meter moves while your mic is on (voice chat, a song or <b>🎤 Mic test</b>).</p></div>
+      <div class="grp"><label><span>Headphones mode (clearer voice in rooms)</span><input type="checkbox" id="pHp"></label><p class="note">When you sing in a room, this keeps the echo canceller off so your voice is not chopped up. Turn it off only if you use speakers.</p></div>
+      <div class="grp"><label><span>⚡ Low-latency voice (recommended)</span><input type="checkbox" id="pLow"></label><p class="note">Uses a smaller voice buffer and shorter audio packets so friends hear you sooner, and keeps everyone’s music closer in step. If the voice crackles or cuts out on weak Wi-Fi, turn it off. Applies right away (the shorter packets from the next song).</p></div>
+    </details>
+    <details class="sgrp"><summary>⏱ Sync &amp; timing <small>audio delay, voice sync, lines early</small></summary>
+      <div class="grp"><label for="pDel">Audio delay <b id="pDelV">0.00s</b></label><input type="range" id="pDel" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">Bluetooth speakers and some devices play sound late. Raise this until the lyrics match what you hear.</p></div>
+      <div class="grp"><label for="pVs">Voice sync (when listening) <b id="pVsV">0.00s</b></label><input type="range" id="pVs" min="-0.5" max="0.5" step="0.05" value="0"><p class="note">When you listen to someone sing, the app holds the music back a little so their voice, the music and the lyrics line up. Nudge this if their voice still feels early or late.</p></div>
+      <div class="grp"><label for="pLead">Show lines early <b id="pLeadV">0.00s</b></label><input type="range" id="pLead" min="0" max="1" step="0.05" value="0"><p class="note">Highlights each line a little before it is sung, so there is time to read it.</p></div>
+    </details>
+    <details class="sgrp"><summary>🎨 Preferences <small>lyrics size, cover, motion, smooth mode</small></summary>
+      <div class="grp"><label for="pFs">Lyrics size <b id="pFsV">100%</b></label><input type="range" id="pFs" min="0.8" max="1.8" step="0.05" value="1"></div>
+      <div class="grp"><label><span>Still cover instead of the karaoke video</span><input type="checkbox" id="pCover"></label><p class="note">On karaoke tracks, show the song’s cover picture in the video box. The music keeps playing. Turn it off to see the karaoke video.</p></div>
+      <div class="grp"><label><span>Reduce motion</span><input type="checkbox" id="pCalm"></label></div>
+      <div class="grp"><label><span>Smooth mode (fewer glow effects, runs better on phones)</span><input type="checkbox" id="pLite"></label></div>
+    </details>
     <div class="row"><button type="button" class="ghost" id="devBtn">Detect devices</button><button type="button" class="ghost" id="pReset">Reset</button><button value="close">Done</button></div>
   </form>
 </dialog>
@@ -88,9 +100,9 @@
     <details><summary>⭐ Scoring and fun</summary>
       <ul><li>Up to 50 points from your mic (tone, volume and timing), a combo bonus of up to 10 for singing lines well in a row, and up to 10 bonus points from the audience’s 1 to 5 stars.</li><li>Duets split the lines between two singers. In a tournament, whoever scores most on their own lines wins a 10-point bonus.</li><li>Listeners can send reactions, chat, and earn funny awards at the end of each song. <b>End the night</b> shows the winner and highlights.</li></ul></details>
     <details><summary>🎧 Microphone tips</summary>
-      <ul><li>Use <b>🎤 Mic test</b> before the first song to check that you are heard.</li><li>If the meter barely moves, raise <b>Mic sensitivity</b> in Settings.</li><li>The browser must be allowed to use your microphone. Chrome, Edge and Brave work best; keep the tab visible while singing.</li></ul></details>
+      <ul><li>Use <b>🎤 Mic test</b> before the first song to check that you are heard.</li><li>If the meter barely moves, raise <b>Mic sensitivity</b> in Settings.</li><li>TV, fans or family in the room? Set <b>Mic suppression</b> to Strong or Maximum under <b>Sound</b> in Settings. It learns the background and quiets your mic until you are clearly louder.</li><li>Mic too sensitive? Set <b>Mic threshold</b> in Settings (like Discord’s input sensitivity): your mic is muted below the white line.</li><li>In voice chat, <b>right-click</b> a person (press and hold on a phone) to change how loud they are for you. <b>Voice chat volume (everyone)</b> goes up to 200%.</li><li>The browser must be allowed to use your microphone. Chrome, Edge and Brave work best; keep the tab visible while singing.</li></ul></details>
     <details><summary>🎨 Looks and settings</summary>
-      <p>Pick a theme on the welcome page. Use <b>⚙ Settings</b> for lyrics size, fullscreen, reduce motion, smooth mode for slow phones, the still karaoke cover and more.</p></details>
+      <p>Pick a theme on the welcome page. Use <b>⚙ Settings</b>, grouped into <b>Sound</b>, <b>Sync &amp; timing</b> and <b>Preferences</b>: microphone and suppression, audio delay, lyrics size, reduce motion, smooth mode for slow phones, the still karaoke cover and more.</p></details>
     <details><summary>ℹ️ About this project</summary>
       <p class="disc" style="margin:0">Karaoke Night is a free project made for fun, not a commercial service. It is a <b>karaoke / sing-along style</b> app: songs play through YouTube’s official embedded player (nothing is downloaded or stored here), synced lyrics come from LRCLIB, and karaoke versions are other people’s YouTube uploads. All songs, lyrics and videos belong to their owners. It is not affiliated with or endorsed by YouTube, YouTube Music or LRCLIB, and availability, lyric timing and karaoke quality are not guaranteed.</p></details>
     <div class="row" style="justify-content:center;margin-top:14px"><button value="close">Got it</button></div>
@@ -100,11 +112,17 @@
 <dialog id="newdlg" aria-labelledby="nwTitle">
   <h2 id="nwTitle">✨ What’s new</h2>
   <ul id="nwList" style="margin:10px 0 14px;padding-left:20px;line-height:1.7">
-    <li>🎤 <b>Karaoke versions:</b> songs can now play a karaoke / instrumental track, so the original singer is gone</li>
-    <li>🎶 Lyrics stay synced to the karaoke track, with timing remembered separately for each video</li>
-    <li>🖼 A still cover replaces the moving karaoke video (you can turn it off in Settings)</li>
-    <li>❓ New <b>How it works</b> guide: tap the button at the top</li>
-    <li>ℹ️ Added a note that this is a free karaoke / sing-along style project</li>
+    <li>🖱 <b>Right-click a person</b> in the Lobby or voice chat (press and hold on a phone) to set how loud <i>they</i> are for you, 0 to 100%, like Discord</li>
+    <li>🎚 <b>Voice chat volume (everyone)</b> at the bottom of the voice chat panel now goes from 0 to 200%</li>
+    <li>🎙 <b>Mic threshold</b> moved to <b>⚙ Settings → Sound</b> (and Mic test), with a live meter: your mic is muted below the white line, like Discord’s input sensitivity</li>
+    <li>👥 The voice chat list is cleaner: just who is connected and a live meter for each person</li>
   </ul>
+  <details style="margin:0 0 14px"><summary>Earlier updates</summary>
+    <ul style="margin:8px 0 0;padding-left:20px;line-height:1.7">
+      <li>🧹 <b>Mic suppression</b> (Off / Standard / Strong / Maximum) hides TV, fans and family noise</li>
+      <li>⚙ Settings is grouped into Sound, Sync &amp; timing and Preferences</li>
+      <li>🎤 Karaoke versions of songs, with timing remembered per video</li>
+    </ul>
+  </details>
   <div class="row" style="justify-content:center"><button type="button" id="nwOk">Got it</button></div>
 </dialog>

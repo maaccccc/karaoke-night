@@ -20,7 +20,7 @@ async function switchMic(reason) {   // reason: 'device' (a different microphone
             try { if (micSrc) micSrc.disconnect(); } catch (e) {}
             const old = stream; stream = ns; micSrc = src; old.getTracks().forEach(t => t.stop());
             const lb = (ns.getAudioTracks()[0] || {}).label;
-            say(why === 'device' ? 'Microphone switched' + (lb ? ' to ' + lb : '') + '.' : 'Headphones mode ' + (prefs.hp ? 'on' : 'off') + ': microphone updated.');
+            say(why === 'device' ? 'Microphone switched' + (lb ? ' to ' + lb : '') + '.' : why === 'sup' ? 'Mic suppression: ' + SUP_LEVELS[supLevel(prefs.sup)].label + '.' : 'Headphones mode ' + (prefs.hp ? 'on' : 'off') + ': microphone updated.');
           }
         } catch (e) {
           say('Could not switch the microphone (' + (e.name || e.message) + '). Still using the previous one.');
@@ -31,14 +31,12 @@ async function switchMic(reason) {   // reason: 'device' (a different microphone
         }
       }
       // 2) the voice chat microphone (only a different device matters there)
-      if (why === 'device' && typeof vc !== 'undefined' && vc.on && vc.stream) {
+      if ((why === 'device' || why === 'sup') && typeof vc !== 'undefined' && vc.on && vc.stream) {
         try {
-          const nv = await navigator.mediaDevices.getUserMedia({ audio: Object.assign({ echoCancellation: true, noiseSuppression: true, autoGainControl: true }, mid ? { deviceId: { exact: mid } } : {}) });
+          const nv = await navigator.mediaDevices.getUserMedia({ audio: Object.assign(supCons(prefs.sup, 'vc'), mid ? { deviceId: { exact: mid } } : {}) });
           if (!vc.on) nv.getTracks().forEach(t => t.stop());
           else {
-            const nt = nv.getAudioTracks()[0]; nt.enabled = !vc.muted && !vcSinging();
-            await Promise.all(Object.values(vc.pcs).map(pc => Promise.all(pc.getSenders().filter(s => s.track && s.track.kind === 'audio').map(s => s.replaceTrack(nt).catch(() => {})))));
-            const old = vc.stream; vc.stream = nv; old.getTracks().forEach(t => t.stop());
+            await vcSetMic(nv);
           }
         } catch (e) { say('Could not switch the voice chat microphone (' + (e.name || e.message) + ').'); }
       }
