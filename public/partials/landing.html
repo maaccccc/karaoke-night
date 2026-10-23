@@ -2,53 +2,73 @@
   <div class="lbar"><button type="button" class="ghost icon" data-help aria-label="How it works">❓ How it works</button> <button type="button" class="ghost icon" id="lSettings" aria-label="Open settings">⚙ Settings</button></div>
   <div class="lhero">
     <h1>Karaoke Night</h1>
-    <p class="tag">Sing your favourite songs with time-synced lyrics, live scoring and your friends, whether they are next to you or across the world.</p>
+    <p class="tag">Sing with time-synced lyrics, live scoring and friends, on one device or across the world.</p>
     <p class="onl" id="onl" hidden role="status" aria-live="polite"><i></i><span></span></p>
-    <p class="desc">Search any song on the search box, add it to the queue and sing while the lyrics follow the music. Your microphone scores you as you sing. Play solo on one device, or create a room so friends anywhere can join with a code: a shared queue, live voice, ready checks, duets and tournaments, reactions and chat.</p>
   </div>
-  <p class="row newhere" style="justify-content:center"><button type="button" class="ghost" data-help>❓ New here? See how it works</button></p>
-  <div class="lgrid">
-    <div class="card">
-      <h2>Get set</h2>
-      <div class="grp"><label for="rName">Your name</label><input id="rName" maxlength="20" placeholder="Name" autocomplete="nickname"></div>
+
+  <div class="card lme">
+    <div class="grp lname"><label for="rName">Your name</label><input id="rName" maxlength="20" placeholder="Name" autocomplete="nickname"></div>
+    <details class="lopt">
+      <summary>Choose your look and test your mic <small>(optional)</small></summary>
       <div class="grp"><label>Your look</label><div id="avPick"></div></div>
       <button type="button" class="ghost" id="lMicBtn">🎤 Test my microphone</button>
       <p class="note" id="lMic">Check that your friends can hear you before the first song.</p>
+    </details>
+  </div>
+
+  <div class="lactions" id="cStart">
+    <div class="card lact">
+      <span class="ic" aria-hidden="true">🎤</span>
+      <h2>Sing solo</h2>
+      <p>On this device, taking turns with the people next to you.</p>
+      <div class="lspace"></div>
+      <button type="button" class="lbtn" id="lSolo"><span class="tx"><b>Sing solo</b></span></button>
     </div>
-    <div class="card" id="cStart">
-      <h2>Start singing</h2>
-      <button type="button" class="lbtn" id="lSolo"><span class="ic">🎤</span><span class="tx"><b>Sing solo</b><small>On this device, taking turns with the people next to you</small></span></button>
 
-      <div class="odiv"><span>or sing online with friends</span></div>
-
-      <p class="vlab" id="visLab">Who can find your new room?</p>
+    <div class="card lact">
+      <span class="ic" aria-hidden="true">✨</span>
+      <h2>Create a room</h2>
+      <p>Get a room code and invite friends from anywhere.</p>
+      <p class="vlab" id="visLab">Who can find your room?</p>
       <div class="visp" role="group" aria-labelledby="visLab">
         <button type="button" class="ghost seg on" data-v="private" aria-pressed="true"><b>🔒 Private</b><small>Only people with the code</small></button>
-        <button type="button" class="ghost seg" data-v="public" aria-pressed="false"><b>🌐 Public</b><small>Listed in the room lobby</small></button>
+        <button type="button" class="ghost seg" data-v="public" aria-pressed="false"><b>🌐 Public</b><small>Listed in the lobby</small></button>
       </div>
-      <button type="button" class="lbtn" id="lCreate"><span class="ic">✨</span><span class="tx"><b>Create a room</b><small>Get a room code and invite friends from anywhere</small></span></button>
+      <button type="button" class="lbtn" id="lCreate"><span class="tx"><b>Create a room</b></span></button>
+    </div>
 
-      <div class="odiv"><span>or join a friend's room</span></div>
-
-      <div class="ljoin"><input id="rCode" maxlength="12" placeholder="ROOM CODE" autocapitalize="characters" aria-label="Room code"><button type="button" id="lJoin">Join a room</button></div>
-      <p id="rStat" class="note" role="status" style="min-height:1.3em;margin:8px 0 0"></p>
+    <div class="card lact">
+      <span class="ic" aria-hidden="true">🚪</span>
+      <h2>Join a room</h2>
+      <p>Enter the code a friend shared with you.</p>
+      <div class="lspace"></div>
+      <div class="ljoin"><input id="rCode" maxlength="12" placeholder="ROOM CODE" autocapitalize="characters" aria-label="Room code"><button type="button" class="lbtn" id="lJoin">Join a room</button></div>
     </div>
   </div>
-  <div class="card" id="rLobby">
-    <h2>🚪 Room lobby</h2>
-    <p class="note">Rooms open right now. Join a public room with one tap. Private rooms need the room code from the host.</p>
-    <div id="lobRooms" aria-live="polite"><p class="note">Looking for rooms…</p></div>
-    <p class="note" id="lobNote" style="min-height:1.3em;margin:8px 0 0"></p>
-  </div>
-  <div class="card" id="gChat">
-    <h2>💬 Global chat</h2>
-    <p class="note">A public chat for everyone visiting Karaoke Night. Be kind. Messages are cleared when the server restarts.</p>
-    <div id="gLog" role="log" aria-live="polite"><p class="note" id="gEmpty">No messages yet. Say hi!</p></div>
-    <div class="row" id="gForm"><input id="gIn" maxlength="200" placeholder="Say something to everyone" aria-label="Global chat message" autocomplete="off"><button type="button" id="gSend">Send</button></div>
-    <p class="note" id="gNote" style="min-height:1.3em;margin:8px 0 0"></p>
-  </div>
-  <div class="card" id="lTheme">
-    <h2>Theme</h2>
+  <p id="rStat" class="note" role="status"></p>
+  <p class="row newhere"><button type="button" class="ghost" data-help>❓ New here? See how it works</button></p>
+
+  <h2 class="lmorehead">More to explore</h2>
+  <details class="card fold" id="rLobby">
+    <summary><span class="ft">🚪 Room lobby</span><small>Public rooms open right now</small></summary>
+    <div class="fbody">
+      <p class="note">Join a public room with one tap. Private rooms need the room code from the host.</p>
+      <div id="lobRooms" aria-live="polite"><p class="note">Looking for rooms…</p></div>
+      <p class="note" id="lobNote"></p>
+    </div>
+  </details>
+  <details class="card fold" id="gChat">
+    <summary><span class="ft">💬 Global chat</span><small>Say hi to everyone visiting</small></summary>
+    <div class="fbody">
+      <p class="note">A public chat for everyone visiting Karaoke Night. Be kind. Messages are cleared when the server restarts.</p>
+      <div id="gLog" role="log" aria-live="polite"><p class="note" id="gEmpty">No messages yet. Say hi!</p></div>
+      <div class="row" id="gForm"><input id="gIn" maxlength="200" placeholder="Say something to everyone" aria-label="Global chat message" autocomplete="off"><button type="button" id="gSend">Send</button></div>
+      <p class="note" id="gNote"></p>
+    </div>
+  </details>
+  <details class="card fold" id="lTheme">
+    <summary><span class="ft">🎨 Theme</span><small>Change the look of the whole site</small></summary>
+    <div class="fbody">
     <p class="note">Changes the look of the whole site, on every page and while you sing.</p>
     <div class="thgrid">
       <button type="button" class="ghost thbtn" data-th="neon" aria-pressed="false"><span class="thsw thsw-neon"></span><b>Neon club</b><small>Hot pink beams and gold glow</small></button>
@@ -60,13 +80,20 @@
       <button type="button" class="ghost thbtn" data-th="aurora" aria-pressed="false"><span class="thsw thsw-aurora"></span><b>Aurora</b><small>Northern lights over a dark sky</small></button>
       <button type="button" class="ghost thbtn" data-th="jazz" aria-pressed="false"><span class="thsw thsw-jazz"></span><b>Jazz lounge</b><small>Warm spotlight and drifting dust</small></button>
     </div>
-  </div>
-  <div class="lfeat">
-    <div class="card"><b>🎶</b><strong>Synced lyrics</strong><br><span>Lyrics follow the music, with easy tools to fix the timing.</span></div>
-    <div class="card"><b>⭐</b><strong>Live scoring</strong><br><span>Your mic scores your tone, volume and timing as you sing.</span></div>
-    <div class="card"><b>🌐</b><strong>Sing together</strong><br><span>Live voice, shared queue, duets and tournaments with friends.</span></div>
-    <div class="card"><b>🔥</b><strong>Crowd energy</strong><br><span>Reactions, stars and chat from everyone in the room.</span></div>
-  </div>
-  <ol class="lsteps"><li>Pick a name</li><li>Sing solo or open a room</li><li>Queue songs and sing</li></ol>
+    </div>
+  </details>
+  <details class="card fold" id="lAbout">
+    <summary><span class="ft">✨ What is Karaoke Night?</span><small>Features and how a night works</small></summary>
+    <div class="fbody">
+      <p class="note">Search any song, add it to the queue and sing while the lyrics follow the music. Your microphone scores you as you sing. Play solo on one device, or create a room so friends anywhere can join with a code: a shared queue, live voice, ready checks, duets and tournaments, reactions and chat.</p>
+      <div class="lfeat">
+        <div class="card"><b>🎶</b><strong>Synced lyrics</strong><br><span>Lyrics follow the music, with easy tools to fix the timing.</span></div>
+        <div class="card"><b>⭐</b><strong>Live scoring</strong><br><span>Your mic scores your tone, volume and timing as you sing.</span></div>
+        <div class="card"><b>🌐</b><strong>Sing together</strong><br><span>Live voice, shared queue, duets and tournaments with friends.</span></div>
+        <div class="card"><b>🔥</b><strong>Crowd energy</strong><br><span>Reactions, stars and chat from everyone in the room.</span></div>
+      </div>
+      <ol class="lsteps"><li>Pick a name</li><li>Sing solo or open a room</li><li>Queue songs and sing</li></ol>
+    </div>
+  </details>
   <p class="disc">Karaoke Night is a free project made for fun, not a commercial service. It is a <b>karaoke / sing-along style</b> app: songs play through YouTube’s official embedded player (nothing is downloaded or stored here), synced lyrics come from LRCLIB, and karaoke versions are other people’s YouTube uploads. All songs, lyrics and videos belong to their owners. It is not affiliated with or endorsed by YouTube, YouTube Music or LRCLIB, and availability, lyric timing and karaoke quality are not guaranteed.</p>
 </section>

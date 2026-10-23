@@ -1,0 +1,156 @@
+/* ===== Design system layer (loaded last). One spacing scale, one card, one heading and one button size for the
+   landing page, the room (queue, lobby, scoreboard, chat, settings) and the singing stage. Colours still come from
+   --pink / --cyan / --gold, so every theme keeps working. ===== */
+:root{
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;   /* spacing scale */
+  --pad:18px;                                                  /* card padding */
+  --ctl:42px;--ctl-sm:34px;--ctl-xs:28px;                      /* control heights: default / icon / mini */
+}
+
+/* ---------- shared pieces (everything) ---------- */
+.card{padding:var(--pad);margin-bottom:var(--s4)}
+.card>h2,.fold summary .ft{font:400 1.05rem/1.3 Bungee,Impact,sans-serif;letter-spacing:.5px;margin:0 0 var(--s3)}
+button{min-height:var(--ctl);padding:0 var(--s4);display:inline-flex;align-items:center;justify-content:center;gap:var(--s2)}
+button.icon{min-height:var(--ctl-sm);padding:0 var(--s3);font-size:.9rem}
+button.mini{min-height:var(--ctl-xs);padding:0 var(--s3);font-size:.8rem}
+input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=file]),select{min-height:var(--ctl)}
+.row{gap:var(--s2)}
+.note{line-height:1.45}
+.item,.qi,.pr,.sc{padding:var(--s3) 0}
+.card>.row:last-child,.card>.note:last-child{margin-bottom:0}
+
+/* ---------- landing: three clear actions, everything else tucked away ---------- */
+#landing{max-width:1040px;padding:var(--s6) var(--s4) 72px}
+#landing .lhero{margin-bottom:var(--s5)}
+#landing .lhero h1{font-size:clamp(2.2rem,7vw,4rem)}
+#landing .lhero .tag{font-size:clamp(1rem,2.2vw,1.2rem);margin-top:var(--s3);max-width:620px}
+#landing .lbar{margin:0 0 var(--s2);gap:var(--s2)}
+.lact>h2::before{display:none}
+
+.lme{display:flex;flex-direction:column;gap:var(--s3);max-width:560px;margin:0 auto var(--s5)}
+.lme .grp{margin:0}
+.lme .lname label{display:block;margin-bottom:var(--s2)}
+.lme .lname input{width:100%;font-size:1.1rem}
+.lopt summary{margin:0;padding:var(--s1) 0;font-size:.92rem}
+.lopt summary small{opacity:.7}
+.lopt[open] summary{margin-bottom:var(--s3)}
+
+#cStart.lactions{display:grid;gap:var(--s4);grid-template-columns:minmax(0,1fr);flex-direction:initial}
+@media (min-width:900px){#cStart.lactions{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.lact{display:flex;flex-direction:column;align-items:flex-start;margin:0;padding:var(--s5)}
+.lact .ic{display:grid;place-items:center;width:56px;height:56px;border-radius:18px;font-size:1.8rem;margin-bottom:var(--s3);background:linear-gradient(135deg,color-mix(in srgb,var(--pink) 55%,transparent),color-mix(in srgb,var(--cyan) 35%,transparent));box-shadow:0 0 22px -6px var(--pink)}
+.lact>h2{font-size:1.4rem;margin:0 0 var(--s2)}
+.lact>p{margin:0 0 var(--s3);color:var(--mute);font-size:.95rem}
+.lact .lspace{flex:1}
+.lact .vlab{margin:0 0 var(--s2);color:var(--ink)}
+.lact .visp{width:100%;margin:0 0 var(--s3)}
+.lact .visp button.seg{min-height:58px;padding:var(--s2) var(--s3)}
+#cStart .lact .lbtn{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;margin:0;padding:0 var(--s4);font-size:1.1rem;text-align:center}
+#cStart .lact .lbtn .tx{display:block}
+#cStart .lact .lbtn .tx b{font-size:1.1rem}
+#cStart .lact .ljoin{display:flex;flex-direction:column;gap:var(--s2);width:100%;margin:0}
+#cStart .lact .ljoin input{flex:none;width:100%;height:var(--ctl);font-size:1.05rem}
+#cStart .lact .ljoin button{width:100%;flex:none;height:56px;padding:0 var(--s4)}
+#rStat{min-height:1.4em;margin:var(--s3) 0 0;text-align:center}
+#landing .newhere{justify-content:center;margin:var(--s2) 0 var(--s5)}
+
+.lmorehead{font:600 .8rem Rubik,sans-serif;text-transform:uppercase;letter-spacing:.14em;color:var(--mute);text-align:center;margin:var(--s5) 0 var(--s3)}
+.lmorehead::before,.lmorehead::after{content:"";display:inline-block;vertical-align:middle;width:min(80px,16vw);height:1px;margin:0 var(--s3);background:var(--line)}
+
+#landing .fold{margin:0 0 var(--s3);padding:0}
+.fold>summary{display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap;margin:0;padding:var(--s3) var(--pad);list-style:none;cursor:pointer;color:var(--ink);border-radius:inherit}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::after{content:"＋";margin-left:auto;color:var(--mute);font-size:1.1rem;line-height:1}
+.fold[open]>summary::after{content:"－"}
+.fold>summary .ft{margin:0}
+.fold>summary small{color:var(--mute);font-size:.85rem;flex:1 1 0;min-width:0}
+@media (max-width:640px){.fold>summary{flex-wrap:nowrap;align-items:center}.fold>summary small{display:none}.fold>summary::after{flex:none}}
+.fold[open]>summary{border-bottom:1px solid var(--line)}
+.fold .fbody{padding:var(--s4) var(--pad) var(--pad)}
+.fold .fbody>.note:first-child{margin-top:0}
+.fold #lobRooms{margin-top:var(--s2)}
+.fold #lobNote,.fold #gNote{min-height:1.3em;margin:var(--s2) 0 0}
+.fold #gForm{margin-top:var(--s3)}
+.fold .lfeat{margin-top:var(--s4);gap:var(--s3)}
+.fold .lfeat .card{padding:var(--s4);background:rgba(255,255,255,.04);box-shadow:none}
+.fold .lfeat .card::before{display:none}
+.fold .lsteps{margin-top:var(--s4)}
+#landing .fold .thgrid{gap:var(--s3)}
+
+/* ---------- room: one screen ---------- */
+body:not(.home) main{padding-top:var(--s5)}
+body.inroom #helpBar{display:none}
+#home>.card:last-of-type{margin-bottom:var(--s4)}
+#home .row+.note,#home .note+.row{margin-top:var(--s2)}
+#queueCard .row{margin-top:var(--s3)}
+#queue{max-height:36vh}
+#side{gap:var(--s4)}
+#sideCards{padding-right:2px}
+#sideCards>.card:last-child{margin-bottom:0}
+#side .card .note,#home .card .note{margin-top:0}
+#chat{border-radius:var(--rad);border:1px solid var(--line)}
+#chat .chead{padding:var(--s3) var(--pad)}
+#chatLog{padding:var(--s3) var(--pad)}
+#chatForm{padding:var(--s3);gap:var(--s2)}
+#chatForm input{min-height:var(--ctl)}
+#chatForm button{min-height:var(--ctl)}
+@media (min-width:1000px){body.inroom #chatForm{padding-right:calc(var(--s3) + 54px)}}   /* keeps the voice bubble (docked at the right edge) off the Send button */
+#lobList .pr:last-child,#sideScores .sc:last-child,#sideQ .qi:last-child,#queue .item:last-child{border-bottom:0}
+dialog{padding:var(--s5);border-radius:var(--rad)}
+#prefs details.sgrp{margin:var(--s3) 0;padding:0 var(--s4)}
+#prefs summary{padding:var(--s3) 0}
+.grp{margin:var(--s4) 0}
+
+/* ---------- singing stage: lyrics, singers and score lead; the rest stays out of the way ---------- */
+body.instage #stage{max-width:980px;margin:0 auto;padding-bottom:96px}
+body.instage #nowRow{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s2)}
+body.instage #now{margin:0;font-size:clamp(1rem,2.4vw,1.35rem);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#avStage{margin:var(--s2) 0 0;gap:var(--s5)}
+#lyrics{height:clamp(300px,46vh,560px);margin-top:var(--s2)}
+.ln{padding:var(--s2) 0}
+#stage .live{justify-content:center;align-items:center;gap:var(--s4);margin:var(--s2) 0}
+#stage .live>.note{order:2}
+#stage .live #combo{order:3}
+#stage .live #liveScore{order:1;font-size:clamp(2.2rem,6vw,3.2rem)}
+#stage .vu{height:14px;max-width:420px;margin:0 auto var(--s2);gap:2px}
+#micNote,#lat,#turn{text-align:center;margin-top:var(--s1)}
+#micNote:empty,#lat:empty,#turn:empty{display:none}
+#stage .stagebar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--s3) var(--s5);margin:var(--s4) 0 var(--s3)}
+#stage .stagebar .row{margin:0;flex-wrap:nowrap}
+#stage .stagebar input[type=range]{width:150px}
+#stage #vRow>label{white-space:nowrap}
+#reactBar{margin:var(--s3) 0}
+
+#stageTools{max-width:640px;margin:var(--s3) auto 0;border:1px solid var(--line);border-radius:var(--rad);background:rgba(255,255,255,.03)}
+#stageTools>summary{display:flex;align-items:center;justify-content:center;gap:var(--s2);margin:0;padding:var(--s3) var(--s4);font-size:.92rem;list-style:none}
+#stageTools>summary::-webkit-details-marker{display:none}
+#stageTools[open]>summary{border-bottom:1px solid var(--line)}
+#stageTools>*:not(summary){margin-left:var(--s4);margin-right:var(--s4)}
+#stageTools>.row{margin-top:var(--s3)}
+#stageTools>.note{margin-top:var(--s2)}
+#stageTools>*:last-child{margin-bottom:var(--s4)}
+#stageTools .row>label{flex:1 1 140px}
+#stageTools input[type=range]{flex:2 1 180px;width:auto}
+#stageTools select{min-width:0}
+
+/* score card at the end of a song */
+#rate{max-width:560px;margin:var(--s4) auto 0}
+
+/* voice-chat dock: a small, quiet bubble while singing; it never blocks the lyrics or the controls */
+body.instage #vcHead{width:46px;height:46px;min-height:46px;opacity:.68;transition:opacity .2s,box-shadow .2s,border-color .2s,left .18s,right .18s}
+body.instage #vcHead svg{width:24px;height:24px}
+body.instage #vcHead:hover,body.instage #vcHead:focus-visible,body.instage #vcHead.live,body.instage #vcHead.talk,body.instage #vcHead[aria-expanded=true]{opacity:1}
+@media (max-width:999px), (hover:none) and (pointer:coarse){
+  body.instage #vcPanel:not(.floating){max-height:46dvh;max-height:46vh}
+  body.instage #vcHead{opacity:.6}
+}
+@media (max-width:640px){
+  #landing{padding:var(--s4) var(--s3) 56px}
+  .lact{padding:var(--s4)}
+  .lact .ic{width:46px;height:46px;font-size:1.5rem;margin-bottom:var(--s2)}
+  #stage .stagebar{gap:var(--s2) var(--s4)}
+  #stage .stagebar .row{flex-wrap:wrap;justify-content:center}
+  #lyrics{height:clamp(280px,50dvh,520px)}
+  body.instage #stage{padding-bottom:88px}
+}
+body.fs #stage .stagebar,body.fs #stageTools{display:none}
