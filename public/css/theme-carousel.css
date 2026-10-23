@@ -1,12 +1,12 @@
 /* theme-carousel.css: turns the theme picker into a 3D coverflow. Transform/opacity only, so it stays smooth. */
-#lTheme .thgrid.thcar{--w:210px;--gap:170px;position:relative;display:block;height:310px;margin-top:6px;perspective:1100px;overflow-x:clip;touch-action:pan-y;user-select:none;-webkit-user-select:none}
-#lTheme .thcar>.thbtn.ghost{position:absolute;left:50%;top:50%;width:var(--w);margin:0;padding:10px;text-align:center;border-radius:18px;
+#lTheme .thgrid.thcar{--w:210px;--first:250px;--step:175px;position:relative;display:block;height:310px;margin-top:6px;perspective:1100px;overflow-x:clip;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+#lTheme .thcar>.thbtn.ghost{position:absolute;left:50%;top:50%;width:var(--w);margin:0;padding:10px;text-align:center;border-radius:18px;--tx:calc(var(--sg,0)*(var(--first) + (var(--a,1) - 1)*var(--step)));
   background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.22);
-  transform:translate(-50%,-50%) translateX(calc(var(--o,0)*var(--gap))) translateZ(calc(var(--a,0)*-120px)) rotateY(calc(var(--sg,0)*-54deg)) scale(calc(1.14 - var(--a,0)*.12));
+  transform:translate(-50%,-50%) translateX(var(--tx)) translateZ(calc(var(--a,0)*-120px)) rotateY(calc(var(--sg,0)*-54deg)) scale(calc(1.14 - var(--a,0)*.12));
   z-index:calc(10 - var(--a,0));filter:brightness(calc(1 - var(--a,0)*.2));
   box-shadow:0 22px 34px -16px rgba(0,0,0,.8);
   transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .4s,filter .4s,box-shadow .3s;cursor:pointer;will-change:transform}
-#lTheme .thcar>.thbtn.ghost:hover,#lTheme .thcar>.thbtn.ghost.on{transform:translate(-50%,-50%) translateX(calc(var(--o,0)*var(--gap))) translateZ(calc(var(--a,0)*-120px)) rotateY(calc(var(--sg,0)*-54deg)) scale(calc(1.14 - var(--a,0)*.12))}
+#lTheme .thcar>.thbtn.ghost:hover,#lTheme .thcar>.thbtn.ghost.on{transform:translate(-50%,-50%) translateX(var(--tx)) translateZ(calc(var(--a,0)*-120px)) rotateY(calc(var(--sg,0)*-54deg)) scale(calc(1.14 - var(--a,0)*.12))}
 #lTheme .thcar>.thbtn.ghost.far{opacity:0;pointer-events:none}
 #lTheme .thcar>.thbtn.ghost.ctr{box-shadow:0 30px 44px -18px rgba(0,0,0,.9),0 0 34px -8px var(--pink)}
 #lTheme .thcar>.thbtn.ghost.on{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 30px 44px -18px rgba(0,0,0,.9),0 0 34px -6px var(--gold)}
@@ -17,5 +17,5 @@
 .thnav{position:absolute;top:50%;z-index:30;width:44px;height:44px;padding:0;border-radius:50%;font-size:1.5rem;line-height:1;transform:translateY(-50%)}
 .thnav:hover{transform:translateY(-50%) scale(1.1)}
 .thnav.prev{left:4px}.thnav.next{right:4px}
-@media (max-width:620px){#lTheme .thgrid.thcar{--w:150px;--gap:112px;height:260px}#lTheme .thcar .thsw{height:110px}.thnav{width:38px;height:38px}}
+@media (max-width:620px){#lTheme .thgrid.thcar{--w:150px;--first:130px;--step:62px;height:260px}#lTheme .thcar .thsw{height:110px}.thnav{width:38px;height:38px}}
 @media (prefers-reduced-motion:reduce){#lTheme .thcar>.thbtn.ghost{transition:none}}
