@@ -25,10 +25,15 @@ function compute(n) {
   for (let i = 0; i < n; i++) { if (!ownLine(i)) continue; m++; cov += S.lf[i] ? Math.min(1, S.lv[i] / (S.lf[i] * .6)) : 0; hits += S.hit[i]; }
   const v = S.voiced;
   if (!v) return { Singing: 0, Tone: 0, Volume: 0, Timing: 0 };
+  // "Volume" no longer rewards a loud or high-gain mic. It scores how clearly you stand out from your own room noise (any mic, any gain)
+  // and how steady your level is, with a penalty for clipping (distortion) measured before the Mic level slider.
+  const clamp01 = x => Math.max(0, Math.min(1, x)), mean = S.db / v, sd = Math.sqrt(Math.max(0, S.db2 / v - mean * mean));
+  const nfDb = 20 * Math.log10(Math.max(.0005, Math.min(S.nf || .002, .015)));
+  const proj = clamp01((mean - nfDb - 8) / 16), steady = 1 - clamp01((sd - 5) / 7);
   return {
     Singing: cov / Math.max(1, m) * 45,
     Tone: Math.min(1, S.clear / v / .7) * 25,
-    Volume: Math.min(1, S.rms / v / .06) * (1 - Math.min(.5, S.clip / v * 2)) * 15,
+    Volume: (.6 * proj + .4 * steady) * (1 - Math.min(.5, S.clip / v * 2)) * 15,
     Timing: hits / Math.max(1, m) * 15
   };
 }

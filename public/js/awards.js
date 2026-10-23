@@ -7,14 +7,14 @@ function awardsFor(r, ctx) {         // funny titles from the score breakdown, t
   const add = (icon, title, why, s) => out.push({ icon, title, why, s }), pc = x => Math.round(x * 100) + '%';
   if (r.pts >= 95) add('🏆', 'Perfect Performance', 'A near-flawless ' + r.pts + ' out of 100', 1);
   if (to >= .85) add('🎯', 'Pitch Perfect', 'Tone ' + pc(to), to);
-  if (vo >= .9) add('📣', 'Loudest Voice', 'Volume ' + pc(vo), vo * .9);
+  if (vo >= .9) add('📣', 'Strong Voice', 'Clear and steady, ' + pc(vo), vo * .9);
   if (ti >= .9) add('⏱️', 'Always Early', 'On time for ' + pc(ti) + ' of the lines', ti * .9);
   if (si >= .9) add('🎶', 'Non-Stop Singer', 'Sang ' + pc(si) + ' of every line', si * .9);
   if (cm >= 8) add('🔥', 'Combo Machine', 'Best streak: ' + cm + ' lines in a row', .8 + Math.min(.15, cm / 100));
   if ((ctx.stars.n && ctx.stars.avg >= 4.3) || ctx.reacts >= 10) add('💖', 'Crowd Favourite', ctx.stars.n ? 'Audience ★ ' + ctx.stars.avg : ctx.reacts + ' reactions', .95);
   if (to >= .6 && vo < .5) add('😎', 'Smooth Operator', 'Clean and calm, never shouty', .55);
-  if (vo >= .8 && to < .4) add('🎺', 'Loud and Proud', 'Volume first, notes second', .5);
-  if (vo < .35) add('🙈', 'Shy Star', 'The mic could barely hear you', .45);
+  if (vo >= .8 && to < .4) add('🎺', 'Loud and Proud', 'Big presence first, notes second', .5);
+  if (vo < .35) add('🙈', 'Shy Star', 'Your voice barely rose above the room', .45);
   if (ti < .3) add('🐢', 'Fashionably Late', 'Always a beat behind', .4);
   if (r.pts < 30) add('🦁', 'Brave Soul', 'You took the stage, and that counts', .35);
   if (!out.length) add('🌟', 'Showtime', 'You gave it a go', .3);
