@@ -1,0 +1,75 @@
+/* ===== fun.css: playful 3D'ish layer for the home page. Loaded last; delete the <link> to undo. ===== */
+body.home #landing{perspective:1200px}
+
+/* --- Hero title: chunky extruded letters + moving rainbow shine --- */
+body.home .lhero h1{
+  background:linear-gradient(100deg,#ff3d8b,#ffc83d,#35e0ff,#a83dff,#ff3d8b);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:funShine 6s linear infinite,funBob 4s ease-in-out infinite;
+  filter:drop-shadow(0 1px 0 #8a0f48) drop-shadow(0 2px 0 #8a0f48) drop-shadow(0 3px 0 #7a0c40) drop-shadow(0 4px 0 #6a0a38) drop-shadow(0 5px 0 #5a0830) drop-shadow(0 14px 18px rgba(0,0,0,.55)) drop-shadow(0 0 26px rgba(255,61,139,.5));
+  transform:rotate(-1.5deg);transform-origin:center}
+@keyframes funShine{to{background-position:250% 0}}
+@keyframes funBob{50%{transform:rotate(1.5deg) translateY(-6px)}}
+
+/* floating notes around the hero */
+.lhero{position:relative}
+.lhero::before,.lhero::after{position:absolute;font-size:2.6rem;pointer-events:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
+.lhero::before{content:"🎵";left:6%;top:4%;animation:funFloat 5s ease-in-out infinite}
+.lhero::after{content:"🎶";right:7%;top:18%;animation:funFloat 6.5s ease-in-out -2s infinite}
+@keyframes funFloat{0%,100%{transform:translateY(0) rotate(-12deg)}50%{transform:translateY(-22px) rotate(14deg)}}
+@media (max-width:620px){.lhero::before,.lhero::after{font-size:1.7rem}}
+
+/* tagline as a glowing pill */
+body.home .lhero .tag{display:inline-block;padding:10px 22px;border-radius:22px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 30px -12px rgba(0,0,0,.7),0 0 30px -10px var(--cyan)}
+
+/* --- 3D tilt cards (tilt vars come from js/fun.js) --- */
+body.home #landing .card{
+  transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateZ(0);
+  transform-style:preserve-3d;transition:transform .25s ease-out,box-shadow .3s;will-change:transform}
+body.home #landing .card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.18),transparent 60%)}
+body.home #landing .card:hover::after{opacity:1}
+body.home #landing .card:hover{box-shadow:0 34px 60px -26px rgba(0,0,0,.85),0 0 40px -12px var(--pink),inset 0 1px 0 rgba(255,255,255,.25)}
+
+/* --- Big action buttons: chunky arcade keys that press down --- */
+body.home .lbtn{position:relative;border-radius:18px;padding:14px 18px 16px;
+  background:linear-gradient(180deg,#ff6fb4,var(--pink) 55%,#c1246f);
+  box-shadow:0 6px 0 #7d1049,0 14px 24px -6px rgba(255,61,139,.55),inset 0 2px 0 rgba(255,255,255,.45);
+  transition:transform .12s,box-shadow .12s}
+body.home .lbtn:hover{transform:translateY(-3px) scale(1.015);box-shadow:0 9px 0 #7d1049,0 20px 30px -6px rgba(255,61,139,.65),inset 0 2px 0 rgba(255,255,255,.5)}
+body.home .lbtn:active{transform:translateY(5px);box-shadow:0 1px 0 #7d1049,0 4px 10px -4px rgba(255,61,139,.5),inset 0 2px 0 rgba(255,255,255,.3)}
+body.home #lCreate{background:linear-gradient(180deg,#8fa8ff,#6a5cff 55%,#4326c9);box-shadow:0 6px 0 #251078,0 14px 24px -6px rgba(106,92,255,.6),inset 0 2px 0 rgba(255,255,255,.45)}
+body.home #lCreate:hover{box-shadow:0 9px 0 #251078,0 20px 30px -6px rgba(106,92,255,.7),inset 0 2px 0 rgba(255,255,255,.5)}
+body.home #lCreate:active{box-shadow:0 1px 0 #251078,0 4px 10px -4px rgba(106,92,255,.5)}
+body.home .lbtn .ic{display:inline-grid;place-items:center;width:46px;height:46px;margin-right:12px;font-size:1.7rem;border-radius:14px;background:rgba(0,0,0,.22);box-shadow:inset 0 2px 6px rgba(0,0,0,.35);transition:transform .3s cubic-bezier(.3,1.8,.5,1)}
+body.home .lbtn:hover .ic{transform:rotate(-14deg) scale(1.2)}
+body.home .lbtn .tx b{font-size:1.2rem;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+body.home #lJoin{border-radius:14px;box-shadow:0 5px 0 #7d1049,0 10px 18px -6px rgba(255,61,139,.5),inset 0 2px 0 rgba(255,255,255,.4)}
+body.home #lJoin:active{transform:translateY(4px);box-shadow:0 1px 0 #7d1049}
+
+/* --- Inputs --- */
+body.home #landing input{border-radius:14px;transition:box-shadow .2s,transform .2s}
+body.home #landing input:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 55%,transparent),0 0 26px -4px var(--cyan);transform:scale(1.015)}
+
+/* --- Feature cards: bouncing emoji --- */
+.lfeat b{display:inline-block;animation:funHop 2.6s ease-in-out infinite;filter:drop-shadow(0 6px 6px rgba(0,0,0,.4))}
+.lfeat .card:nth-child(2) b{animation-delay:-.5s}.lfeat .card:nth-child(3) b{animation-delay:-1s}.lfeat .card:nth-child(4) b{animation-delay:-1.5s}
+@keyframes funHop{0%,60%,100%{transform:translateY(0) scale(1)}30%{transform:translateY(-12px) scale(1.12) rotate(-6deg)}45%{transform:translateY(0) scale(1.08,.9)}}
+
+/* --- Steps, online pill, theme buttons --- */
+.lsteps li{padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.lsteps li::before{box-shadow:0 3px 0 #5a1a8a,0 6px 10px rgba(168,61,255,.5)}
+.onl{box-shadow:0 0 22px -6px #4dff9b}
+.thbtn.ghost{transition:transform .25s cubic-bezier(.3,1.6,.5,1),border-color .2s}
+.thbtn.ghost:hover{transform:translateY(-5px) rotate(-1.5deg) scale(1.03)}
+.thbtn.ghost.on{transform:translateY(-3px);box-shadow:0 0 0 2px var(--gold),0 14px 24px -10px var(--gold)}
+
+/* --- In-app (queue / search) cards get a lighter touch of fun --- */
+#home .card{transition:transform .25s,box-shadow .25s}
+@media (hover:hover){#home .card:hover{transform:translateY(-2px)}}
+.top h1{filter:drop-shadow(0 2px 0 #8a0f48) drop-shadow(0 0 14px rgba(255,61,139,.55))}
+
+@media (prefers-reduced-motion:reduce){
+  body.home .lhero h1,.lhero::before,.lhero::after,.lfeat b{animation:none}
+  body.home #landing .card{transform:none}
+}
