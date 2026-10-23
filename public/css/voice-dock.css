@@ -14,7 +14,7 @@
 #vcPanel[hidden]{display:none}
 #vcPanel .vcph{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #vcPanel #vcBox{margin-top:0;border-top:0;padding-top:0}
-@media (max-width:640px){#vcPanel{left:10px!important;right:10px;top:auto!important;bottom:max(10px,env(safe-area-inset-bottom));width:auto;max-height:70vh;max-height:70dvh}}
+@media (max-width:999px), (hover:none) and (pointer:coarse){#vcPanel{left:10px!important;right:10px;max-width:560px;margin:0 auto;top:auto!important;bottom:max(10px,env(safe-area-inset-bottom));width:auto;max-height:70vh;max-height:70dvh}}
 @media (prefers-reduced-motion:reduce){#vcHead.talk{animation:none;border-color:#3be58a}}
 
 /* ---- input bar under each person in the lobby ---- */
@@ -34,4 +34,4 @@ body.qside #queueCard{margin-bottom:12px}
 #vcChatPane #chat{display:flex!important;height:min(52vh,380px);height:min(52dvh,380px);border:0;border-radius:12px;background:rgba(0,0,0,.25)}
 #vcChatPane #chat .chead{display:none}
 #vcHead .vcub{position:absolute;left:-4px;bottom:-4px;margin:0;border:2px solid #1c0e2c;line-height:18px}
-@media (max-width:640px){body.inroom #chatBtn{display:none!important}}
+@media (max-width:999px), (hover:none) and (pointer:coarse){body.inroom #chatBtn{display:none!important}}

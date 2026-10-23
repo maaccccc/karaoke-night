@@ -13,7 +13,7 @@
     const t = top(); head.style.top = t + 'px'; head.style.bottom = 'auto';
     head.style.left = pos.side === 'l' ? M + 'px' : 'auto'; head.style.right = pos.side === 'r' ? M + 'px' : 'auto';
     if (panel.hidden) return;
-    if (matchMedia('(max-width:640px)').matches) { panel.style.left = panel.style.top = ''; return; }   // phones: CSS makes it a bottom sheet
+    if (matchMedia('(max-width:999px), (hover:none) and (pointer:coarse)').matches) { panel.style.left = panel.style.top = ''; return; }   // phones: CSS makes it a bottom sheet
     const w = panel.offsetWidth, h = panel.offsetHeight;
     panel.style.left = (pos.side === 'r' ? Math.max(M, innerWidth - M - S - 8 - w) : Math.min(innerWidth - w - M, M + S + 8)) + 'px';
     panel.style.top = Math.max(M, Math.min(t + S - h, innerHeight - h - M)) + 'px';
@@ -34,7 +34,7 @@
   window.vcDock = { open, shows: t => !panel.hidden && tab === t };
 
   // phones: the room chat moves into the bubble (its Chat tab); on a PC it stays in the side column
-  const chat = document.getElementById('chat'), side = document.getElementById('side'), mq = matchMedia('(max-width:640px)');
+  const chat = document.getElementById('chat'), side = document.getElementById('side'), mq = matchMedia('(max-width:999px), (hover:none) and (pointer:coarse)');
   function chatPlace() {
     if (!chat) return;
     if (mq.matches) { chat.classList.remove('min'); if (chat.parentNode !== cpane) cpane.appendChild(chat); }

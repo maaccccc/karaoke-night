@@ -12,7 +12,7 @@ function addChat(m, quiet) {
   const tt = $('#chatToast'); tt.textContent = (m.av ? m.av.e + ' ' : '') + m.from + ': ' + m.text; tt.style.display = 'block';
   clearTimeout(toastT); toastT = setTimeout(() => tt.style.display = 'none', 4500);
 }
-const chatPhone = () => matchMedia('(max-width:640px)').matches;   // phones: the chat is a tab in the voice bubble
+const chatPhone = () => matchMedia('(max-width:999px), (hover:none) and (pointer:coarse)').matches;   // phones: the chat is a tab in the voice bubble
 const chatVisible = () => chatPhone() ? !!(window.vcDock && vcDock.shows('chat')) : !$('#chat').classList.contains('min') && (matchMedia('(min-width:1000px)').matches || $('#side').classList.contains('open'));
 function chatSeen() { chatUnread = 0; $('#chatBtn').classList.remove('unread'); $('#chatToast').style.display = 'none'; $('#chatLog').scrollTop = 1e9; chatLabel(); }
 function chatLabel() {      // the header button shows – while open and + while minimised; unread count shows on the bar
