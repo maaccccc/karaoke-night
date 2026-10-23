@@ -165,7 +165,7 @@ async function runSong() {
   box.className = 'm-' + $('#romMode').value; $('#romNote').style.display = anyRom || anyHan ? 'block' : 'none'; upgradeRomaji(lines);
   box.scrollTop = 0; frames = 0; active = true; drawMeter(0, 0); renderNow();
   labelTurns(); fxStart();
-  S = { voiced: 0, rms: 0, db: 0, db2: 0, nf: 0, nfN: 0, clear: 0, clip: 0, lf: lines.map(() => 0), lv: lines.map(() => 0), hit: lines.map(() => 0) };
+  S = { voiced: 0, rms: 0, db: 0, db2: 0, nf: 0, nfN: 0, pn: 0, ps: 0, ps2: 0, gf: 0, gv: 0, clear: 0, clip: 0, lf: lines.map(() => 0), lv: lines.map(() => 0), hit: lines.map(() => 0) };
   let saved = 0; try { saved = parseFloat(localStorage.getItem('off:' + pvid())) || 0; } catch (e) {}
   let sv = NaN; try { sv = parseFloat(localStorage.getItem('spd:' + pvid())); } catch (e) {}
   let shared = null;      // a timing fix someone already made for this exact track beats a guess
@@ -274,8 +274,9 @@ async function runSong() {
       const d = $('#l' + Math.max(idx, 0)); box.scrollTo({ top: d.offsetTop - box.clientHeight / 2 + d.offsetHeight / 2, behavior: prefs.calm ? 'auto' : 'smooth' });
     }
     if (an && playing) {
-      an.getFloatTimeDomainData(fb); let s = 0, mx = 0;
-      for (const v of fb) { s += v * v; const a = Math.abs(v); if (a > mx) mx = a; }
+      an.getFloatTimeDomainData(fb); let s = 0, mx = 0, dc = 0;
+      for (const v of fb) { dc += v; const a = Math.abs(v); if (a > mx) mx = a; }
+      dc /= fb.length; for (const v of fb) s += (v - dc) * (v - dc);                  // level without the mic's DC offset
       const rms = Math.sqrt(s / fb.length);
       lvl = Math.max(Math.min(1, rms * 5), lvl * .86);
       if (lvl >= peak) { peak = lvl; pkT = now; } else if (now - pkT > 600) peak = Math.max(lvl, peak - .02);
@@ -285,9 +286,14 @@ async function runSong() {
       // measured against this mic's own background noise (learned in the first second and tracked while you are quiet).
       const g = (micGain && micGain.gain.value) || 1, rr = rms / g, rmx = mx / g;
       if (S.nfN < 45) { S.nf = S.nfN ? Math.min(S.nf, rr) : rr; S.nfN++; }
-      const voiced = rr > Math.min(.045, Math.max(.008, S.nf * 3));
-      if (!voiced && S.nfN >= 45) S.nf += (rr - S.nf) * .03;
-      if (voiced && (idx < 0 || ownLine(idx))) { const d = 20 * Math.log10(Math.max(rr, 1e-4)); S.voiced++; S.rms += rr; S.db += d; S.db2 += d * d; if (clr > .45) S.clear++; if (rmx > .95) S.clip++; }
+      const thr = Math.min(.045, Math.max(.008, S.nf * 3));
+      if (rr <= thr && S.nfN >= 45) S.nf += (rr - S.nf) * .03;
+      const voiced = rr > thr && clr > .35;                                          // above the noise AND a real pitch: hiss and rumble do not count
+      if (voiced && (idx < 0 || ownLine(idx))) {
+        const d = 20 * Math.log10(Math.max(rr, 1e-4)); S.voiced++; S.rms += rr; S.db += d; S.db2 += d * d; if (clr > .55) S.clear++; if (rmx > .95) S.clip++;
+        if (clr > .55 && clarity.hz) { const st = 12 * Math.log2(clarity.hz / 440); S.pn++; S.ps += st; S.ps2 += st * st; }
+      }
+      if (!(idx >= 0 && t < lineEnd(idx) && ownLine(idx))) { S.gf++; if (voiced) S.gv++; }   // sound during breaks / a partner's lines = noise or music leaking in
       if (idx >= 0 && t < lineEnd(idx)) { S.lf[idx]++; if (voiced) { S.lv[idx]++; if (t - lines[idx].t * scale < 2) S.hit[idx] = 1; } }
       if (now - liveT > 300 && idx >= 0) { liveT = now; const sc = total(compute(idx + 1)); $('#liveScore').textContent = sc; const ns = $('#nowScore'); if (ns) ns.textContent = sc + ' pts'; }
     }
