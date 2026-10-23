@@ -12,13 +12,17 @@ function addChat(m, quiet) {
   const tt = $('#chatToast'); tt.textContent = (m.av ? m.av.e + ' ' : '') + m.from + ': ' + m.text; tt.style.display = 'block';
   clearTimeout(toastT); toastT = setTimeout(() => tt.style.display = 'none', 4500);
 }
-const chatVisible = () => !$('#chat').classList.contains('min') && (matchMedia('(min-width:1000px)').matches || $('#side').classList.contains('open'));
+const chatPhone = () => matchMedia('(max-width:640px)').matches;   // phones: the chat is a tab in the voice bubble
+const chatVisible = () => chatPhone() ? !!(window.vcDock && vcDock.shows('chat')) : !$('#chat').classList.contains('min') && (matchMedia('(min-width:1000px)').matches || $('#side').classList.contains('open'));
+function chatSeen() { chatUnread = 0; $('#chatBtn').classList.remove('unread'); $('#chatToast').style.display = 'none'; $('#chatLog').scrollTop = 1e9; chatLabel(); }
 function chatLabel() {      // the header button shows – while open and + while minimised; unread count shows on the bar
   const c = $('#chat'), m = c.classList.contains('min'), x = $('#chatX');
   x.textContent = m ? '+' : '–'; x.setAttribute('aria-label', m ? 'Show chat' : 'Minimise chat'); x.title = m ? 'Show chat' : 'Minimise chat';
   $('#chatTitle').textContent = '💬 Chat' + (m && chatUnread ? ' (' + chatUnread + ' new)' : '');
 }
-function toggleChat(open) {   // header button: on a phone it opens the drawer; on desktop it expands/minimises the docked chat
+function toggleChat(open) {
+  if (chatPhone() && window.vcDock) { const on = vcDock.shows('chat'); vcDock.open(open === undefined ? !on : open, 'chat'); return; }
+  // header button: on a phone it opens the drawer; on desktop it expands/minimises the docked chat
   const c = $('#chat'), narrow = !matchMedia('(min-width:1000px)').matches;
   const o = open === undefined ? (narrow ? true : c.classList.contains('min')) : open;
   c.classList.toggle('min', !o); if (o && narrow) $('#side').classList.add('open');

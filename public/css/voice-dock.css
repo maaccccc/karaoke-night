@@ -3,7 +3,8 @@
 #vcHead{position:fixed;z-index:45;width:58px;height:58px;min-height:58px;padding:0;border-radius:50%;display:grid;place-items:center;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
   background:linear-gradient(135deg,#3a1f58,#1c0e2c);border:2px solid var(--line);box-shadow:0 8px 26px rgba(0,0,0,.55);transition:box-shadow .2s,border-color .2s,left .18s,right .18s}
 #vcHead:hover{transform:none}#vcHead.drag{cursor:grabbing;transition:none;transform:scale(1.08)}
-#vcHead .vcico{font-size:1.65rem;line-height:1}
+#vcHead .vcico{display:grid;place-items:center;width:100%;height:100%;color:#fff;pointer-events:none}#vcHead .vcico svg{display:block}
+#vcHead.live .vcico{color:#8ff0bd}#vcHead.live.muted .vcico{color:#ff9aa6}
 #vcHead.live{border-color:#3be58a;box-shadow:0 8px 26px rgba(0,0,0,.55),0 0 0 3px rgba(59,229,138,.25)}
 #vcHead.live.muted{border-color:#ff5d6c;box-shadow:0 8px 26px rgba(0,0,0,.55),0 0 0 3px rgba(255,93,108,.25)}
 #vcHead.talk{animation:vcpulse .9s ease-in-out infinite}
@@ -13,7 +14,7 @@
 #vcPanel[hidden]{display:none}
 #vcPanel .vcph{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #vcPanel #vcBox{margin-top:0;border-top:0;padding-top:0}
-@media (max-width:560px){#vcPanel{left:10px!important;right:10px;top:auto!important;bottom:max(10px,env(safe-area-inset-bottom));width:auto;max-height:70vh;max-height:70dvh}}
+@media (max-width:640px){#vcPanel{left:10px!important;right:10px;top:auto!important;bottom:max(10px,env(safe-area-inset-bottom));width:auto;max-height:70vh;max-height:70dvh}}
 @media (prefers-reduced-motion:reduce){#vcHead.talk{animation:none;border-color:#3be58a}}
 
 /* ---- input bar under each person in the lobby ---- */
@@ -23,3 +24,14 @@
 .pr .acts{order:6}
 body.qside #upNext{display:none}
 body.qside #queueCard{margin-bottom:12px}
+
+/* tabs (the Chat tab only exists on phones; on a PC the chat stays in the side column) */
+#vcPanel .vctabs{display:flex;gap:6px}
+#vcPanel .vct{padding:6px 12px;font-size:.92rem;border-radius:99px;background:transparent;box-shadow:none;border:1px solid var(--line);color:var(--mute)}
+#vcPanel .vct.on{background:linear-gradient(135deg,var(--pink),#a83dff);color:#fff;border-color:transparent}
+#vcPanel .vct[data-t=chat]{display:none}#vcDock.phone .vct[data-t=chat]{display:inline-block;position:relative}
+#vcPanel .vctb,#vcHead .vcub{display:none;margin-left:6px;min-width:20px;padding:0 6px;border-radius:99px;background:var(--pink);color:#fff;font-size:.72rem;line-height:20px;text-align:center}
+#vcChatPane #chat{display:flex!important;height:min(52vh,380px);height:min(52dvh,380px);border:0;border-radius:12px;background:rgba(0,0,0,.25)}
+#vcChatPane #chat .chead{display:none}
+#vcHead .vcub{position:absolute;left:-4px;bottom:-4px;margin:0;border:2px solid #1c0e2c;line-height:18px}
+@media (max-width:640px){body.inroom #chatBtn{display:none!important}}
