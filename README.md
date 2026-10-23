@@ -39,6 +39,9 @@ Under the search box, **🎤 Karaoke versions** (on by default) swaps the origin
 - **Timing is saved per video.** Shift and stretch are remembered for the karaoke video separately from the original, so fixing one never breaks the other. A karaoke track is never speed-stretched automatically (a length difference is usually extra intro or outro, which needs a shift); the page tells you when the track is more than 3 seconds longer or shorter than the lyrics' version. If the first line starts early or late, click it and press **Mark** when you hear it begin. It is remembered for that track in your browser.
 - Turn the checkbox off to play original recordings as before.
 
+- **If the original still plays:** that means no karaoke video was found, and the page now says so clearly when you add the song. Queued songs without one show a **🎤 Find karaoke** button to try again, and ticking the Karaoke versions box also switches the songs you already queued. The search tries four queries, accepts tracks up to 45 s different in length (25 s for songs titled in another script, which are matched by artist and length because karaoke uploads are usually romanized), reads lengths given as text, and prefers trusted karaoke channels over a one-second closer length.
+- **See why a song has none:** open `http://localhost:3000/api/karaoke?title=SONG&artist=ARTIST&duration=SECONDS&debug=1`. It lists every video that was left out and the reason (no karaoke word in the title, different title, length too far off, search failed).
+
 ## Online rooms (friends in different places)
 Everyone opens the same link, enters a name, and joins the same room code. The queue and scoreboard are shared, the song starts for everyone at the same moment (after a 5 second countdown), and the singer's microphone is streamed live to everyone else.
 

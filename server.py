@@ -111,38 +111,53 @@ KARA_BAD = re.compile(r'guide vocals?|with (?:lead )?vocals?|original vocals?|\b
 KARA_CHANNELS = ('sing king', 'karafun', 'karaoke version', 'zoom karaoke', 'stingray karaoke', 'karaoke channel', 'sunfly', 'singsnap', 'party tyme', 'karaoke hits', 'pro karaoke', 'vocal star')
 KARA = {}
 
-def rank_karaoke(results, title, artist, refs):
+def _secs(r):
+    """Length in seconds of a YouTube Music result: duration_seconds, or the text "4:55" / "1:02:03" if that is all there is."""
+    d = r.get('duration_seconds')
+    if d: return d
+    try:
+        n = 0
+        for x in str(r.get('duration') or '').split(':'): n = n * 60 + int(x)
+        return n
+    except Exception:
+        return 0
+
+def rank_karaoke(results, title, artist, refs, why=None):
     """Pure ranking step (no network): filter + sort YouTube video results into karaoke candidates, best first.
-    refs = lengths (seconds) of the recordings the lyrics may be timed to (the original song and the LRCLIB version)."""
+    refs = lengths (seconds) of the recordings the lyrics may be timed to (the original song and the LRCLIB version).
+    why = optional list that collects the reason each rejected video was left out (for /api/karaoke?debug=1)."""
     tk = {k for k in title_keys(title) if len(k) >= 2}
+    latin = bool(re.search(r'[a-z0-9]', norm(title)))   # a title in another script (Japanese, Korean...) is usually uploaded romanized, so it cannot be matched by its letters
     a = norm((artist or '').split(',')[0])
     refs = [x for x in refs if x]
     out, seen = [], set()
+    def no(t, msg):
+        if why is not None: why.append(t[:70] + ': ' + msg)
     for r in results:
         vid, t = r.get('videoId'), r.get('title') or ''
-        dur = r.get('duration_seconds') or 0
-        if not vid or vid in seen or not dur or not KARA_WORDS.search(t):
+        if not vid or vid in seen:
             continue
+        dur = _secs(r)
+        if not dur: no(t, 'no length given'); continue
+        if not KARA_WORDS.search(t): no(t, 'title has no karaoke / instrumental word'); continue
         nt = norm(t)
-        if not any(k in nt for k in tk):          # must really be this song
-            continue
+        if latin and not any(k in nt for k in tk): no(t, 'different song title'); continue      # must really be this song
         chan = ', '.join(x.get('name', '') for x in (r.get('artists') or []) if isinstance(x, dict))
         diff = min((abs(dur - x) for x in refs), default=0)
-        if refs and diff > 30:                    # a different arrangement or an extended mix: it could never line up
-            continue
+        if refs and diff > (45 if latin else 25): no(t, 'length differs by %d s' % diff); continue   # a different arrangement or an extended mix: it could never line up
         seen.add(vid)
         bad = bool(KARA_BAD.search(t))
         trusted = any(c in chan.lower() for c in KARA_CHANNELS)
         am = bool(a) and (a in nt or a in norm(chan))
-        out.append(((bad, int(diff // 3), not trusted, not am, diff), {
+        out.append(((bad, int(diff // 5), not trusted, not am, diff), {
             'videoId': vid, 'title': t[:200], 'channel': chan[:80], 'duration': dur, 'diff': round(diff, 1)}))
     out.sort(key=lambda x: x[0])
     return [x[1] for x in out]
 
-def find_karaoke(title, artist, duration):
+def find_karaoke(title, artist, duration, fresh=False, why=None):
     k = (norm(title), norm(artist), int(duration or 0))
     hit = KARA.get(k)
-    if hit and time.time() - hit[1] < (3600 if hit[0] else 300):
+    if not fresh and why is None and hit and time.time() - hit[1] < (3600 if hit[0] else 300):
         return hit[0]
     refs = [float(duration or 0)]
     try:
@@ -150,16 +165,20 @@ def find_karaoke(title, artist, duration):
         if ld: refs.append(float(ld))
     except Exception:
         pass
-    first, res = (artist or '').split(',')[0].strip(), []
-    for q in ((title + ' ' + first + ' karaoke').strip(), (title + ' ' + first + ' instrumental').strip()):
+    first, res, errors, tried = (artist or '').split(',')[0].strip(), [], 0, []
+    for q in ((title + ' ' + first + ' karaoke').strip(), (title + ' ' + first + ' instrumental').strip(),
+              (title + ' ' + first + ' karaoke version').strip(), (title + ' karaoke').strip()):
+        if q in tried: continue
+        tried.append(q)
         try:
             res += yt.search(q, filter='videos', limit=20)
-        except Exception:
-            pass
-        found = rank_karaoke(res, title, artist, refs)
-        if len(found) >= 3: break
-    found = rank_karaoke(res, title, artist, refs)[:5]
-    KARA[k] = (found, time.time())
+        except Exception as e:
+            errors += 1
+            if why is not None: why.append('search failed for "' + q + '": ' + str(e)[:120])
+        if len(rank_karaoke(res, title, artist, refs)) >= 3: break
+    if why is not None: why.append('searched %d videos with %d queries; lyric lengths %s' % (len(res), len(tried), [round(x) for x in refs if x]))
+    found = rank_karaoke(res, title, artist, refs, why)[:5]
+    if errors < len(tried): KARA[k] = (found, time.time())     # do not remember an answer that only came from failed searches
     return found
 
 def clean_kv(kv):
@@ -762,6 +781,11 @@ def room_send(code, cid, typ, data, to=None):
                 r['hist'][-1]['stars'] = round(avg, 1)
                 room_push(r, {'type': 'hist', 'hist': r['hist']})
             room_push(r, {'type': 'stars', 'avg': round(avg, 1), 'n': len(la['votes']), 'bonus': bonus})
+        elif op == 'qkv':          # attach a karaoke video to a song that is already queued (the person who queued it, or the host)
+            it = next((q for q in r['queue'] if q['id'] == data.get('id')), None); kv = clean_kv(data.get('kv'))
+            if not it or not kv: return 'That song is no longer in the queue.'
+            if it['singer'] != me['name'] and r.get('host') != cid: return 'Only the person who queued a song (or the host) can change it.'
+            it['song']['kv'] = kv
         elif op == 'qrm':
             r['queue'] = [q for q in r['queue'] if q['id'] != data.get('id')]
             fair_sort(r)
@@ -964,7 +988,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, {'has': has_lyrics(g('title'), g('artist'), float(g('duration') or 0))})
             if u.path == '/api/karaoke':
                 g = lambda k: q.get(k, [''])[0]
-                return self.send_json(200, find_karaoke(g('title'), g('artist'), float(g('duration') or 0)))
+                if g('debug'):      # /api/karaoke?title=...&artist=...&duration=...&debug=1 : shows why videos were accepted or left out
+                    why = []; found = find_karaoke(g('title'), g('artist'), float(g('duration') or 0), fresh=True, why=why)
+                    return self.send_json(200, {'found': found, 'notes': why[:80]})
+                return self.send_json(200, find_karaoke(g('title'), g('artist'), float(g('duration') or 0), fresh=g('fresh') == '1'))
             if u.path == '/api/versions':
                 g = lambda k: q.get(k, [''])[0]
                 return self.send_json(200, lyric_versions(g('title'), g('artist'), float(g('duration') or 0)))

@@ -38,7 +38,7 @@ function applyPrefs(save = true) {
   $('#pVs').value = prefs.vsync; $('#pVsV').textContent = Number(prefs.vsync).toFixed(2) + 's';
   $('#pCalm').checked = prefs.calm; $('#pHp').checked = $('#rdHp').checked = prefs.hp;
   $('#karOn').checked = !!prefs.kar; $('#pCover').checked = !!prefs.cover; document.body.classList.toggle('nocover', !prefs.cover);
-  $('#pLow').checked = $('#tLow').checked = prefs.lowLat !== false;
+  ['#pLow', '#tLow'].forEach(i => { const x = $(i); if (x) x.checked = prefs.lowLat !== false; });   // (a missing checkbox must never break the rest of the settings)
   if (typeof refreshTheme === 'function') refreshTheme();
   if (micGain) micGain.gain.value = prefs.sens;
   if (player && player.setVolume) { try { player.setVolume(prefs.vol); } catch (e) {} }
@@ -46,7 +46,7 @@ function applyPrefs(save = true) {
   if (save) { try { localStorage.setItem('karaokePrefs', JSON.stringify(prefs)); } catch (e) {} }
 }
 [['pFs', 'fs'], ['sVol', 'vol'], ['pSens', 'sens'], ['sLive', 'sens'], ['pDel', 'delay'], ['pLead', 'lead'], ['pVs', 'vsync']].forEach(([id, k]) => $('#' + id).oninput = e => { prefs[k] = parseFloat(e.target.value); applyPrefs(); });
-$('#pLow').onchange = $('#tLow').onchange = e => { prefs.lowLat = e.target.checked; applyPrefs(); if (typeof lowLatApply === 'function') lowLatApply(); };   // low-latency voice: applies right away
+['#pLow', '#tLow'].forEach(i => { const x = $(i); if (x) x.onchange = e => { prefs.lowLat = e.target.checked; applyPrefs(); if (typeof lowLatApply === 'function') lowLatApply(); }; });   // low-latency voice: applies right away
 $('#pCalm').onchange = e => { prefs.calm = e.target.checked; applyPrefs(); };
 $('#karOn').onchange = e => { prefs.kar = e.target.checked; applyPrefs(); };
 $('#pCover').onchange = e => { prefs.cover = e.target.checked; applyPrefs(); };

@@ -30,6 +30,12 @@ async function startPreview(s, btn, row) {
       onError: () => { say('YouTube won’t play this video here, so it can’t be previewed.'); stopPreview(); }
     } });
 }
+async function findKaraoke(s, fresh) {   // a karaoke video {videoId, title, duration}, null = none found, undefined = the lookup failed
+  try {
+    const r = await fetch('/api/karaoke?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration || 0, fresh: fresh ? 1 : 0 })), list = await r.json();
+    return r.ok && list.length ? { videoId: list[0].videoId, title: list[0].title, duration: list[0].duration } : null;
+  } catch (e) { return undefined; }
+}
 async function search() {
   const q = $('#q').value.trim(); if (q.length < 2) return; badgeQ.length = 0; stopPreview();
   say('Searching…');
@@ -53,11 +59,9 @@ async function search() {
         let note = '';
         if (prefs.kar) {      // swap in a karaoke (instrumental) video; the lyrics still come from the original song
           add.disabled = true; say('Finding a karaoke version of ' + s.title + '…');
-          try {
-            const r = await fetch('/api/karaoke?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration || 0 })), list = await r.json();
-            if (r.ok && list.length) { song.kv = { videoId: list[0].videoId, title: list[0].title, duration: list[0].duration }; note = ' (karaoke version)'; }
-            else note = ' (no karaoke version found, so the original will play)';
-          } catch (e) { note = ' (could not look for a karaoke version, so the original will play)'; }
+          const kv = await findKaraoke(song);
+          if (kv) { song.kv = kv; note = ' (karaoke version)'; }
+          else note = kv === null ? ' ⚠ no karaoke version found, so the ORIGINAL (with the singer) will play. Press “🎤 Find karaoke” on it in the queue to try again.' : ' ⚠ could not look for a karaoke version, so the original will play. Press “🎤 Find karaoke” on it in the queue to try again.';
           add.disabled = false;
         }
         if (room.on) { roomOp({ op: 'qadd', song }); say('Queued: ' + s.title + note); return; }
@@ -94,7 +98,15 @@ function renderQueueMain() {
     const info = el('div'); info.append(el('span', it.song.title + ' (' + whoTxt(it) + (it.mode && it.mode !== 'solo' ? ' · ' + modeName[it.mode] : '') + ')'),
       el('small', it.song.artist + (it.song.kv ? ' · 🎤 karaoke version' : ' · original recording (has the singer’s vocals)')));
     const rm = el('button', 'Remove', 'ghost'); rm.onclick = () => { if (room.on) roomOp({ op: 'qrm', id: it.id }); else { queue.splice(i, 1); renderQueue(); } };
-    row.append(info, rm); box.appendChild(row);
+    const kb = it.song.kv ? null : el('button', '🎤 Find karaoke', 'ghost');
+    if (kb) kb.onclick = async () => {      // no karaoke version yet (it was queued before the box was ticked, or none was found): try now
+      kb.disabled = true; say('Looking for a karaoke version of ' + it.song.title + '…');
+      const kv = await findKaraoke(it.song, true); kb.disabled = false;
+      if (!kv) { say(kv === null ? 'Still no karaoke version found for ' + it.song.title + ', so the original will play.' : 'Could not look for a karaoke version. Try again.'); return; }
+      if (room.on) roomOp({ op: 'qkv', id: it.id, kv }); else if (queue.includes(it)) { it.song.kv = kv; renderQueue(); }
+      say('Karaoke version found for ' + it.song.title + '.');
+    };
+    row.append(...(kb ? [info, kb, rm] : [info, rm])); box.appendChild(row);
   });
 }
 $('#saveBtn').onclick = async () => {

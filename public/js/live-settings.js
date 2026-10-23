@@ -52,3 +52,19 @@ $('#tSel').addEventListener('change', () => { if (active) setTimeout(() => switc
 
 // Lyrics display (original / romanized / both) changes straight away
 $('#romMode').addEventListener('change', () => { if (active) $('#lyrics').className = 'm-' + $('#romMode').value; });
+
+// Ticking "Karaoke versions" also switches the songs that are already in the queue (the ones you queued) to their karaoke versions
+$('#karOn').addEventListener('change', async e => {
+  if (!e.target.checked) return;
+  const todo = queue.filter(it => !it.song.kv && (!room.on || it.singer === room.name));
+  if (!todo.length) return;
+  say('Looking for karaoke versions of the ' + todo.length + ' song' + (todo.length > 1 ? 's' : '') + ' already queued…');
+  let n = 0;
+  for (const it of todo) {
+    if (!$('#karOn').checked || !queue.includes(it)) continue;      // switched off again, or the song already started or was removed
+    const kv = await findKaraoke(it.song);
+    if (kv && $('#karOn').checked && queue.includes(it)) { n++; if (room.on) roomOp({ op: 'qkv', id: it.id, kv }); else it.song.kv = kv; }
+  }
+  if (!room.on) renderQueue();
+  say(n ? 'Switched ' + n + ' queued song' + (n > 1 ? 's' : '') + ' to karaoke versions.' + (n < todo.length ? ' The others have none; use “🎤 Find karaoke” on them to try again.' : '') : 'No karaoke versions found for the songs already queued.');
+});
