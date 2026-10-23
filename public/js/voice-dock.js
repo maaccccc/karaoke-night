@@ -12,7 +12,7 @@
   function place() {
     const t = top(); head.style.top = t + 'px'; head.style.bottom = 'auto';
     head.style.left = pos.side === 'l' ? M + 'px' : 'auto'; head.style.right = pos.side === 'r' ? M + 'px' : 'auto';
-    if (panel.hidden) return;
+    if (panel.hidden || panel.classList.contains('floating')) return;
     if (matchMedia('(max-width:999px), (hover:none) and (pointer:coarse)').matches) { panel.style.left = panel.style.top = ''; return; }   // phones: CSS makes it a bottom sheet
     const w = panel.offsetWidth, h = panel.offsetHeight;
     panel.style.left = (pos.side === 'r' ? Math.max(M, innerWidth - M - S - 8 - w) : Math.min(innerWidth - w - M, M + S + 8)) + 'px';
@@ -67,7 +67,38 @@
   };
   head.addEventListener('pointerup', end); head.addEventListener('pointercancel', end);
   head.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(panel.hidden); } });
-  addEventListener('resize', place);
+  // ---- detach: on screens at least 641px wide the panel can become a floating window you drag (by its title bar) and resize (corner), and leave anywhere
+  const win = { on: false, x: 40, y: 90, w: 380, h: 480 }, dt = document.getElementById('vcDetach'), rz = document.getElementById('vcResize'), hdr = panel.querySelector('.vcph');
+  try { const s = JSON.parse(localStorage.getItem('vcWin') || 'null'); if (s && typeof s === 'object') Object.assign(win, s); } catch (e) {}
+  const saveWin = () => { try { localStorage.setItem('vcWin', JSON.stringify(win)); } catch (e) {} };
+  const canFloat = () => matchMedia('(min-width:641px)').matches, cl = (v, a, b) => Math.max(a, Math.min(b, v));
+  function applyWin() {
+    const f = !!win.on && canFloat(); panel.classList.toggle('floating', f);
+    dt.textContent = f ? '⇲' : '⧉'; dt.title = f ? 'Dock: put it back next to the bubble' : 'Detach: float this window anywhere on the screen'; dt.setAttribute('aria-label', f ? 'Dock' : 'Detach');
+    if (f) {
+      win.w = cl(win.w, 290, innerWidth - 16); win.h = cl(win.h, 270, innerHeight - 16); win.x = cl(win.x, 0, innerWidth - win.w); win.y = cl(win.y, 0, innerHeight - win.h);
+      Object.assign(panel.style, { left: win.x + 'px', top: win.y + 'px', width: win.w + 'px', height: win.h + 'px', right: 'auto', bottom: 'auto' });
+    } else ['left', 'top', 'width', 'height', 'right', 'bottom'].forEach(k => { panel.style[k] = ''; });
+  }
+  dt.onclick = () => {
+    if (!win.on) { const r = panel.getBoundingClientRect(); Object.assign(win, { on: true, x: r.left, y: r.top, w: r.width, h: r.height }); }   // it stays exactly where it is
+    else win.on = false;
+    saveWin(); applyWin(); place();
+  };
+  hdr.addEventListener('pointerdown', e => {
+    if (!panel.classList.contains('floating') || e.button || e.target.closest('button')) return;
+    hdr.setPointerCapture(e.pointerId); const sx = e.clientX - win.x, sy = e.clientY - win.y;
+    const mv = ev => { win.x = cl(ev.clientX - sx, 0, innerWidth - win.w); win.y = cl(ev.clientY - sy, 0, innerHeight - win.h); panel.style.left = win.x + 'px'; panel.style.top = win.y + 'px'; };
+    const up = () => { hdr.removeEventListener('pointermove', mv); hdr.removeEventListener('pointerup', up); hdr.removeEventListener('pointercancel', up); saveWin(); };
+    hdr.addEventListener('pointermove', mv); hdr.addEventListener('pointerup', up); hdr.addEventListener('pointercancel', up);
+  });
+  rz.addEventListener('pointerdown', e => {
+    if (e.button) return; e.preventDefault(); rz.setPointerCapture(e.pointerId); const sx = e.clientX, sy = e.clientY, w0 = win.w, h0 = win.h;
+    const mv = ev => { win.w = cl(w0 + ev.clientX - sx, 290, innerWidth - win.x); win.h = cl(h0 + ev.clientY - sy, 270, innerHeight - win.y); panel.style.width = win.w + 'px'; panel.style.height = win.h + 'px'; };
+    const up = () => { rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); rz.removeEventListener('pointercancel', up); saveWin(); };
+    rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up); rz.addEventListener('pointercancel', up);
+  });
+  addEventListener('resize', () => { applyWin(); place(); });
 
   // the badge: how many people are in voice chat; red dot when I am muted
   const bd = document.getElementById('vcBd');
@@ -79,5 +110,5 @@
     head.classList.toggle('live', !!vc.on); head.classList.toggle('muted', !!(vc.on && vc.muted));
     if (!inRoom && !panel.hidden) open(false);
   }, 400);
-  chatPlace(); place();
+  chatPlace(); applyWin(); place();
 })();

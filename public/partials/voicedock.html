@@ -1,6 +1,6 @@
 <div id="vcDock" aria-label="Voice chat">
   <div id="vcPanel" hidden role="dialog" aria-label="Voice chat">
-    <div class="vcph"><div class="vctabs"><button class="vct on" type="button" data-t="voice">🎧 Voice chat</button><button class="vct" type="button" data-t="chat">💬 Chat<span class="vctb" id="vcTabBd"></span></button></div><button class="ghost mini" id="vcMin" type="button" aria-label="Minimise">–</button></div>
+    <div class="vcph"><div class="vctabs"><button class="vct on" type="button" data-t="voice">🎧 Voice chat</button><button class="vct" type="button" data-t="chat">💬 Chat<span class="vctb" id="vcTabBd"></span></button></div><span class="vcbtns"><button class="ghost mini" id="vcDetach" type="button" aria-label="Detach" title="Detach: float this window anywhere on the screen">⧉</button><button class="ghost mini" id="vcMin" type="button" aria-label="Minimise">–</button></span></div>
 <div id="vcVoicePane"><div id="vcBox">
     <div class="row"><button id="vcJoin">🎧 Join voice chat</button><button class="ghost" id="vcMute" style="display:none">🎙 Mute</button></div>
     <div id="vcPeers" aria-live="polite"></div>
@@ -10,6 +10,7 @@
     <p class="note" id="vcNote">Talk with everyone in the room, even during songs (at a lower volume so the singer stays clear). Headphones avoid echo.</p>
   </div></div>
   <div id="vcChatPane" hidden></div>
+  <i id="vcResize" aria-hidden="true" title="Drag to resize"></i>
   </div>
   <button id="vcHead" type="button" aria-label="Voice chat" aria-expanded="false" title="Voice chat (drag me anywhere)"><span class="vcico"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></span><span class="vcbd" id="vcBd"></span></button>
 </div>

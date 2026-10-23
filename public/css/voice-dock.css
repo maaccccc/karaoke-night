@@ -14,7 +14,7 @@
 #vcPanel[hidden]{display:none}
 #vcPanel .vcph{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #vcPanel #vcBox{margin-top:0;border-top:0;padding-top:0}
-@media (max-width:999px), (hover:none) and (pointer:coarse){#vcPanel{left:10px!important;right:10px;max-width:560px;margin:0 auto;top:auto!important;bottom:max(10px,env(safe-area-inset-bottom));width:auto;max-height:70vh;max-height:70dvh}}
+@media (max-width:999px), (hover:none) and (pointer:coarse){#vcPanel:not(.floating){left:10px!important;right:10px;max-width:560px;margin:0 auto;top:auto!important;bottom:max(10px,env(safe-area-inset-bottom));width:auto;max-height:70vh;max-height:70dvh}}
 @media (prefers-reduced-motion:reduce){#vcHead.talk{animation:none;border-color:#3be58a}}
 
 /* ---- input bar under each person in the lobby ---- */
@@ -35,3 +35,17 @@ body.qside #queueCard{margin-bottom:12px}
 #vcChatPane #chat .chead{display:none}
 #vcHead .vcub{position:absolute;left:-4px;bottom:-4px;margin:0;border:2px solid #1c0e2c;line-height:18px}
 @media (max-width:999px), (hover:none) and (pointer:coarse){body.inroom #chatBtn{display:none!important}}
+
+/* ---- detached: a floating window you can drag (title bar) and resize (corner) ---- */
+#vcPanel .vcph{touch-action:none}#vcPanel .vcbtns{display:flex;gap:6px}
+#vcDetach{display:none}@media (min-width:641px){#vcDetach{display:inline-block}}
+#vcPanel.floating{display:flex;flex-direction:column;overflow:hidden;max-height:none;max-width:none;margin:0;padding-bottom:22px;border-color:var(--cyan);box-shadow:0 24px 70px rgba(0,0,0,.75)}
+#vcPanel.floating[hidden]{display:none}
+#vcPanel.floating .vcph{cursor:move;flex:none}
+#vcPanel.floating #vcVoicePane{flex:1;min-height:0;overflow:auto}
+#vcPanel.floating #vcChatPane{flex:1;min-height:0;display:flex;flex-direction:column}
+#vcPanel.floating #vcChatPane[hidden]{display:none}
+#vcPanel.floating #vcChatPane #chat{height:auto;flex:1;min-height:0}
+#vcResize{display:none}
+#vcPanel.floating #vcResize{display:block;position:absolute;right:3px;bottom:3px;width:22px;height:22px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 50%,var(--mute) 50% 60%,transparent 60% 72%,var(--mute) 72% 82%,transparent 82%)}
+#vcPanel.floating{background:#1c0e2c}#vcPanel.floating #vcChatPane #chat{background:#150a22}
