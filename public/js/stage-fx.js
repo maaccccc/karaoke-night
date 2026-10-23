@@ -17,7 +17,7 @@ function avBuild() {
   const box = $('#avStage'); box.textContent = ''; if (!current) return;
   singersOf(current).forEach(n => {
     const a = avFor(n), d = el('div', null, 'avs'), big = el('div', null, 'big');
-    big.style.background = a.c; big.style.setProperty('--ac', a.c); big.appendChild(el('span', a.e, 'em')); d.append(big, el('div', n, 'nm')); box.appendChild(d);
+    decorAv(big, a); big.style.background = a.c; big.style.setProperty('--ac', a.c); big.appendChild(el('span', a.e, 'em')); d.append(big, el('div', n, 'nm')); box.appendChild(d);
   });
 }
 function avUpdate(idx, playing) {
@@ -28,7 +28,7 @@ function avUpdate(idx, playing) {
 function crowdBuild() {
   const box = $('#crowd'); if (!box) return; box.textContent = ''; if (!room.on || !current) return;
   room.peers.filter(p => !(current.sids || []).includes(p.id) && !p.away).forEach(p => {
-    const a = p.av || { e: '🎤', c: '#888' }, d = el('div', a.e, 'cav'); d.style.background = a.c; d.dataset.name = p.name; d.title = p.name; box.appendChild(d);
+    const a = p.av || { e: '🎤', c: '#888' }, d = el('div', a.e, 'cav'); d.style.background = a.c; decorAv(d, a); d.dataset.name = p.name; d.title = p.name; box.appendChild(d);
   });
 }
 const crowdTxt = e => e < 20 ? 'Quiet' : e < 45 ? 'Warming up' : e < 70 ? 'Hype!' : 'ON FIRE 🔥';

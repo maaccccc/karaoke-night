@@ -21,7 +21,7 @@ function renderPick() {
   }
   if (two) others.forEach(p => {
     const on = pkSel.ops.includes(p.name), b = el('button', '', 'ghost' + (on ? ' on' : '')); b.type = 'button';
-    const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888';
+    const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; decorAv(av, p.av);
     b.append(av, el('span', (on && multi ? '✓ ' : '') + p.name));
     b.onclick = () => { pkSel.ops = multi ? (on ? pkSel.ops.filter(n => n !== p.name) : pkSel.ops.concat(p.name)) : [p.name]; renderPick(); }; pl.appendChild(b);
   });

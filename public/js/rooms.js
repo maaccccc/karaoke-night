@@ -8,19 +8,25 @@ const rtc = { pcs: {}, stream: null, remote: null, pend: {}, rctx: null, rems: {
 let pendingResult = null, awaiting = false;
 const micC = () => Object.assign(room.on ? { echoCancellation: !prefs.hp, latency: { ideal: 0 } } : { echoCancellation: true }, supCons(prefs.sup, 'sing'));   // Mic suppression decides the browser's noise suppression (Standard = off while singing, as before)
 const isSinger = () => !room.on || (current && (current.sids ? current.sids.includes(room.id) : current.singer === room.name));
-const EMOJI = ['🎤', '😎', '🦄', '🐱', '🐶', '🦊', '🐼', '🐸', '🤖', '👽', '🎸', '🍕', '🌟', '🔥', '👑', '🦖'];
-const COLORS = ['#ff3d8b', '#35e0ff', '#ffc83d', '#3be58a', '#b388ff', '#ff8a3d', '#ff5252', '#7cb7ff'];
+const EMOJI = ['🎤', '😎', '🦄', '🐱', '🐶', '🦊', '🐼', '🐸', '🤖', '👽', '🎸', '🍕', '🌟', '🔥', '👑', '🦖', '🐧', '🦉', '🐙', '🦁', '🐯', '🐰', '🐨', '🐲', '🍩', '🍔', '🌮', '🍦', '⚡', '💎', '🚀', '👻'];
+const COLORS = ['#ff3d8b', '#35e0ff', '#ffc83d', '#3be58a', '#b388ff', '#ff8a3d', '#ff5252', '#7cb7ff', '#ff6ec7', '#00e5a8', '#ffe14d', '#8a5cff', '#ff9ec4', '#5ee6ff', '#c6ff4d', '#e8e8ff'];
+const FRAMES = ['', 'gold', 'ice', 'hot', 'royal', 'candy', 'lime'], HATS = ['', '👑', '🎩', '🧢', '🎧', '🎀', '🪩', '🎓'];
+const FRAME_NAMES = { '': 'No frame', gold: 'Gold', ice: 'Ice', hot: 'Hot pink', royal: 'Royal', candy: 'Candy', lime: 'Lime' };
+const decorAv = (node, a) => { if (a && a.f) node.dataset.f = a.f; if (a && a.h) node.dataset.h = a.h; return node; };
 let myAv = null; try { myAv = JSON.parse(localStorage.getItem('karaokeAv')); } catch (e) {}
 if (!myAv || !EMOJI.includes(myAv.e) || !COLORS.includes(myAv.c)) myAv = { e: EMOJI[Math.floor(Math.random() * EMOJI.length)], c: COLORS[Math.floor(Math.random() * COLORS.length)] };
+myAv.f = FRAMES.includes(myAv.f) ? myAv.f : ''; myAv.h = HATS.includes(myAv.h) ? myAv.h : '';
 const avOf = n => { const p = room.on && room.peers.find(x => x.name === n); return p && p.av || null; };
 const avTxt = n => { const a = avOf(n); return a ? a.e + ' ' : ''; };
 function buildPickers() {
   ['#avPick', '#avPick2'].forEach(id => {
     const box = $(id); if (!box) return; box.textContent = ''; const wrap = el('div', null, 'pk');
-    EMOJI.forEach(e => { const b = el('button', e, 'ghost' + (e === myAv.e ? ' on' : '')); b.type = 'button'; b.onclick = () => setAv({ e, c: myAv.c }); wrap.appendChild(b); });
+    EMOJI.forEach(e => { const b = el('button', e, 'ghost' + (e === myAv.e ? ' on' : '')); b.type = 'button'; b.onclick = () => setAv({ e, c: myAv.c, f: myAv.f, h: myAv.h }); wrap.appendChild(b); });
     box.appendChild(wrap); const cw = el('div', null, 'pk');
-    COLORS.forEach(c => { const d = el('i', null, c === myAv.c ? 'on' : ''); d.style.background = c; d.onclick = () => setAv({ e: myAv.e, c }); cw.appendChild(d); });
+    COLORS.forEach(c => { const d = el('i', null, c === myAv.c ? 'on' : ''); d.style.background = c; d.onclick = () => setAv({ e: myAv.e, c, f: myAv.f, h: myAv.h }); cw.appendChild(d); });
     box.appendChild(cw);
+    const fw = el('div', null, 'pk pkx'); FRAMES.forEach(f => { const b = el('button', FRAME_NAMES[f], 'ghost' + (f === myAv.f ? ' on' : '')); b.type = 'button'; b.title = 'Frame'; b.onclick = () => setAv({ e: myAv.e, c: myAv.c, f, h: myAv.h }); fw.appendChild(b); }); box.appendChild(fw);
+    const hw = el('div', null, 'pk pkx'); HATS.forEach(h => { const b = el('button', h || 'No hat', 'ghost' + (h === myAv.h ? ' on' : '')); b.type = 'button'; b.title = 'Hat'; b.onclick = () => setAv({ e: myAv.e, c: myAv.c, f: myAv.f, h }); hw.appendChild(b); }); box.appendChild(hw);
   });
 }
 function setAv(a) { myAv = a; try { localStorage.setItem('karaokeAv', JSON.stringify(a)); } catch (e) {} buildPickers(); if (room.on) roomOp({ op: 'avatar', av: a }); }
@@ -139,7 +145,7 @@ function renderWho(m) {
   const box = $('#lobList'); box.textContent = ''; $('#lobN').textContent = '(' + m.peers.length + ')';
   const mic = { untested: ['mic untested', ''], tested: ['mic OK', 'ok'], blocked: ['mic blocked', 'bad'], none: ['no mic', 'bad'], error: ['mic problem', 'bad'] };
   m.peers.forEach(p => {
-    const row = el('div', '', 'pr' + (p.away ? ' away' : '')); row.dataset.pid = p.id; if (p.id !== room.id) row.title = 'Click or hover to change ' + p.name + '’s volume'; const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; row.appendChild(av); row.appendChild(el('b', p.name + (p.id === room.id ? ' (you)' : '') + ((m.singers || []).includes(p.name) ? ' 🎤' : ''), p.id === room.id ? 'me' : ''));
+    const row = el('div', '', 'pr' + (p.away ? ' away' : '')); row.dataset.pid = p.id; if (p.id !== room.id) row.title = 'Click or hover to change ' + p.name + '’s volume'; const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; decorAv(av, p.av); row.appendChild(av); row.appendChild(el('b', p.name + (p.id === room.id ? ' (you)' : '') + ((m.singers || []).includes(p.name) ? ' 🎤' : ''), p.id === room.id ? 'me' : ''));
     if (p.id === m.host) row.appendChild(el('span', '👑 host', 'tg ok'));
     const [t, c] = mic[p.mic] || mic.untested; row.appendChild(el('span', t, 'tg ' + c));
     if (p.vc) row.appendChild(el('span', p.vcm ? '🔇 muted' : '🎧 voice', 'tg' + (p.vcm ? '' : ' ok')));

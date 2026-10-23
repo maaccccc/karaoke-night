@@ -515,12 +515,15 @@ def room_launch(r):
     r['queue'].remove(item)
     begin_song(r, item)
 
-EMOJIS = ['🎤', '😎', '🦄', '🐱', '🐶', '🦊', '🐼', '🐸', '🤖', '👽', '🎸', '🍕', '🌟', '🔥', '👑', '🦖']
-COLORS = ['#ff3d8b', '#35e0ff', '#ffc83d', '#3be58a', '#b388ff', '#ff8a3d', '#ff5252', '#7cb7ff']
+EMOJIS = ['🎤', '😎', '🦄', '🐱', '🐶', '🦊', '🐼', '🐸', '🤖', '👽', '🎸', '🍕', '🌟', '🔥', '👑', '🦖', '🐧', '🦉', '🐙', '🦁', '🐯', '🐰', '🐨', '🐲', '🍩', '🍔', '🌮', '🍦', '⚡', '💎', '🚀', '👻']
+COLORS = ['#ff3d8b', '#35e0ff', '#ffc83d', '#3be58a', '#b388ff', '#ff8a3d', '#ff5252', '#7cb7ff', '#ff6ec7', '#00e5a8', '#ffe14d', '#8a5cff', '#ff9ec4', '#5ee6ff', '#c6ff4d', '#e8e8ff']
+FRAMES = ('gold', 'ice', 'hot', 'royal', 'candy', 'lime')
+HATS = ('👑', '🎩', '🧢', '🎧', '🎀', '🪩', '🎓')
 REACTS = ['👏', '🔥', '❤️', '😂', '🎉', '😮']
 def clean_av(av):
     av = av if isinstance(av, dict) else {}
-    return {'e': av.get('e') if av.get('e') in EMOJIS else EMOJIS[0], 'c': av.get('c') if av.get('c') in COLORS else COLORS[0]}
+    return {'e': av.get('e') if av.get('e') in EMOJIS else EMOJIS[0], 'c': av.get('c') if av.get('c') in COLORS else COLORS[0],
+            'f': av.get('f') if av.get('f') in FRAMES else '', 'h': av.get('h') if av.get('h') in HATS else ''}
 
 ZP = {'Singing': 0.0, 'Tone': 0.0, 'Volume': 0.0, 'Timing': 0.0}
 THEMES_PICK = ('neon', 'arcade', 'stars')

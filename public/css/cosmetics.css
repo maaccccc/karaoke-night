@@ -1,0 +1,13 @@
+/* cosmetics.css: avatar frames + hats. Static only (no animation) so it costs nothing on slow devices. */
+[data-f],[data-h]{position:relative}
+[data-f]{outline-offset:2px}
+[data-f=gold]{outline:3px solid #ffd86b}
+[data-f=ice]{outline:3px solid #bdf3ff}
+[data-f=hot]{outline:4px double #ff3d8b}
+[data-f=royal]{outline:4px double #b388ff}
+[data-f=candy]{outline:3px dashed #fff}
+[data-f=lime]{outline:3px dashed #3be58a}
+[data-h]::after{content:attr(data-h);position:absolute;left:50%;top:-.42em;transform:translateX(-50%) rotate(-10deg);font-size:.5em;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.avs .big[data-h]::after{font-size:.55em;top:-.5em}
+.pkx button{font-size:.8rem;padding:4px 10px}
+.pkx button.on{outline:0}
