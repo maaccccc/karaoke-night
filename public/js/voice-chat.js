@@ -40,12 +40,18 @@ function vcHook(id, ms) {   // incoming voice -> level meter, volume -> limiter 
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   } catch (e) { delete vc.nodes[id]; }
 }
-function vcTick() {   // about 20 times a second: move each person's meter
-  Object.entries(vc.nodes).forEach(([id, n]) => {
-    n.an.getFloatTimeDomainData(n.buf); let sum = 0; for (let i = 0; i < n.buf.length; i++) sum += n.buf[i] * n.buf[i];
-    const rms = Math.sqrt(sum / n.buf.length), db = rms > 0 ? 20 * Math.log10(rms) : -100, lvl = Math.max(0, Math.min(100, (db + 60) / 60 * 100));   // 0-100 = -60 dB .. 0 dB
-    const u = vc.ui[id]; if (u) { u.fill.style.width = lvl + '%'; u.fill.classList.toggle('hot', lvl > 90); }
-  });
+function vcLevel(an, buf) {   // 0-100 = -60 dB .. 0 dB
+  an.getFloatTimeDomainData(buf); let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+  const rms = Math.sqrt(sum / buf.length), db = rms > 0 ? 20 * Math.log10(rms) : -100;
+  return Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+}
+function vcBar(m, lvl, off) { const f = m && m.firstChild; if (!f) return; f.style.width = lvl + '%'; f.classList.toggle('hot', lvl > 90); m.classList.toggle('off', !!off); }
+function vcTick() {   // about 20 times a second: move the input bar under each person in the lobby (and under me), and light up the chat head while someone talks
+  const bars = {}; document.querySelectorAll('#lobList .lmeter[data-lm]').forEach(m => { bars[m.dataset.lm] = m; });
+  let talk = 0;
+  Object.entries(vc.nodes).forEach(([id, n]) => { const lvl = vcLevel(n.an, n.buf); if (!isMutedId(id)) talk = Math.max(talk, lvl); vcBar(bars[id], lvl, isMutedId(id)); });
+  if (vc.myAn && room.id) { const off = vc.muted || vcSinging(); vcBar(bars[room.id], off ? 0 : vcLevel(vc.myAn, vc.myBuf), off); }   // my bar = what the room actually hears (after Mic suppression); empty while muted
+  const h = document.getElementById('vcHead'); if (h) h.classList.toggle('talk', talk > 25);
 }
 setInterval(() => { if (vc.on) vcTick(); }, 50);
 
@@ -133,8 +139,8 @@ function vcStatus(id) {   // how is my link to this person?  'ok' | 'wait' | 'fa
 function vcRow(p) {
   const row = el('div', null, 'vcp wait'), head = el('div', null, 'vch'), ic = el('span', '…', 'vci'), nm = el('span', '', 'vcn');
   row.dataset.pid = p.id; row.title = 'Click or hover to change ' + p.name + '’s volume'; head.append(ic, nm);
-  const meter = el('div', null, 'vcmeter'), fill = el('i', null, 'vcf'); meter.appendChild(fill); row.append(head, meter);
-  return { row, ic, nm, fill };
+  row.append(head);
+  return { row, ic, nm };
 }
 function vcPeersRender() {
   const box = $('#vcPeers'); if (!box) return;
@@ -221,11 +227,12 @@ async function onVc1(from, d) {
   } catch (e) {}
 }
 async function vcBuildSend() {   // microphone -> Mic suppression -> the track that is sent to everyone (if Web Audio fails, the raw microphone is sent)
-  vc.send = vc.sup = vc.src = vc.dest = null; const ctx = vcCtx(); if (!ctx || !vc.stream) return;
+  vc.send = vc.sup = vc.src = vc.dest = vc.myAn = null; const ctx = vcCtx(); if (!ctx || !vc.stream) return;
   try {
     const sup = await makeSuppressor(ctx, prefs.sup, prefs.thr), src = ctx.createMediaStreamSource(vc.stream), dest = ctx.createMediaStreamDestination();
     src.connect(sup.in); sup.out.connect(dest); vc.sup = sup; vc.src = src; vc.dest = dest; vc.send = dest.stream;
-  } catch (e) { vc.send = vc.sup = vc.src = vc.dest = null; }
+    const ma = ctx.createAnalyser(); ma.fftSize = 1024; sup.out.connect(ma); vc.myAn = ma; vc.myBuf = new Float32Array(ma.fftSize);   // my own input bar
+  } catch (e) { vc.send = vc.sup = vc.src = vc.dest = vc.myAn = null; }
 }
 async function vcSetMic(nv) {   // a different microphone (or a change of browser noise suppression): swap it without reconnecting anyone
   const old = vc.stream; vc.stream = nv;
@@ -249,7 +256,7 @@ async function vcJoin() {
 function vcLeave() {
   Object.keys(vc.pcs).forEach(vcDrop);
   if (vc.stream) { vc.stream.getTracks().forEach(t => t.stop()); vc.stream = null; }
-  vc.send = vc.sup = vc.src = vc.dest = null;
+  vc.send = vc.sup = vc.src = vc.dest = vc.myAn = null;
   if (vc.ctx) { try { vc.ctx.close(); } catch (e) {} vc.ctx = null; vc.lim = null; }
   vc.on = false; vc.muted = false; vc.q = {}; if (room.on) roomOp({ op: 'vc', on: false, muted: false }); vcRender(); vcPeersRender();
 }

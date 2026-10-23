@@ -201,7 +201,11 @@ $('#roomBtn').onclick = async () => {
     const qr = window.qrcode(0, 'M'); qr.addData(link); qr.make(); $('#qrBox').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
   } catch (e) { $('#qrBox').textContent = 'Could not load the QR code (needs internet). Use the link below.'; }
 };
-addEventListener('pagehide', () => { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id })); });
+addEventListener('pagehide', e => {
+  if (!room.on) return;
+  try { const l = JSON.parse(localStorage.getItem('karaokeLast') || 'null'); if (l) { l.t = Date.now(); localStorage.setItem('karaokeLast', JSON.stringify(l)); } } catch (x) {}
+  if (!e.persisted) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id }));
+});
 {
   const qs = new URLSearchParams(location.search); let nm = '';
   try { nm = localStorage.getItem('karaokeName') || ''; } catch (e) {}
@@ -221,16 +225,28 @@ addEventListener('pagehide', () => { if (room.on) navigator.sendBeacon('/api/roo
     catch (e) { $('#rStat').textContent = 'Could not join: ' + e.message; }
   };
   try {
-    const sr = sessionStorage.getItem('karaokeRoom');
-    if (!qs.get('room') && sr && nm) { $('#rCode').value = sr; setTimeout(() => go(false), 0); }   // refreshed page: back into the same room
-    else if (qs.get('room')) $('#rStat').textContent = 'You were invited to room ' + $('#rCode').value + '. Enter your name and press Join a room.';
+    // Refreshed page: back into the same room. Works for people who came in through an invite link (?room=CODE stays in the address bar)
+    // and on phones that wipe the tab's session storage on a refresh / tab restore (the room is also remembered in localStorage).
+    const inv = (qs.get('room') || '').toUpperCase(); let sr = ''; try { sr = sessionStorage.getItem('karaokeRoom') || ''; } catch (e) {}
+    const nav = ((performance.getEntriesByType && performance.getEntriesByType('navigation')) || [])[0], navType = nav ? nav.type : '';
+    if (!sr && (navType === 'reload' || navType === 'back_forward')) {
+      try {
+        const l = JSON.parse(localStorage.getItem('karaokeLast') || 'null');
+        if (l && l.code && Date.now() - l.t < 12 * 3600 * 1000 && (!inv || inv === l.code)) {
+          sr = l.code; sessionStorage.setItem('karaokeRoom', l.code);
+          if (l.id) sessionStorage.setItem('karaokeId', l.id); if (l.key) sessionStorage.setItem('karaokeKey', l.key);   // same person, same host key
+        }
+      } catch (e) {}
+    }
+    if (sr && nm && (!inv || inv === sr)) { $('#rCode').value = sr; setTimeout(() => go(false), 0); }
+    else if (inv) $('#rStat').textContent = 'You were invited to room ' + $('#rCode').value + '. Enter your name and press Join a room.';
   } catch (e) {}
   $('#lJoin').onclick = () => go(false); $('#lCreate').onclick = () => go(true);
   $('#lSolo').onclick = () => { $('#rStat').textContent = ''; enter(false); };
   $('#lMicBtn').onclick = () => openMicTest();
   $('#homeBtn').onclick = () => {
     if (!confirm(room.on ? 'Leave the room and go back to the home page?' : 'Go back to the home page? Your queue on this device will be cleared.')) return;
-    try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id })); sessionStorage.removeItem('karaokeRoom'); } catch (e) {}
+    try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id })); sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
     location.href = location.pathname;
   };
   $('#rName').onkeydown = e => { if (e.key === 'Enter') go(!$('#rCode').value.trim()); };

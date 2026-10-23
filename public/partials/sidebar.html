@@ -1,20 +1,13 @@
 <aside id="side" aria-label="Lobby and live queue">
   <button class="ghost" id="sideClose" aria-label="Close lobby and queue" style="margin-bottom:12px">✕ Close</button>
   <div id="sideCards">
+  <div class="card" id="upNext"><h2>Up next <span id="qN"></span></h2><div id="sideQ"><p class="note">The queue is empty.</p></div></div>
+  <div class="card"><h2>Now singing</h2><div id="nowBox"><p class="note">Nobody yet. Start a song!</p></div></div>
+  <div class="card"><h2>Scoreboard</h2><div id="sideScores"><p class="note">No scores yet.</p></div></div>
   <div class="card" id="cLobby"><h2>Lobby <span id="lobN"></span></h2>
     <div id="visRow"><span id="visTag" class="vb"></span><button class="ghost mini" id="visBtn" type="button" style="display:none"></button></div><p class="note" id="visNote" style="margin:2px 0 6px"></p>
-    <div id="lobList"></div><div id="banList" style="display:none"></div><div id="vcBox">
-    <div class="row"><button id="vcJoin">🎧 Join voice chat</button><button class="ghost" id="vcMute" style="display:none">🎙 Mute</button></div>
-    <div id="vcPeers" aria-live="polite"></div>
-    <p class="note" id="vcHint" style="display:none;margin:4px 0 0">Tip: hover or click a person to change how loud they are for you (right-click works too; press and hold on a phone).</p>
-    <label id="vcMasterRow" style="display:none">Voice chat volume (everyone) <b id="vcMasterV"></b><input type="range" id="vcMaster" min="0" max="200" step="5"></label>
-    <label id="vcDuckRow" style="display:none">Voice chat volume while someone sings <b id="vcDuckV"></b><input type="range" id="vcDuck" min="0" max="100" step="5"></label>
-    <p class="note" id="vcNote">Talk with everyone in the room, even during songs (at a lower volume so the singer stays clear). Headphones avoid echo.</p>
-  </div>
+    <div id="lobList"></div><div id="banList" style="display:none"></div>
   <p class="note" style="margin:8px 0 0">A mic marked “untested” can be checked in Settings.</p></div>
-  <div class="card"><h2>Now singing</h2><div id="nowBox"><p class="note">Nobody yet. Start a song!</p></div></div>
-  <div class="card" id="upNext"><h2>Up next <span id="qN"></span></h2><div id="sideQ"><p class="note">The queue is empty.</p></div></div>
-  <div class="card"><h2>Scoreboard</h2><div id="sideScores"><p class="note">No scores yet.</p></div></div>
   <div class="card" id="ytcard"><h2>Video</h2><div id="ytwrap"></div></div>
   <div id="sideSlot"></div>
   </div>

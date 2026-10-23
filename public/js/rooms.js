@@ -66,7 +66,8 @@ async function claimId() {
 }
 async function roomJoin(code, name, vis) {   // vis ('public' | 'private') only matters when this join creates the room
   room.id = room.id || await claimId(); try { sessionStorage.setItem('karaokeRoom', code); } catch (e) {}
-  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis, key: roomKey() }); setRoomKey(d.key);
+  const keepLast = () => { try { localStorage.setItem('karaokeLast', JSON.stringify({ code, id: room.id, key: room.key || roomKey() || '', t: Date.now() })); } catch (e) {} }; keepLast();
+  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis, key: roomKey() }); setRoomKey(d.key); keepLast();
   room.skew = d.now - (t0 + Date.now()) / 2; room.code = code; room.name = d.name; room.on = true;
   document.body.classList.add('inroom'); say('You are in room ' + code + ' as ' + d.name + '. Share the invite link with friends.');
   const b = $('#roomBtn'); b.style.display = ''; $('#chatBtn').style.display = ''; $('#skipBtn2').style.display = ''; pollLoop(); syncClock(); if (room.mic !== 'untested') roomOp({ op: 'mic', mic: room.mic });
@@ -145,6 +146,11 @@ function renderWho(m) {
     if (m.picking === p.name) row.appendChild(el('span', 'choosing mode…', 'tg ok'));
     if (p.away) row.appendChild(el('span', 'reconnecting…', 'tg'));
     else if (rdIn || p.ready) row.appendChild(el('span', p.ready ? 'ready' : 'not ready', 'tg ' + (p.ready ? 'ok' : '')));
+    if (p.vc && !p.away && vc.on) {   // input bar right under this person (moved by vcTick); mine shows that my own mic works
+      const mt = el('div', null, 'lmeter'); mt.dataset.lm = p.id; mt.appendChild(el('i'));
+      mt.title = p.id === room.id ? 'Your microphone level: this is what the room hears' : p.name + '’s microphone level';
+      row.appendChild(mt);
+    }
     if (p.id !== room.id) {
       const acts = el('span', null, 'acts'), btn = (txt, tip, fn) => { const b = el('button', txt, 'ghost mini'); b.type = 'button'; b.title = tip; b.onclick = fn; acts.appendChild(b); };
       btn(isMuted(p.name) ? '🔊 Unmute' : '🔇 Mute', 'Only you stop hearing and seeing ' + p.name, () => toggleMute(p.name));
@@ -173,7 +179,7 @@ const HOSTOPS = ['kick', 'ban', 'unban', 'vis', 'host', 'skip'];
 function roomKey() { if (room.key) return room.key; try { return sessionStorage.getItem('karaokeKey') || undefined; } catch (e) { return undefined; } }   // secret that proves you are you (needed for host tools)
 function setRoomKey(k) { room.key = k; try { sessionStorage.setItem('karaokeKey', k || ''); } catch (e) {} }
 function kickedOut(banned) {
-  room.on = false; try { sessionStorage.removeItem('karaokeRoom'); } catch (e) {}
+  room.on = false; try { sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
   alert(banned ? 'The host banned you from this room.' : 'The host removed you from the room.'); location.href = location.pathname;
 }
 function renderVis(m) {
