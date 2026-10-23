@@ -49,14 +49,14 @@ function vcTick() {   // about 20 times a second: move each person's meter
 }
 setInterval(() => { if (vc.on) vcTick(); }, 50);
 
-// ---- right-click (or press and hold on a phone) a person: their volume, Discord style
-const vcm = { box: null, id: '' };
-function vcMenuClose() { if (vcm.box) vcm.box.hidden = true; vcm.id = ''; }
+// ---- click, hover or right-click a person (press and hold on a phone): their volume, Discord style
+const vcm = { box: null, id: '', pin: false, at: 0 };
+function vcMenuClose() { if (vcm.box) vcm.box.hidden = true; vcm.id = ''; vcm.pin = false; }
 function vcMenuSync() {
   if (!vcm.box || !vcm.id) return; const n = vcName(vcm.id), v = vcPref(vcm.id).v;
   vcm.t.textContent = '🎧 ' + n; vcm.sl.value = v; vcm.val.textContent = v + '%'; vcm.mu.textContent = isMuted(n) ? '🔊 Unmute' : '🔇 Mute';
 }
-function vcMenuOpen(id, x, y) {
+function vcMenuOpen(id, x, y, rect, pin) {   // rect = the person's row: the menu then sits beside it (left side first, the lobby is on the right)
   if (!room.on || id === room.id || !(room.peers || []).some(p => p.id === id)) return;
   if (!vcm.box) {
     const box = el('div', null, 'vcmenu'), t = el('b', '', 't'), lab = el('label', 'User volume '), val = el('b'), sl = el('input'), row = el('div', null, 'vcmr'), rs = el('button', '↺ Reset', 'ghost mini'), mu = el('button', '', 'ghost mini');
@@ -66,17 +66,47 @@ function vcMenuOpen(id, x, y) {
     mu.onclick = () => { toggleMute(vcName(vcm.id)); vcMenuSync(); };
     Object.assign(vcm, { box, t, sl, val, mu });
   }
-  vcm.id = id; vcMenuSync(); vcm.box.hidden = false;
+  vcm.id = id; vcm.pin = !!pin; vcm.at = Date.now(); vcMenuSync(); vcm.box.hidden = false;
   const w = vcm.box.offsetWidth, h = vcm.box.offsetHeight;
+  if (rect) { x = rect.left - w - 4 >= 8 ? rect.left - w - 4 : rect.right + 4; y = rect.top; }
   vcm.box.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px'; vcm.box.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px';
 }
 const vcRowAt = e => { const r = e.target.closest && e.target.closest('#lobList [data-pid], #vcPeers [data-pid]'); return r && r.dataset.pid !== room.id ? r : null; };
-document.addEventListener('contextmenu', e => { const r = vcRowAt(e); if (!r) return; e.preventDefault(); vcMenuOpen(r.dataset.pid, e.clientX, e.clientY); });
-document.addEventListener('pointerdown', e => { if (vcm.box && !vcm.box.hidden && !vcm.box.contains(e.target)) vcMenuClose(); }, true);
+document.addEventListener('contextmenu', e => { const r = vcRowAt(e); if (!r) return; e.preventDefault(); vcMenuOpen(r.dataset.pid, e.clientX, e.clientY, null, true); });
+document.addEventListener('pointerdown', e => {   // click anywhere else closes it (but not a click on the same person's row: that pins it open)
+  const r = vcRowAt(e);
+  if (vcm.box && !vcm.box.hidden && !vcm.box.contains(e.target) && !(r && r.dataset.pid === vcm.id)) vcMenuClose();
+}, true);
+// click a person: pins their volume box open (click again to close). Hover a person for a moment: it shows by itself and goes away when the mouse leaves.
+document.addEventListener('click', e => {
+  if (e.target.closest && e.target.closest('button, input, select, a, label, .vcmenu')) return;   // the Mute / Make host / Kick / Ban buttons keep their own job
+  const r = vcRowAt(e); if (!r) return;
+  const id = r.dataset.pid;
+  if (vcm.id === id && vcm.pin && Date.now() - vcm.at > 600) { vcMenuClose(); return; }
+  if (vcm.id === id && vcm.pin) return;   // just opened by press-and-hold; the tap that follows must not close it
+  vcMenuOpen(id, 0, 0, r.getBoundingClientRect(), true);
+});
+let vcHo = 0, vcHc = 0;
+const vcZone = t => !!(t && t.closest && (t.closest('.vcmenu') || vcRowAt({ target: t })));
+const vcCanHover = () => !matchMedia || matchMedia('(hover: hover)').matches;
+document.addEventListener('mouseover', e => {
+  if (!room.on || !vcCanHover()) return;
+  const r = vcRowAt(e);
+  if (vcZone(e.target)) clearTimeout(vcHc);
+  if (r && !vcm.pin && vcm.id !== r.dataset.pid) {
+    clearTimeout(vcHo);
+    vcHo = setTimeout(() => { if (!vcm.pin && r.isConnected) vcMenuOpen(r.dataset.pid, 0, 0, r.getBoundingClientRect(), false); }, 280);
+  }
+});
+document.addEventListener('mouseout', e => {
+  clearTimeout(vcHo);
+  if (vcm.pin || !vcm.id || vcZone(e.relatedTarget)) return;
+  clearTimeout(vcHc); vcHc = setTimeout(() => { if (!vcm.pin) vcMenuClose(); }, 250);
+});
 document.addEventListener('keydown', e => { if (e.key === 'Escape') vcMenuClose(); });
 window.addEventListener('resize', vcMenuClose); window.addEventListener('blur', vcMenuClose);
 let vcLp = 0;   // press and hold (phones have no right-click)
-document.addEventListener('touchstart', e => { const r = e.touches.length === 1 && vcRowAt(e); if (!r) return; const t = e.touches[0]; clearTimeout(vcLp); vcLp = setTimeout(() => vcMenuOpen(r.dataset.pid, t.clientX, t.clientY), 500); }, { passive: true });
+document.addEventListener('touchstart', e => { const r = e.touches.length === 1 && vcRowAt(e); if (!r) return; const t = e.touches[0]; clearTimeout(vcLp); vcLp = setTimeout(() => vcMenuOpen(r.dataset.pid, t.clientX, t.clientY, null, true), 500); }, { passive: true });
 ['touchend', 'touchcancel', 'touchmove'].forEach(ev => document.addEventListener(ev, () => clearTimeout(vcLp), { passive: true }));
 
 function vcApply() {
@@ -102,7 +132,7 @@ function vcStatus(id) {   // how is my link to this person?  'ok' | 'wait' | 'fa
 }
 function vcRow(p) {
   const row = el('div', null, 'vcp wait'), head = el('div', null, 'vch'), ic = el('span', '…', 'vci'), nm = el('span', '', 'vcn');
-  row.dataset.pid = p.id; row.title = 'Right-click (or press and hold) to change ' + p.name + '’s volume'; head.append(ic, nm);
+  row.dataset.pid = p.id; row.title = 'Click or hover to change ' + p.name + '’s volume'; head.append(ic, nm);
   const meter = el('div', null, 'vcmeter'), fill = el('i', null, 'vcf'); meter.appendChild(fill); row.append(head, meter);
   return { row, ic, nm, fill };
 }

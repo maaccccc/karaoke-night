@@ -30,3 +30,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .item small{color:var(--mute);display:block}
 .chip{display:inline-block;background:rgba(255,255,255,.1);border:1px solid var(--line);border-radius:99px;padding:2px 14px;margin:6px 6px 0 0;animation:in .3s both}
 .note{color:var(--mute);font-size:.9rem}
+/* dropdown lists: dark panel, light text (the list is drawn by the browser and was falling back to white) */
+select{color-scheme:dark}
+select option,select optgroup{background-color:#1c0e2c;color:#fbeeff}
+select option:hover,select option:focus,select option:checked{background-color:#ff3d8b;color:#fff}
+select option:disabled{color:#8a7399}

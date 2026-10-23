@@ -46,13 +46,32 @@ async function loadAndRun() {
   runSong();
 }
 function loadedOnce() { if (room.on && room.prep && !loadedSent) { loadedSent = true; roomOp({ op: 'loaded' }); } }
-function setOffset(v) {
+// The lyrics are timed to the ORIGINAL recording, so a karaoke track usually needs a shift. Once someone fixes it, the fix is kept on the server
+// for that track (for everybody, every time), and in a room it is sent to everyone live, so each person does not have to fix it on their own.
+const canShareTiming = () => !room.on || isSinger() || room.host === room.id;
+let tmTimer = 0;
+function shareTimingSoon() {
+  if (!current || !active || !canShareTiming()) return;
+  clearTimeout(tmTimer);
+  tmTimer = setTimeout(() => {
+    const v = pvid(), o = offset, s = scale;
+    rpost('/api/timing', { v, l: lyricId || '', o, s }).catch(() => {});
+    if (room.on) roomOp({ op: 'timing', v, o, s });
+  }, 700);
+}
+function onTiming(m) {       // the singer (or host) fixed the timing: use it right away
+  if (!active || !current || m.v !== pvid() || m.by === room.name) return;
+  setOffset(m.o, false); setScale(m.s, false); force = true;
+  $('#markHint').textContent = (m.by || 'The singer') + ' adjusted the lyric timing for everyone.';
+}
+function setOffset(v, share = true) {
   offset = Math.round(v * 10) / 10; $('#off').textContent = (offset > 0 ? '+' : '') + offset.toFixed(1) + 's';
   try { localStorage.setItem('off:' + pvid(), String(offset)); } catch (e) {}
+  if (share) shareTimingSoon();
 }
 $('#rstTiming').onclick = () => {
   try { localStorage.removeItem('off:' + pvid()); localStorage.removeItem('spd:' + pvid()); } catch (e) {}
-  offset = 0; $('#off').textContent = '0.0s'; setScale(autoScale, false); anchor = null; force = true;
+  offset = 0; $('#off').textContent = '0.0s'; setScale(autoScale, false); anchor = null; force = true; shareTimingSoon();
   $('#markHint').textContent = 'Timing reset. If the lyrics are still off, click a line and press Mark when you hear it.';
 };
 [['s5', .5], ['s1', .1], ['l1', -.1], ['l5', -.5]].forEach(([id, d]) => $('#' + id).onclick = () => setOffset(offset + d));
@@ -60,7 +79,7 @@ $('#rstTiming').onclick = () => {
 function setScale(v, save = true) {
   scale = Math.min(1.12, Math.max(.88, v)); $('#spd').value = scale;
   $('#spdv').textContent = (scale >= 1 ? '+' : '') + ((scale - 1) * 100).toFixed(1) + '%';
-  if (save) { try { localStorage.setItem('spd:' + pvid(), String(scale)); } catch (e) {} }
+  if (save) { try { localStorage.setItem('spd:' + pvid(), String(scale)); } catch (e) {} shareTimingSoon(); }
 }
 const tweak = () => (prefs.lead || 0) - (prefs.delay || 0);
 let anchor = null, pick = -1;
@@ -148,9 +167,14 @@ async function runSong() {
   labelTurns(); fxStart();
   S = { voiced: 0, rms: 0, clear: 0, clip: 0, lf: lines.map(() => 0), lv: lines.map(() => 0), hit: lines.map(() => 0) };
   let saved = 0; try { saved = parseFloat(localStorage.getItem('off:' + pvid())) || 0; } catch (e) {}
-  setOffset(saved);
-  if (Math.abs(saved) >= 2) $('#markHint').textContent = 'This song still has a saved timing shift of ' + saved.toFixed(1) + 's from an earlier try. Press Reset timing if the lyrics do not match.';
   let sv = NaN; try { sv = parseFloat(localStorage.getItem('spd:' + pvid())); } catch (e) {}
+  let shared = null;      // a timing fix someone already made for this exact track beats a guess
+  try { const r = await Promise.race([fetch('/api/timing?' + new URLSearchParams({ v: pvid(), l: lyricId || '' })), new Promise((_, no) => setTimeout(no, 1500))]); shared = (await r.json()).timing || null; } catch (e) {}
+  if (shared) { saved = shared.o; sv = shared.s; }
+  setOffset(saved, false);
+  if (shared) $('#markHint').textContent = 'Using the lyric timing that was already fixed for this track (shift ' + saved.toFixed(1) + 's).' + (isSinger() ? ' Nudge it with Sooner / Later or Mark if it is still off; the fix is kept for everyone.' : '');
+  else if (current.song.kv) $('#markHint').textContent = 'First time with this karaoke track: if the lyrics are early or late, click the first lyric line and press Mark when you hear it begin. The fix is saved for everyone.';
+  else if (Math.abs(saved) >= 2) $('#markHint').textContent = 'This song still has a saved timing shift of ' + saved.toFixed(1) + 's from an earlier try. Press Reset timing if the lyrics do not match.';
   setScale(isNaN(sv) ? autoScale : sv, false); loadVersions();
 
   an = null; document.body.classList.toggle('aud', room.on && !isSinger());

@@ -15,3 +15,4 @@
 .thrmeter{position:relative;height:10px;margin:8px 0 6px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
 .thrmeter .f{display:block;height:100%;width:0;border-radius:5px;background:#3be58a;transition:width .05s linear}.thrmeter .f.hot{background:#ff5d6c}.thrmeter .f.shut{background:#7a7a8c;opacity:.7}
 .thrmeter .m{position:absolute;top:0;bottom:0;left:0;width:2px;margin-left:-1px;background:#fff;display:none}
+#lobList .pr,#vcPeers .vcp{cursor:pointer}#lobList .pr:has(.me){cursor:default}

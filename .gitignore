@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .env
 oauth.json
+timing.json
+timing.json.tmp

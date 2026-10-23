@@ -96,6 +96,7 @@ function handleMsg(m) {
   else if (m.type === 'night') openNight();
   else if (m.type === 'chatlog') { $('#chatLog').textContent = ''; (m.msgs || []).forEach(x => addChat(x, true)); }
   else if (m.type === 'react') { floatReact(m); fxReact(); }
+  else if (m.type === 'timing') onTiming(m);
   else if (m.type === 'stars') { aud.avg = m.avg; aud.n = m.n; if ($('#rate').style.display === 'block') { renderAud(); renderAwards(); } }
   else if (m.type === 'next') { nextInfo = { item: m.item, end: Date.now() + m.in * 1000, secs: m.in }; if ($('#rate').style.display === 'block') nextCountdown(m.in, m.item, false); else say('Next up: ' + m.item.song.title + ' (' + whoTxt(m.item) + ').'); }
   else if (m.type === 'live') { room.live = m; refreshLive(); }
@@ -137,7 +138,7 @@ function renderWho(m) {
   const box = $('#lobList'); box.textContent = ''; $('#lobN').textContent = '(' + m.peers.length + ')';
   const mic = { untested: ['mic untested', ''], tested: ['mic OK', 'ok'], blocked: ['mic blocked', 'bad'], none: ['no mic', 'bad'], error: ['mic problem', 'bad'] };
   m.peers.forEach(p => {
-    const row = el('div', '', 'pr' + (p.away ? ' away' : '')); row.dataset.pid = p.id; const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; row.appendChild(av); row.appendChild(el('b', p.name + (p.id === room.id ? ' (you)' : '') + ((m.singers || []).includes(p.name) ? ' 🎤' : ''), p.id === room.id ? 'me' : ''));
+    const row = el('div', '', 'pr' + (p.away ? ' away' : '')); row.dataset.pid = p.id; if (p.id !== room.id) row.title = 'Click or hover to change ' + p.name + '’s volume'; const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; row.appendChild(av); row.appendChild(el('b', p.name + (p.id === room.id ? ' (you)' : '') + ((m.singers || []).includes(p.name) ? ' 🎤' : ''), p.id === room.id ? 'me' : ''));
     if (p.id === m.host) row.appendChild(el('span', '👑 host', 'tg ok'));
     const [t, c] = mic[p.mic] || mic.untested; row.appendChild(el('span', t, 'tg ' + c));
     if (p.vc) row.appendChild(el('span', p.vcm ? '🔇 muted' : '🎧 voice', 'tg' + (p.vcm ? '' : ' ok')));

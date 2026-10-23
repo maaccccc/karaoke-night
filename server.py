@@ -122,13 +122,40 @@ def _secs(r):
     except Exception:
         return 0
 
+KARA_MAX_DIFF = 20     # seconds: a backing track further from the song's length than this is a different arrangement, so the lyrics could never line up
+KARA_SURE_DIFF = 6     # an upload that does not name the artist (and is not from a known karaoke channel) must be this close to the song's length
+KARA_FOR = re.compile(r'(?:originally (?:performed|made famous|recorded|sung) by|as made famous by|made famous by|in the style of|as performed by)\s*[:\-]?\s*(.+)', re.I)
+
+def _has_name(name, text):
+    """Is the artist's name in this text? Short names (BTS, IU) need to be a whole word so they do not match inside other words."""
+    if not name: return False
+    if len(name) >= 4: return name in norm(text)
+    return bool(re.search(r'(?<!\w)' + re.escape(name) + r'(?!\w)', (text or '').lower()))
+
+_DELIM = r'[-\u2013\u2014|:(\[\]),/~\u2022"\'\u201c\u201d\u2018\u2019\u00ab\u00bb]'
+def _title_ok(title, vt, artist):
+    """Is the whole SONG TITLE in the video title as its own title (not just inside a longer one)?
+    "Perfect" must match "Perfect (Karaoke Version)" and "Ed Sheeran - Perfect", but not "Perfect Symphony"."""
+    vl, al = (vt or '').lower(), (artist or '').strip().lower()
+    for cand in {title or '', re.sub(r'[\(\[].*?[\)\]]', '', title or '')}:
+        toks = re.findall(r'\w+', cand.lower())
+        if not toks or len(''.join(toks)) < 2: continue
+        for m in re.finditer(r'(?<!\w)' + r'[\W_]+'.join(map(re.escape, toks)) + r'(?!\w)', vl):
+            after, before = vl[m.end():].lstrip(), vl[:m.start()].rstrip()
+            a_ok = not after or re.match(_DELIM, after) or KARA_WORDS.match(after) or (al and after.startswith(al))
+            b_ok = not before or re.search(_DELIM + r'$', before) or re.search(KARA_WORDS.pattern + r'$', before, re.I) or (al and before.endswith(al))
+            if a_ok and b_ok: return True
+    return False
+
 def rank_karaoke(results, title, artist, refs, why=None):
     """Pure ranking step (no network): filter + sort YouTube video results into karaoke candidates, best first.
     refs = lengths (seconds) of the recordings the lyrics may be timed to (the original song and the LRCLIB version).
+    A candidate must be the SAME song by the SAME artist in the SAME arrangement: live / cover / remix / with-vocals uploads are dropped,
+    the length must be close, and an upload that does not name the artist must be an almost exact length match.
     why = optional list that collects the reason each rejected video was left out (for /api/karaoke?debug=1)."""
     tk = {k for k in title_keys(title) if len(k) >= 2}
     latin = bool(re.search(r'[a-z0-9]', norm(title)))   # a title in another script (Japanese, Korean...) is usually uploaded romanized, so it cannot be matched by its letters
-    a = norm((artist or '').split(',')[0])
+    first = (artist or '').split(',')[0]; a = norm(first); araw = first.strip().lower()
     refs = [x for x in refs if x]
     out, seen = [], set()
     def no(t, msg):
@@ -140,16 +167,21 @@ def rank_karaoke(results, title, artist, refs, why=None):
         dur = _secs(r)
         if not dur: no(t, 'no length given'); continue
         if not KARA_WORDS.search(t): no(t, 'title has no karaoke / instrumental word'); continue
+        if KARA_BAD.search(t): no(t, 'live / cover / remix / with-vocals upload: not the same backing track'); continue
         nt = norm(t)
-        if latin and not any(k in nt for k in tk): no(t, 'different song title'); continue      # must really be this song
+        if latin and not _title_ok(title, t, first): no(t, 'different song title (or the song title is only part of a longer title)'); continue      # must really be this song
         chan = ', '.join(x.get('name', '') for x in (r.get('artists') or []) if isinstance(x, dict))
+        mf = KARA_FOR.search(t)
+        if mf and a and not _has_name(a if len(a) >= 4 else araw, mf.group(1)): no(t, 'made for a different artist (' + mf.group(1)[:30] + ')'); continue
         diff = min((abs(dur - x) for x in refs), default=0)
-        if refs and diff > (45 if latin else 25): no(t, 'length differs by %d s' % diff); continue   # a different arrangement or an extended mix: it could never line up
-        seen.add(vid)
-        bad = bool(KARA_BAD.search(t))
+        if refs and diff > KARA_MAX_DIFF: no(t, 'length differs by %d s' % diff); continue   # a different arrangement or an extended mix: it could never line up
         trusted = any(c in chan.lower() for c in KARA_CHANNELS)
-        am = bool(a) and (a in nt or a in norm(chan))
-        out.append(((bad, int(diff // 5), not trusted, not am, diff), {
+        am = _has_name(a if len(a) >= 4 else araw, t) or _has_name(a if len(a) >= 4 else araw, chan)
+        if not am and not trusted:
+            if not latin: no(t, 'cannot confirm the artist, and the title is in another script'); continue
+            if refs and diff > KARA_SURE_DIFF: no(t, 'artist not named and length is %d s off (needs <= %d s)' % (diff, KARA_SURE_DIFF)); continue
+        seen.add(vid)
+        out.append(((int(diff // 4), not am, not trusted, diff), {
             'videoId': vid, 'title': t[:200], 'channel': chan[:80], 'duration': dur, 'diff': round(diff, 1)}))
     out.sort(key=lambda x: x[0])
     return [x[1] for x in out]
@@ -180,6 +212,37 @@ def find_karaoke(title, artist, duration, fresh=False, why=None):
     found = rank_karaoke(res, title, artist, refs, why)[:5]
     if errors < len(tried): KARA[k] = (found, time.time())     # do not remember an answer that only came from failed searches
     return found
+
+# ---- lyric timing fixes, shared. The lyrics are timed to the original recording, so a karaoke track usually needs a shift.
+# Once anyone fixes it (Mark button / Sooner / Later), the fix is kept here per playing video + lyrics version and used for everybody, every time.
+TIMING_FILE = os.path.join(HERE, 'timing.json')
+TLOCK = threading.Lock()
+try:
+    with open(TIMING_FILE, encoding='utf-8') as _f: TIMING = json.load(_f)
+    if not isinstance(TIMING, dict): TIMING = {}
+except Exception:
+    TIMING = {}
+def timing_key(v, l):
+    v = str(v or ''); l = re.sub(r'[^0-9]', '', str(l or ''))[:12]
+    return v + ':' + l if re.fullmatch(r'[A-Za-z0-9_-]{6,20}', v) else None
+def timing_get(v, l):
+    k = timing_key(v, l); t = TIMING.get(k) if k else None
+    return {'o': t['o'], 's': t['s'], 'n': t.get('n', 1)} if t else None
+def timing_set(v, l, o, sc):
+    k = timing_key(v, l)
+    if not k: raise RuntimeError('Bad video id.')
+    o = max(-60.0, min(60.0, float(o))); sc = max(0.88, min(1.12, float(sc)))
+    with TLOCK:
+        old = TIMING.get(k) or {}
+        TIMING[k] = {'o': round(o, 2), 's': round(sc, 4), 'n': old.get('n', 0) + 1, 't': int(time.time())}
+        if len(TIMING) > 5000:      # keep the file small: forget the least recently fixed ones
+            for kk, _ in sorted(TIMING.items(), key=lambda x: x[1].get('t', 0))[:500]: TIMING.pop(kk, None)
+        try:
+            tmp = TIMING_FILE + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as f: json.dump(TIMING, f)
+            os.replace(tmp, TIMING_FILE)
+        except Exception:
+            pass                    # a read-only folder just means the fix is remembered until the server restarts
 
 def clean_kv(kv):
     """The karaoke video chosen for a queue item (sanitised): {videoId, title, duration} or None."""
@@ -781,6 +844,14 @@ def room_send(code, cid, typ, data, to=None):
                 r['hist'][-1]['stars'] = round(avg, 1)
                 room_push(r, {'type': 'hist', 'hist': r['hist']})
             room_push(r, {'type': 'stars', 'avg': round(avg, 1), 'n': len(la['votes']), 'bonus': bonus})
+        elif op == 'timing':       # the singer (or host) fixed the lyric timing mid-song: everybody in the room uses it right away
+            nw = r['now']; vid = str(data.get('v') or '')
+            if not nw or not (me['name'] in nw['singers'] or r.get('host') == cid) or not re.fullmatch(r'[A-Za-z0-9_-]{6,20}', vid):
+                return None
+            try: off = max(-60.0, min(60.0, float(data.get('o')))); sc = max(0.88, min(1.12, float(data.get('s') or 1)))
+            except Exception: return None
+            room_push(r, {'type': 'timing', 'v': vid, 'o': off, 's': sc, 'by': me['name']})
+            return None
         elif op == 'qkv':          # attach a karaoke video to a song that is already queued (the person who queued it, or the host)
             it = next((q for q in r['queue'] if q['id'] == data.get('id')), None); kv = clean_kv(data.get('kv'))
             if not it or not kv: return 'That song is no longer in the queue.'
@@ -992,6 +1063,9 @@ class Handler(BaseHTTPRequestHandler):
                     why = []; found = find_karaoke(g('title'), g('artist'), float(g('duration') or 0), fresh=True, why=why)
                     return self.send_json(200, {'found': found, 'notes': why[:80]})
                 return self.send_json(200, find_karaoke(g('title'), g('artist'), float(g('duration') or 0), fresh=g('fresh') == '1'))
+            if u.path == '/api/timing':
+                g = lambda k: q.get(k, [''])[0]
+                return self.send_json(200, {'timing': timing_get(g('v'), g('l'))})
             if u.path == '/api/versions':
                 g = lambda k: q.get(k, [''])[0]
                 return self.send_json(200, lyric_versions(g('title'), g('artist'), float(g('duration') or 0)))
@@ -1050,6 +1124,9 @@ class Handler(BaseHTTPRequestHandler):
                 msg = room_send(clean_code(data.get('room')), clean_id(data.get('id')), str(data.get('type')),
                                 data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None)
                 return self.send_json(200, {'ok': True, 'msg': msg})
+            if u.path == '/api/timing':
+                timing_set(data.get('v'), data.get('l'), data.get('o') or 0, data.get('s') or 1)
+                return self.send_json(200, {'ok': True})
             if u.path == '/api/romanize':
                 rl, miss = romanize_lines(data.get('lines') if isinstance(data.get('lines'), list) else [])
                 return self.send_json(200, {'lines': rl, 'missing': miss, 'japanese': _ja_name})
