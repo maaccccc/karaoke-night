@@ -159,8 +159,16 @@ The timed lyrics match the original recording, and a karaoke track usually has a
 - **Reset timing** puts the shift back to 0 for that track. If a wrong fix was saved, fix it again or reset it. To wipe everything, delete `timing.json`.
 - `/api/timing?v=VIDEOID&l=LYRICID` shows what is stored for a track.
 
-### How the automatic score treats echo and quiet mics
-- Your voice must stand out from two things: the mic's own noise floor, and the level of the song leaking in from the speakers. The leak level is learned from the instrumental breaks and from your duet partner's lines.
-- Quiet or low-volume mics are fine: the thresholds are relative to the mic's own noise, the Mic level slider is divided back out, and short dips in a quiet voice are bridged.
-- If the mic "sings" almost as much in the breaks as on your lines, and at a similar loudness, it is hearing the music. The score is cut (up to about 85% on Singing and Timing), a note appears while singing, and the results screen explains why. Headphones fix it.
-- Timing is graded by how soon you come in after each line starts (full marks within 0.8 s, fading to 2.2 s), and needs a few voiced frames in a row.
+## Settings, security and deploying (optional environment variables)
+
+| Variable | What it does |
+|---|---|
+| `GEMINI_API_KEY` | Turns on the AI judge comment on the results screen (Google Gemini). `GEMINI_MODEL` picks the model. |
+| `TRUST_PROXY` | `1` reads the visitor address from the proxy (`CF-Connecting-IP`). On by default on Render. |
+| `RATE_SCALE` | Multiplies every rate limit (`2` = twice as generous, `0.5` = half). Limits only cover search, lyric timing, chat, joining rooms, playlists and romanizing, and are set well above normal use. |
+| `MAX_ROOMS`, `MAX_ROOM_CLIENTS` | Caps on open rooms (default 400) and people per room (default 40). |
+| `CSP` | `on` (default), `report` (log problems without blocking) or `off`. If something from a new site stops loading, try `report` first, then add that site to `csp_value()` in `server.py`. |
+| `JUDGE_LIMIT` | Optional cap on judge comments per visitor per 10 minutes (default: no limit). |
+
+The server sends compressed files with ETags (a page reload re-downloads nothing that has not changed), keeps connections open, and sets security headers. Lyric-timing fixes are shared by everyone, so the value people see is the median of the latest fixes from different visitors; one visitor cannot overwrite it. On Render, start with `python server.py` and add your variables under Environment.
+

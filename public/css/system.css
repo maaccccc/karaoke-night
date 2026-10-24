@@ -154,3 +154,23 @@ body.instage #vcHead:hover,body.instage #vcHead:focus-visible,body.instage #vcHe
   body.instage #stage{padding-bottom:88px}
 }
 body.fs #stage .stagebar,body.fs #stageTools{display:none}
+
+/* AI judge note + Claude judge line */
+#aiNote{font-size:.8rem;opacity:.85}
+#aiNote:empty{display:none}
+#aiRow label{display:flex;gap:var(--s2);align-items:flex-start;font-weight:400}
+#aiRow input{flex:none;margin-top:3px}
+#judge{margin:var(--s3) auto 0;max-width:46ch;padding:var(--s3) var(--s4);border-radius:var(--rad);border:1px dashed var(--line);background:rgba(255,255,255,.04);font-style:italic;text-align:center;animation:in .4s both}
+#judge[hidden]{display:none}
+
+/* ---------- accessibility: button text must be readable (4.5:1) in every theme, and touch targets big enough ---------- */
+button:not([class]),button.lbtn{background:linear-gradient(135deg,var(--btn-a,color-mix(in srgb,var(--pink) 76%,#000)),var(--btn-b,color-mix(in srgb,#a83dff 85%,#000)))}
+body[data-theme="stars"]{--btn-a:#3a6db5;--btn-b:#5a4bc7}
+body[data-theme="aurora"]{--btn-a:#1b8061;--btn-b:#6a52c8}
+body[data-theme="spooky"]{--btn-a:#b04d00;--btn-b:#7a3bc2}
+body[data-theme="jazz"]{--btn-a:#a2531a;--btn-b:#8a5a2b}
+@media (pointer:coarse){
+  button,summary,select,input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=file]){min-height:44px}
+  button.mini{min-height:36px}
+  input[type=checkbox],input[type=radio]{width:22px;height:22px}
+}

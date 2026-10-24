@@ -1,7 +1,8 @@
 """Karaoke Night server: YouTube Music search (ytmusicapi) + timed lyrics (LRCLIB).
 Run: pip install -r requirements.txt && python server.py
 """
-import json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse, urllib.error
+import gzip, hashlib, json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse, urllib.error
+from collections import deque
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from ytmusicapi import YTMusic
 from wordfilter import is_blocked
@@ -228,13 +229,22 @@ def timing_key(v, l):
 def timing_get(v, l):
     k = timing_key(v, l); t = TIMING.get(k) if k else None
     return {'o': t['o'], 's': t['s'], 'n': t.get('n', 1)} if t else None
-def timing_set(v, l, o, sc):
+def _median(xs):
+    xs = sorted(xs); n = len(xs)
+    return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
+def timing_set(v, l, o, sc, voter='anon'):
+    # Everyone shares one lyric-timing fix per song, so a single visitor must not be able to wreck it for all. Each visitor gets one vote
+    # (a new vote replaces their old one), and the value people see is the median of the latest votes, which one bad vote cannot move far.
     k = timing_key(v, l)
     if not k: raise RuntimeError('Bad video id.')
-    o = max(-60.0, min(60.0, float(o))); sc = max(0.88, min(1.12, float(sc)))
+    o = max(-60.0, min(60.0, float(o))); sc = max(0.88, min(1.12, float(sc))); now = int(time.time())
     with TLOCK:
         old = TIMING.get(k) or {}
-        TIMING[k] = {'o': round(o, 2), 's': round(sc, 4), 'n': old.get('n', 0) + 1, 't': int(time.time())}
+        votes = dict(old.get('v') or ({'legacy': [old['o'], old['s'], old.get('t', 0)]} if 'o' in old else {}))
+        votes[voter] = [round(o, 2), round(sc, 4), now]
+        for kk, _ in sorted(votes.items(), key=lambda x: x[1][2])[:max(0, len(votes) - 9)]: votes.pop(kk, None)     # keep the 9 newest voters
+        TIMING[k] = {'o': round(_median([x[0] for x in votes.values()]), 2), 's': round(_median([x[1] for x in votes.values()]), 4),
+                     'n': old.get('n', 0) + 1, 't': now, 'v': votes}
         if len(TIMING) > 5000:      # keep the file small: forget the least recently fixed ones
             for kk, _ in sorted(TIMING.items(), key=lambda x: x[1].get('t', 0))[:500]: TIMING.pop(kk, None)
         try:
@@ -676,8 +686,10 @@ def room_prune():
 def room_join(code, cid, name, av=None, vis=None, key=None):
     with RLOCK:
         room_prune()
+        if code not in ROOMS and len(ROOMS) >= MAX_ROOMS: raise RuntimeError('The server is busy right now. Please try again in a few minutes.')
         r = ROOMS.setdefault(code, {'code': code, 'public': vis == 'public', 'timer': None, 'clients': {}, 'queue': [], 'chat': [], 'hist': [], 'sung': {}, 'turn': 0, 'tv': {}, 'scores': {}, 'now': None, 'ready': None, 'pick': None, 'nid': 0, 'empty': time.time(), 'host': cid, 'bans': [], 'kicked': {}})
         r.setdefault('bans', []); r.setdefault('kicked', {})
+        if cid not in r['clients'] and len(r['clients']) >= MAX_ROOM_CLIENTS: raise RuntimeError('This room is full.')
         for b in r['bans']:
             if b['id'] == cid or b['name'].lower() == name.lower():
                 raise RuntimeError('You have been banned from this room by the host.')
@@ -1162,14 +1174,135 @@ def judge_comment(data, ip):
 
 MAX_BODY = 1_000_000   # bytes: the largest request body the server will read
 
+# ---- abuse protection, speed and security headers ----
+# Environment switches (all optional):  TRUST_PROXY=1 (on by default on Render) reads the visitor's address from the proxy headers,
+# RATE_SCALE=2 doubles every limit below (0.5 halves them), MAX_ROOMS, MAX_ROOM_CLIENTS, CSP=on|report|off, PROXY_HSTS=0 to skip HSTS.
+BEHIND_PROXY = os.getenv('TRUST_PROXY', '1' if os.getenv('RENDER') else '0') == '1'
+RATE_SCALE = float(os.getenv('RATE_SCALE', '1') or 1)
+MAX_ROOMS = int(os.getenv('MAX_ROOMS', '400'))
+MAX_ROOM_CLIENTS = int(os.getenv('MAX_ROOM_CLIENTS', '40'))
+CSP_MODE = os.getenv('CSP', 'on').lower()
+# bucket: (requests allowed, per this many seconds), counted per visitor address. Only abuse-prone routes are limited, set well above normal
+# use (a whole family on one Wi-Fi shares an address). Live room polling is deliberately not limited.
+RATE = {'search': (240, 60), 'timing': (30, 600), 'gchat': (20, 60), 'chat': (30, 30), 'join': (60, 60), 'playlist': (6, 60), 'romanize': (30, 60)}
+GET_BUCKETS = {'/api/search': 'search', '/api/haslyrics': 'search', '/api/karaoke': 'search', '/api/versions': 'search', '/api/lyrics': 'search'}
+POST_BUCKETS = {'/api/timing': 'timing', '/api/gchat': 'gchat', '/api/room/join': 'join', '/api/playlist': 'playlist', '/api/romanize': 'romanize'}
+_rl = {}; _rl_lock = threading.Lock()
+
+def rate_ok(ip, bucket):
+    limit, window = RATE[bucket]; limit = max(1, int(limit * RATE_SCALE)); now = time.time(); key = (ip, bucket)
+    with _rl_lock:
+        dq = _rl.get(key)
+        if dq is None: dq = _rl[key] = deque()
+        while dq and now - dq[0] > window: dq.popleft()
+        if len(dq) >= limit: return False
+        dq.append(now)
+        if len(_rl) > 20000:                        # forget visitors who have been quiet for an hour
+            for k in [k for k, d in _rl.items() if not d or now - d[-1] > 3600][:5000]: _rl.pop(k, None)
+    return True
+
+TIMING_SALT = os.urandom(8).hex()
+def voter_id(ip): return hashlib.sha256((TIMING_SALT + str(ip)).encode()).hexdigest()[:12]
+
+COMPRESSIBLE = ('.html', '.js', '.css', '.svg', '.json', '.csv', '.txt', '.xml', '.webmanifest')
+_static = {}     # path -> (mtime_ns, size, etag, body, gzipped)
+_static_lock = threading.Lock()
+
+def csp_value():
+    return '; '.join(["default-src 'self'",
+        "script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src 'self' data: https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https:", "media-src 'self' blob: data:", "connect-src 'self' https:",
+        "frame-src https://www.youtube.com https://www.youtube-nocookie.com", "worker-src 'self' blob:",
+        "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'"])
+
 class Handler(BaseHTTPRequestHandler):
-    def send_json(self, code, obj):
+    protocol_version = 'HTTP/1.1'     # keep-alive: the ~45 files of the page share one connection instead of opening 45
+    timeout = 60                      # an idle keep-alive connection is closed after a minute
+
+    def end_headers(self):
+        for k, v in (('X-Content-Type-Options', 'nosniff'), ('X-Frame-Options', 'DENY'), ('Referrer-Policy', 'strict-origin-when-cross-origin'),
+                     ('Permissions-Policy', 'microphone=(self), camera=(), geolocation=(), payment=()'), ('Cross-Origin-Resource-Policy', 'same-origin')):
+            self.send_header(k, v)
+        if BEHIND_PROXY and self.headers.get('X-Forwarded-Proto') == 'https' and os.getenv('PROXY_HSTS', '1') != '0':
+            self.send_header('Strict-Transport-Security', 'max-age=15552000')
+        BaseHTTPRequestHandler.end_headers(self)
+
+    def client_ip(self):
+        h = self.headers
+        if BEHIND_PROXY:       # Render sits behind Cloudflare, which sets CF-Connecting-IP itself. X-Forwarded-For can be forged, so it is only a fallback.
+            ip = (h.get('CF-Connecting-IP') or h.get('True-Client-IP') or '').strip()
+            if not ip:
+                parts = [x.strip() for x in (h.get('X-Forwarded-For') or '').split(',') if x.strip()]
+                ip = parts[-2] if len(parts) >= 2 else (parts[0] if parts else '')
+            if ip: return ip[:64]
+        return self.client_address[0]
+
+    def limit(self, bucket):
+        if rate_ok(self.client_ip(), bucket): return True
+        self.send_json(429, {'error': 'Too many requests. Please slow down for a moment.'}, {'Retry-After': '10'})
+        return False
+
+    def send_json(self, code, obj, extra=None):
         body = json.dumps(obj).encode()
-        self.send_response(code); self.send_header('Content-Type', 'application/json')
+        self.send_response(code); self.send_header('Content-Type', 'application/json'); self.send_header('Cache-Control', 'no-store')
+        for k, v in (extra or {}).items(): self.send_header(k, v)
         self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+
+    def serve_static(self, u):
+        page = u.path in ('/', '/index.html')
+        if page:
+            path = find_page()
+            if not path:
+                body = ('<h2>Karaoke Night: index.html not found</h2><p>Put <b>index.html</b> in this folder:</p><pre>' + PUB +
+                        '</pre><p>(The server is running from <code>' + HERE + '</code>.)</p>').encode()
+                self.send_response(404); self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body); return
+        else:
+            path = os.path.normpath(os.path.join(PUB, urllib.parse.unquote(u.path).lstrip('/')))
+            if not path.startswith(PUB + os.sep) or not os.path.isfile(path):
+                self.send_response(404); self.send_header('Content-Length', '0'); self.end_headers(); return
+        ext = os.path.splitext(path)[1].lower()
+        try:
+            if page:
+                body = render_page(path); etag = '"' + hashlib.md5(body).hexdigest()[:16] + '"'; gz = None
+            else:
+                st = os.stat(path); key = (st.st_mtime_ns, st.st_size)
+                with _static_lock: hit = _static.get(path)
+                if hit and hit[0] == key:
+                    etag, body, gz = hit[1], hit[2], hit[3]
+                else:
+                    with open(path, 'rb') as f: body = f.read()
+                    etag = '"' + hashlib.md5(body).hexdigest()[:16] + '"'; gz = None
+                    with _static_lock: _static[path] = (key, etag, body, gz)
+        except OSError:
+            self.send_response(404); self.send_header('Content-Length', '0'); self.end_headers(); return
+        use_gz = ext in COMPRESSIBLE and len(body) > 600 and 'gzip' in (self.headers.get('Accept-Encoding') or '')
+        ct = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml',
+              '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.webp': 'image/webp', '.woff2': 'font/woff2'}.get(ext, 'application/octet-stream')
+        if use_gz:
+            with _static_lock:
+                cur = _static.get(path)
+                if page or not cur or cur[3] is None:
+                    gzb = gzip.compress(body, 6)
+                    if not page and cur: _static[path] = (cur[0], cur[1], cur[2], gzb)
+                else: gzb = cur[3]
+            payload = gzb
+        else: payload = body
+        if etag in (self.headers.get('If-None-Match') or ''):
+            self.send_response(304); self.send_header('ETag', etag); self.send_header('Cache-Control', 'no-cache'); self.send_header('Vary', 'Accept-Encoding')
+            self.send_header('Content-Length', '0'); self.end_headers(); return
+        self.send_response(200); self.send_header('Content-Type', ct)
+        self.send_header('Cache-Control', 'no-cache')      # the browser re-checks every time, but gets a tiny 304 unless the file changed
+        self.send_header('ETag', etag); self.send_header('Vary', 'Accept-Encoding')
+        if use_gz: self.send_header('Content-Encoding', 'gzip')
+        if page and CSP_MODE != 'off':
+            self.send_header('Content-Security-Policy-Report-Only' if CSP_MODE == 'report' else 'Content-Security-Policy', csp_value())
+        self.send_header('Content-Length', str(len(payload))); self.end_headers(); self.wfile.write(payload)
 
     def do_GET(self):
         u = urllib.parse.urlparse(self.path); q = urllib.parse.parse_qs(u.query)
+        if u.path in GET_BUCKETS and not self.limit(GET_BUCKETS[u.path]): return
         try:
             if u.path == '/api/search':
                 term = (q.get('q', [''])[0]).strip()
@@ -1216,33 +1349,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, {'lrc': lrc, 'lyricDuration': ld, 'id': lid})
         except Exception as e:
             return self.send_json(502, {'error': str(e)})
-        if u.path in ('/', '/index.html'):
-            path = find_page()
-            if not path:
-                body = ('<h2>Karaoke Night: index.html not found</h2><p>Put <b>index.html</b> in this folder:</p><pre>' + PUB +
-                        '</pre><p>(The server is running from <code>' + HERE + '</code>.)</p>').encode()
-                self.send_response(404); self.send_header('Content-Type', 'text/html; charset=utf-8')
-                self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body); return
-        else:
-            path = os.path.normpath(os.path.join(PUB, u.path.lstrip('/')))
-            if not path.startswith(PUB + os.sep) or not os.path.isfile(path):
-                self.send_response(404); self.end_headers(); return
-        if u.path in ('/', '/index.html'):
-            body = render_page(path)
-        else:
-            with open(path, 'rb') as f:
-                body = f.read()
-        self.send_response(200); self.send_header('Content-Type', MIME.get(os.path.splitext(path)[1], 'application/octet-stream'))
-        self.send_header('Cache-Control', 'no-cache')   # always pick up edited files
-        self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+        return self.serve_static(u)
 
     def do_POST(self):
         try:
             u = urllib.parse.urlparse(self.path); q = urllib.parse.parse_qs(u.query)
             n = int(self.headers.get('Content-Length', 0))
             if n < 0 or n > MAX_BODY:       # every POST is small JSON; refuse anything bigger before reading it
+                self.close_connection = True      # the unread body would otherwise be mistaken for the next request
                 return self.send_json(413, {'error': 'Request too large.'})
             data = json.loads(self.rfile.read(n) or b'{}')
+            bucket = 'chat' if (u.path == '/api/room/send' and str(data.get('type')) == 'chat') else POST_BUCKETS.get(u.path)
+            if bucket and not self.limit(bucket): return
             if u.path == '/api/online':
                 return self.send_json(200, online_stats(clean_id(data.get('id')), bool(data.get('leave'))))
             if u.path == '/api/gchat':
@@ -1263,9 +1381,9 @@ class Handler(BaseHTTPRequestHandler):
                                 data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None)
                 return self.send_json(200, {'ok': True, 'msg': msg})
             if u.path == '/api/judge':
-                return self.send_json(200, judge_comment(data, self.client_address[0]))
+                return self.send_json(200, judge_comment(data, self.client_ip()))
             if u.path == '/api/timing':
-                timing_set(data.get('v'), data.get('l'), data.get('o') or 0, data.get('s') or 1)
+                timing_set(data.get('v'), data.get('l'), data.get('o') or 0, data.get('s') or 1, voter_id(self.client_ip()))
                 return self.send_json(200, {'ok': True})
             if u.path == '/api/romanize':
                 rl, miss = romanize_lines(data.get('lines') if isinstance(data.get('lines'), list) else [])
