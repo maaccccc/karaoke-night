@@ -165,7 +165,8 @@ async function runSong() {
   box.className = 'm-' + $('#romMode').value; $('#romNote').style.display = anyRom || anyHan ? 'block' : 'none'; upgradeRomaji(lines);
   box.scrollTop = 0; frames = 0; active = true; drawMeter(0, 0); renderNow();
   labelTurns(); fxStart();
-  S = { voiced: 0, rms: 0, db: 0, db2: 0, nf: 0, nfN: 0, pn: 0, ps: 0, ps2: 0, gf: 0, gv: 0, clear: 0, clip: 0, lf: lines.map(() => 0), lv: lines.map(() => 0), hit: lines.map(() => 0) };
+  S = { voiced: 0, rms: 0, db: 0, db2: 0, nf: 0, nfN: 0, pn: 0, ps: 0, ps2: 0, gf: 0, gv: 0, clear: 0, clip: 0, lf: lines.map(() => 0), lv: lines.map(() => 0), hit: lines.map(() => 0),
+    gb: [], bg: 0, vh: 0, run: 0, lt: 0, lb: 0, gdb: 0, gdn: 0, echoWarn: false };   // gb = recent levels from clear gaps (music bleed), bg = their low percentile, lt/lb = own-line frames / of those above plain noise, gdb/gdn = level in gaps
   let saved = 0; try { saved = parseFloat(localStorage.getItem('off:' + pvid())) || 0; } catch (e) {}
   let sv = NaN; try { sv = parseFloat(localStorage.getItem('spd:' + pvid())); } catch (e) {}
   let shared = null;      // a timing fix someone already made for this exact track beats a guess
@@ -283,18 +284,41 @@ async function runSong() {
       drawMeter(lvl, peak);
       if (++frames % 2 === 0) clr = clarity(fb, actx.sampleRate);
       // Fair scoring: judge the voice itself, not how loud the mic is set. The Mic level slider is divided back out, and "singing" is
-      // measured against this mic's own background noise (learned in the first second and tracked while you are quiet).
+      // measured against this mic's own background: its noise floor (learned in the first second) AND the level of the song leaking in from
+      // the speakers (learned from the instrumental breaks, where nobody should be singing). A quiet mic is fine; a mic that only hears the song is not.
       const g = (micGain && micGain.gain.value) || 1, rr = rms / g, rmx = mx / g;
       if (S.nfN < 45) { S.nf = S.nfN ? Math.min(S.nf, rr) : rr; S.nfN++; }
-      const thr = Math.min(.045, Math.max(.008, S.nf * 3));
-      if (rr <= thr && S.nfN >= 45) S.nf += (rr - S.nf) * .03;
-      const voiced = rr > thr && clr > .35;                                          // above the noise AND a real pitch: hiss and rumble do not count
+      const thr0 = Math.min(.06, Math.max(.003, S.nf * 3));                         // low floor so a quiet mic still counts; the cap is higher than before because bleed is handled below
+      if (rr <= thr0 && S.nfN >= 45) S.nf += (rr - S.nf) * .03;
+      const prevV = S.vh > 0;                                                        // short memory: a quiet voice that dips for a few frames is still the same note
+      const vBase = (rr > thr0 && clr > .35) || (prevV && rr > thr0 * .7 && clr > .25);
+      const own = idx >= 0 && t < lineEnd(idx) && ownLine(idx);
+      const nxL = lines[idx + 1], nxOwn = nxL && ownLine(idx + 1) && nxL.t * scale - t < .6;
+      const edge = own || (idx >= 0 && ownLine(idx) && t < lineEnd(idx) + .8) || nxOwn;   // lyric timing is never perfect: ignore the moments right around your own lines
+      if (!edge) {                                                                   // a clear gap: break, intro, outro or the partner's line
+        S.gf++; if (vBase) { S.gv++; S.gdb += 20 * Math.log10(Math.max(rr, 1e-4)); S.gdn++; }
+        S.gb.push(rr); if (S.gb.length > 420) S.gb.shift();
+        if (S.gb.length >= 30 && S.gf % 20 === 0) { const q = S.gb.slice().sort((x, y) => x - y); S.bg = q[Math.floor(q.length * .35)]; }   // low percentile: a bit of humming in a break does not raise it
+      }
+      const bleedThr = S.gb.length >= 30 ? S.bg * 1.6 : 0;                           // you must stand about 4 dB above the song leaking into the mic
+      const voiced = vBase && rr > bleedThr;
+      S.vh = voiced ? 8 : Math.max(0, S.vh - 1); S.run = voiced ? S.run + 1 : 0;
       if (voiced && (idx < 0 || ownLine(idx))) {
         const d = 20 * Math.log10(Math.max(rr, 1e-4)); S.voiced++; S.rms += rr; S.db += d; S.db2 += d * d; if (clr > .55) S.clear++; if (rmx > .95) S.clip++;
         if (clr > .55 && clarity.hz) { const st = 12 * Math.log2(clarity.hz / 440); S.pn++; S.ps += st; S.ps2 += st * st; }
       }
-      if (!(idx >= 0 && t < lineEnd(idx) && ownLine(idx))) { S.gf++; if (voiced) S.gv++; }   // sound during breaks / a partner's lines = noise or music leaking in
-      if (idx >= 0 && t < lineEnd(idx)) { S.lf[idx]++; if (voiced) { S.lv[idx]++; if (t - lines[idx].t * scale < 2) S.hit[idx] = 1; } }
+      if (own) { S.lt++; if (vBase) S.lb++; }
+      if (idx >= 0 && t < lineEnd(idx)) {
+        S.lf[idx]++;
+        if (voiced) {
+          S.lv[idx]++;
+          const late = t - lines[idx].t * scale;                                     // how soon after the line started you really came in (a few frames in a row, not a blip)
+          if (S.run >= 4 && late < 2.2 && !S.hit[idx]) S.hit[idx] = late <= .8 ? 1 : 1 - (late - .8) * .45;
+        }
+      }
+      if (!S.echoWarn && S.gf > 180 && S.gf % 30 === 0 && echoLevel() > .6) {       // tell the singer once, while it can still be fixed
+        S.echoWarn = true; $('#micNote').textContent += ' Your mic is picking up the song itself, which lowers your score. Wear headphones or turn the music down.';
+      }
       if (now - liveT > 300 && idx >= 0) { liveT = now; const sc = total(compute(idx + 1)); $('#liveScore').textContent = sc; const ns = $('#nowScore'); if (ns) ns.textContent = sc + ' pts'; }
     }
     fxTick(now, t, idx, playing, an && playing ? lvl : -1);
@@ -328,7 +352,7 @@ function showResult(pts, parts, hasMic) {
     setTimeout(() => fill.style.width = (hasMic ? parts[k] / MAXP[k] * 100 : 0) + '%', 60);
   });
   $('#rank').textContent = !hasMic ? 'No mic, no score' : pts >= 90 ? 'Superstar!' : pts >= 75 ? 'Crowd pleaser' : pts >= 55 ? 'Warming up' : pts >= 30 ? 'Getting there' : 'Grab the mic closer';
-  $('#scoreNote').textContent = hasMic ? 'Scored from how much you sang on each line, how clear your tone was, your volume, and how quickly you came in.' : 'Allow the microphone to get a score next time.';
+  $('#scoreNote').textContent = hasMic ? 'Scored from how much you sang on each line, how clear your tone was, your volume, and how quickly you came in.' + (S && echoLevel() > .4 ? ' Your mic was picking up the song itself, so the score was reduced. Headphones fix this.' : '') : 'Allow the microphone to get a score next time.';
   $('#rate').style.display = 'block'; $('#big').textContent = '0'; renderAud(); comboRow($('#bk'), (awData.list[0] || {}).combo); renderAwards();
   const ring = $('#ring'); ring.style.setProperty('--p', 0);
   setTimeout(() => ring.style.setProperty('--p', pts), 60);

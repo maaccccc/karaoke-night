@@ -18,27 +18,34 @@ function loadYT() {
 }
 
 // ---- automatic scoring (out of 100)
-// A cheap or noisy mic must not be able to "sing" a perfect score. So a frame only counts as singing when it is clearly above this mic's own
-// noise AND has a real musical pitch (hiss, rumble, DC offset and fans have none), and the score also looks at WHEN there is sound:
-// sound that keeps going through instrumental breaks or a duet partner's lines is noise or backing music leaking into the mic, not singing.
+// Fair to quiet or cheap mics, hard on mics that only hear the song. A frame counts as singing when it is above this mic's own noise floor,
+// above the level of the song leaking in from the speakers (measured in the instrumental breaks), and has a real musical pitch.
+// A mic that "sings" just as much in the breaks as on the lines is echoing the music, and its score is cut (see echoLevel).
 const MAXP = { Singing: 45, Tone: 25, Volume: 15, Timing: 15 };
 let S = null;
 const clamp01 = x => Math.max(0, Math.min(1, x));
+function echoLevel() {      // 0 = clean, 1 = the mic is clearly just replaying the music
+  if (!S || S.gf < 60 || S.lt < 60) return 0;                                  // need about a second of clear break and of own lines to judge
+  const gapShare = S.gv / S.gf, lineShare = S.lb / S.lt, ratio = gapShare / Math.max(lineShare, .05);   // how much of the breaks "sounds like singing" compared with the lines
+  const gl = S.gdn ? S.gdb / S.gdn : -100, ll = S.voiced ? S.db / S.voiced : -100;                       // a real singer is much louder on the lines than in a break
+  return clamp01((gapShare - .25) / .3) * clamp01((ratio - .5) / .35) * (1 - .6 * clamp01((ll - gl - 3) / 9));
+}
 function compute(n) {
   n = Math.max(1, Math.min(n, lines.length)); let cov = 0, hits = 0, m = 0;
-  for (let i = 0; i < n; i++) { if (!ownLine(i)) continue; m++; cov += S.lf[i] ? clamp01(S.lv[i] / (S.lf[i] * .75)) : 0; hits += S.hit[i]; }
+  for (let i = 0; i < n; i++) { if (!ownLine(i)) continue; m++; cov += S.lf[i] ? clamp01(S.lv[i] / (S.lf[i] * .7)) : 0; hits += S.hit[i]; }
   const v = S.voiced;
   if (!v) return { Singing: 0, Tone: 0, Volume: 0, Timing: 0 };
-  const gapR = S.gf >= 120 ? S.gv / S.gf : 0, gapPen = 1 - .7 * clamp01((gapR - .35) / .4);          // constant sound through the breaks = not singing
+  const echo = echoLevel(), leak = 1 - .85 * echo, soft = 1 - .6 * echo;
   const mean = S.db / v, sd = Math.sqrt(Math.max(0, S.db2 / v - mean * mean));
   const nfDb = 20 * Math.log10(Math.max(.0005, Math.min(S.nf || .002, .03)));
-  const proj = clamp01((mean - nfDb - 10) / 20), steady = 1 - clamp01((sd - 5) / 7);                  // stands out from the room noise; steady level
+  const bgDb = S.bg > 0 ? 20 * Math.log10(Math.max(S.bg, .0005)) : -100, refDb = Math.max(nfDb, bgDb);   // what you must stand out from: room noise or the song in the mic
+  const proj = clamp01((mean - refDb - 6) / 16), steady = 1 - clamp01((sd - 5) / 7);                         // stands out from the background; steady level
   const pm = S.pn > 20 ? Math.sqrt(Math.max(0, S.ps2 / S.pn - (S.ps / S.pn) ** 2)) : 0;                 // how far the pitch travels (semitones): a drone or hum does not
   return {
-    Singing: cov / Math.max(1, m) * 45 * gapPen * (.6 + .4 * clamp01(pm / 2)),                              // a flat hum is not singing either
-    Tone: clamp01((S.clear / v - .3) / .55) * (.4 + .6 * clamp01(pm / 2)) * 25,
-    Volume: (.6 * proj + .4 * steady) * (1 - Math.min(.5, S.clip / v * 2)) * 15,
-    Timing: hits / Math.max(1, m) * 15 * gapPen
+    Singing: cov / Math.max(1, m) * 45 * leak * (.6 + .4 * clamp01(pm / 2)),                                // a flat hum is not singing either
+    Tone: clamp01((S.clear / v - .3) / .55) * (.4 + .6 * clamp01(pm / 2)) * 25 * soft,
+    Volume: (.6 * proj + .4 * steady) * (1 - Math.min(.5, S.clip / v * 2)) * 15 * soft,
+    Timing: hits / Math.max(1, m) * 15 * leak
   };
 }
 const total = p => Math.round(Object.values(p).reduce((a, b) => a + b, 0));

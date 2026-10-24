@@ -158,3 +158,9 @@ The timed lyrics match the original recording, and a karaoke track usually has a
 - **Live in a room.** When the singer (or the host) changes the timing, everyone in the room gets it immediately, so listeners no longer have to adjust their own. A listener's own nudges stay on their device only.
 - **Reset timing** puts the shift back to 0 for that track. If a wrong fix was saved, fix it again or reset it. To wipe everything, delete `timing.json`.
 - `/api/timing?v=VIDEOID&l=LYRICID` shows what is stored for a track.
+
+### How the automatic score treats echo and quiet mics
+- Your voice must stand out from two things: the mic's own noise floor, and the level of the song leaking in from the speakers. The leak level is learned from the instrumental breaks and from your duet partner's lines.
+- Quiet or low-volume mics are fine: the thresholds are relative to the mic's own noise, the Mic level slider is divided back out, and short dips in a quiet voice are bridged.
+- If the mic "sings" almost as much in the breaks as on your lines, and at a similar loudness, it is hearing the music. The score is cut (up to about 85% on Singing and Timing), a note appears while singing, and the results screen explains why. Headphones fix it.
+- Timing is graded by how soon you come in after each line starts (full marks within 0.8 s, fading to 2.2 s), and needs a few voiced frames in a row.
