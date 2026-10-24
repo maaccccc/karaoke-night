@@ -32,6 +32,7 @@ body.home #landing{display:block}
 .thsw-sunset{background:linear-gradient(transparent 70%,#14052b 70%),radial-gradient(circle at 50% 70%,#ffe66d 0 16px,transparent 17px),linear-gradient(#12062e,#3b0f6b 28%,#b0286f 55%,#ff6a5e 70%)}
 .thsw-aurora{background:radial-gradient(70% 60% at 25% 35%,rgba(70,255,170,.55),transparent 70%),radial-gradient(60% 55% at 75% 30%,rgba(150,100,255,.5),transparent 70%),linear-gradient(#010514,#0b2a2f)}
 .thsw-jazz{background:conic-gradient(from 160deg at 50% -4%,transparent 0deg,rgba(255,214,150,.45) 20deg,transparent 40deg,transparent 360deg),linear-gradient(#1a0f0a,#0b0605)}
+.thsw-none{background:#000}
 .onl{display:inline-flex;align-items:center;gap:8px;margin:16px auto 0;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--line,rgba(255,255,255,.2));font-size:.92rem}.onl[hidden]{display:none}
 .onl i{width:9px;height:9px;border-radius:50%;background:#3be58a;box-shadow:0 0 0 0 rgba(59,229,138,.7);animation:onlp 2s infinite}
 @keyframes onlp{70%{box-shadow:0 0 0 8px rgba(59,229,138,0)}100%{box-shadow:0 0 0 0 rgba(59,229,138,0)}}

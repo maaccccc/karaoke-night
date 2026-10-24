@@ -71,3 +71,7 @@ body[data-theme="jazz"] .bg{background:radial-gradient(70% 60% at 50% 0,rgba(255
 body[data-theme="jazz"] .ln.now{font-family:Georgia,'Times New Roman',serif;font-style:italic;filter:drop-shadow(0 0 10px rgba(255,170,80,.6))}
 
 @media (prefers-reduced-motion:reduce){.th,.th::before,.th::after{animation:none!important}}
+
+/* ===== No theme: a plain black background, no beams and no animated layers (the accent colours stay the default ones) ===== */
+body[data-theme="none"] .bg{background:#000}
+body[data-theme="none"] .bg .th{opacity:0 !important;display:none}
