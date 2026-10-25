@@ -120,7 +120,6 @@ async function search(force) {
     setTimeout(() => { if (mySeq === searchSeq) runBadges(); }, 800);   // lyric badges wait until typing has settled, so live search does not flood the server
   } catch (e) { if (e.name === 'AbortError' || mySeq !== searchSeq) return; lastQ = ''; say('Search failed: ' + e.message); }
 }
-$('#searchBtn').onclick = () => search(true);
 $('#q').onkeydown = e => { if (e.key === 'Enter') search(true); };
 $('#q').addEventListener('input', () => {      // live search: runs shortly after you stop typing, no Enter needed
   clearTimeout(searchTimer); searchTimer = setTimeout(search, 450);
