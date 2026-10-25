@@ -144,26 +144,7 @@ dialog{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:aut
   #cdNum{font-size:4.5rem}
 }
 
-/* fullscreen lyrics on short screens (phone landscape): the old 244px bottom padding left no room for lyrics */
-@media (max-height:520px){
-  body.fs #stage:not([style*="none"]){padding-bottom:64px}
-  body.fs #stage>#fsbar{flex-wrap:nowrap;overflow-x:auto;left:10px;right:10px;bottom:max(8px,env(safe-area-inset-bottom));transform:none;width:auto;max-width:none;justify-content:flex-start;-webkit-overflow-scrolling:touch}
-  body.fs #stage>#fsbar>*{flex:none}
-  body.fs #stage>#avStage{display:none}
-  body.fs #stage>#nowRow{max-width:calc(100% - 140px)}
-  body.fs #side,body.fs #stage>#ytslot{width:120px;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right))}
-  body.fs #ytwrap{width:120px;min-width:120px;min-height:120px}
-  body.fs .ln{font-size:calc(clamp(1rem,3.4vw,1.6rem)*var(--fs,1));padding:3px 0}
-  body.fs .ln.now{font-size:calc(clamp(1.5rem,5.4vw,2.6rem)*var(--fs,1))}
-  body.fs #stage>.live{display:none}
-}
-/* fullscreen on portrait phones: keep controls compact */
-@media (max-width:640px) and (min-height:521px){
-  body.fs #stage>#fsbar{max-height:38vh;overflow-y:auto;padding:6px 8px}
-  body.fs #stage:not([style*="none"]){padding-bottom:200px}
-  body.fs #stage>#reactBar{right:8px}
-  body.fs #fsbar input[type=range]{width:90px!important}
-}
+/* fullscreen layout for short, narrow and portrait screens now lives in fullscreen.css */
 
 /* large screens / TVs: use the space */
 @media (min-width:1900px){

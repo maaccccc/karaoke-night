@@ -1,50 +1,111 @@
-/* ===== Fullscreen lyrics: body.fs is switched on by js/fullscreen.js ===== */
+/* ===== Fullscreen lyrics: body.fs is switched on by js/fullscreen.js =====
+   Layout (wide screens): title + singers on top, lyrics centered, and a bottom "dock":
+   [album art / video]  [controls]  [score + combo]. Narrow screens stack the art and score in a top row.
+   Phone landscape (short screens) gets its own compact layout at the end of this file. */
 #nowRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 #fsbar{display:none}
-body.fs{overflow:hidden}
+body.fs{overflow:hidden;
+  --gut:clamp(12px,1.5vw,28px);
+  --gl:max(var(--gut),env(safe-area-inset-left,0px));--gr:max(var(--gut),env(safe-area-inset-right,0px));
+  --gt:max(var(--gut),env(safe-area-inset-top,0px));--gb:max(var(--gut),env(safe-area-inset-bottom,0px));
+  --art:clamp(200px,11vw,300px)}
 body.fs.fs-idle{cursor:none}
 body.fs .top,body.fs #chat,body.fs #home,body.fs #msg{display:none!important}
 body.fs .layout{display:block;max-width:none;margin:0;padding:0}
-/* the YouTube player has to stay visible, so it shrinks to a small window in the corner */
-body.fs #side{position:fixed;left:14px;bottom:14px;top:auto;right:auto;width:200px;height:auto;max-height:none;overflow:visible;padding:0;margin:0;background:none;border:0;box-shadow:none;transform:none;z-index:70}
+
+/* ---- album art / video window (the YouTube player has to stay visible, so it lives in the dock) ---- */
+body.fs #side,body.fs #stage>#ytslot{position:fixed;left:var(--gl);bottom:var(--gb);top:auto;right:auto;width:var(--art);height:auto;max-height:none;overflow:visible;padding:0;margin:0;background:none;border:0;box-shadow:none;transform:none;z-index:70}
+body.fs #stage>#ytslot{display:block}
 body.fs #side>*:not(#sideCards){display:none}
 body.fs #sideCards{overflow:visible;padding:0}
 body.fs #sideCards>*:not(#ytcard){display:none}
-body.fs #ytcard{padding:0;border-radius:14px;overflow:hidden}
+body.fs #ytcard,body.fs #ytcard:hover{padding:0;margin:0;border-radius:16px;overflow:hidden;background:#000;transform:none!important;border:1px solid rgba(255,255,255,.2);box-shadow:0 0 0 1px rgba(255,61,139,.35),0 12px 36px -10px rgba(0,0,0,.8),0 0 30px -8px var(--pink)}
 body.fs #ytcard h2,body.fs #ytcard::before{display:none}
-body.fs #ytwrap{width:200px;min-width:200px;min-height:200px;border-radius:14px}
-body.fs #stage>#ytslot{display:block;position:fixed;left:14px;bottom:14px;width:200px;z-index:70}
-/* the stage fills the screen */
-body.fs #stage:not([style*="none"]){position:fixed;inset:0;z-index:50;display:flex!important;flex-direction:column;align-items:stretch;padding:clamp(12px,2vw,26px) clamp(16px,4vw,72px) 124px;overflow:hidden;animation:none}
+body.fs #ytwrap{width:var(--art);min-width:var(--art);min-height:var(--art);border:0;border-radius:0}
+
+/* ---- the stage fills the screen ---- */
+body.fs #stage:not([style*="none"]){position:fixed;inset:0;z-index:50;display:flex!important;flex-direction:column;align-items:stretch;max-width:none;margin:0;padding:clamp(18px,3.5vh,40px) var(--gr) calc(var(--art) + var(--gb) + var(--gut)) var(--gl);overflow:hidden;animation:none}
+/* soft neon glow behind the lyrics and a shade under the dock so the controls stay readable */
+body.fs #stage:not([style*="none"])::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(62% 42% at 50% 46%,color-mix(in srgb,var(--pink) 13%,transparent),transparent 72%),linear-gradient(to top,rgba(10,4,20,.6),transparent 34%)}
 body.fs #stage>*{display:none}
+
+/* title + singers */
 body.fs #stage>#nowRow{display:flex;justify-content:center;text-align:center}
-body.fs #nowRow h2{margin:0;font-size:clamp(1rem,1.7vw,1.5rem);opacity:.92}
+body.fs #nowRow h2{margin:0;flex:1;text-align:center;font-size:clamp(.95rem,1.5vw,1.35rem);letter-spacing:.02em;opacity:.95;text-shadow:0 0 18px rgba(255,61,139,.45);text-wrap:balance}
 body.fs #fsBtn{display:none}
-body.fs #stage>#avStage{display:flex;min-height:0;margin:0;transform:scale(.72);transform-origin:center top;height:84px}
-body.fs #stage>#lyrics{display:block;flex:1 1 auto;height:auto;min-height:0}
-body.fs .ln{font-size:calc(clamp(1.3rem,2.5vw,2.6rem)*var(--fs,1));padding:calc(.4vw + 5px) 0}
-body.fs .ln.now{font-size:calc(clamp(2.1rem,4.8vw,5rem)*var(--fs,1))}
-body.fs #stage>#turn{display:block;text-align:center;margin:0}
-body.fs #stage>.live{display:flex;justify-content:center;gap:16px;margin:2px 0 0}
+body.fs #stage>#avStage{display:flex;gap:clamp(12px,2vw,28px);justify-content:center;align-items:flex-end;min-height:0;height:auto;margin:clamp(4px,1vh,10px) 0 0;transform:none}
+body.fs #avStage .avs .big{width:clamp(44px,4.6vw,64px);height:clamp(44px,4.6vw,64px);font-size:clamp(1.5rem,2.4vw,2.2rem)}
+body.fs #avStage .avs .nm{font-size:.74rem;max-width:12ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* lyrics: centered in the free space, with room to breathe between the lines */
+body.fs #stage>#lyrics{display:block;flex:1 1 auto;height:auto;min-height:0;align-self:center;width:min(100%,1320px);padding:0 clamp(8px,2vw,40px)}
+body:not(.lite).fs #stage>#lyrics{perspective-origin:50% 50%}
+body.fs .ln{font-size:calc(clamp(1.15rem,min(2.3vw,4.4vh),2.4rem)*var(--fs,1));line-height:1.28;padding:clamp(6px,1.3vh,14px) 0;text-wrap:balance}
+body.fs .ln.next{opacity:.8}
+body.fs .ln.now{font-size:calc(clamp(2rem,min(4.6vw,8.4vh),4.8rem)*var(--fs,1));line-height:1.18;margin:clamp(4px,1.2vh,14px) 0}
+body.fs.aud #stage>#lyrics{padding-inline:clamp(72px,6vw,96px)}   /* clear of the reaction buttons */
+
+/* turn text + mic meter sit right under the lyrics */
+body.fs #stage>#turn{display:block;text-align:center;margin:0;padding:2px 0 4px;font-size:.85rem;letter-spacing:.04em;color:var(--cyan)}
+body.fs #stage>#turn:empty{display:none}
+body.fs #stage>#vu{display:grid;height:8px;width:min(420px,60%);margin:2px auto 10px}
+
+/* score + combo: a HUD card in the bottom-right corner, same width as the album art so the dock is balanced */
+body.fs #stage>.live{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:fixed;right:var(--gr);bottom:var(--gb);width:var(--art);margin:0;padding:12px 10px 10px;border-radius:16px;background:rgba(14,8,30,.72);border:1px solid rgba(255,255,255,.14);box-shadow:0 0 0 1px rgba(255,200,61,.12),0 10px 34px -10px rgba(0,0,0,.75),0 0 30px -12px var(--gold);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:60}
 body.fs.aud #stage>.live{display:none}
 body.fs .live .note{display:none}
-body.fs #liveScore{font-size:clamp(2rem,4vw,3.6rem)}
-body.fs #stage>#vu{display:grid;height:10px;width:min(560px,70%);margin:8px auto 0}
+body.fs .live::before{content:"Score";order:0;font:600 .68rem Rubik,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:var(--mute)}
+body.fs #stage>.live #liveScore{order:1;font-size:clamp(2.2rem,3.6vw,3.6rem);line-height:1}
+body.fs #stage>.live #combo{order:2;font-size:clamp(.72rem,1.05vw,.95rem);min-height:1.5em;line-height:1.3;text-align:center}
+
+/* audience reactions + the final score card */
 body.fs.aud #stage>#reactBar{display:flex;position:fixed;right:16px;top:50%;transform:translateY(-50%);bottom:auto;flex-direction:column;z-index:56;margin:0}
 body.fs #stage>#rate{position:fixed;inset:0;margin:auto;width:min(600px,92vw);height:fit-content;max-height:88vh;overflow:auto;z-index:90}
-/* the control bar: the normal controls move in here while fullscreen is on */
-body.fs #stage>#fsbar{display:flex;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:80;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:center;width:max-content;max-width:96vw;padding:8px 12px;border-radius:18px;background:rgba(14,8,30,.82);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:opacity .35s}
-#fsbar button{padding:6px 11px;font-size:.78rem;border-radius:11px}
-#fsbar .note,#fsbar label{font-size:.76rem;white-space:nowrap}
-#fsbar .row{gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
-#fsbar .row{margin:0!important}
-#fsbar input[type=range]{width:110px!important}
+body.fs #stage>#lyCountWrap{display:block;flex:none}   /* the countdown over the lyrics (countdown.css) */
+
+/* ---- the control bar: the normal controls move in here while fullscreen is on ---- */
+body.fs #stage>#fsbar{display:flex;position:fixed;left:calc(var(--gl) + var(--art) + var(--gut));right:calc(var(--gr) + var(--art) + var(--gut));bottom:var(--gb);width:max-content;max-width:calc(100vw - 2*(var(--art) + var(--gut)) - var(--gl) - var(--gr));margin-inline:auto;max-height:var(--art);overflow-y:auto;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;padding:8px;border-radius:16px;background:rgba(14,8,30,.78);border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 30px -10px rgba(0,0,0,.7),0 0 24px -14px var(--pink);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:80;transition:opacity .35s}
 body.fs.fs-idle #stage>#fsbar{opacity:0;pointer-events:none}
-/* keep the control bar clear of the small video window */
-@media (min-width:901px){body.fs #stage>#fsbar{left:226px;right:14px;transform:none;width:auto;max-width:none}}
-@media (max-width:900px){
-  body.fs #side,body.fs #stage>#ytslot{left:auto;right:12px;top:12px;bottom:auto}
-  body.fs #stage>#fsbar{left:10px;right:10px;bottom:10px;transform:none;width:auto;max-width:none}
-  body.fs #stage:not([style*="none"]){padding-bottom:244px}
-  body.fs #stage>#nowRow{justify-content:flex-start;text-align:left;max-width:calc(100% - 216px)}
+#fsbar>*{flex:none}
+#fsbar>.row{margin:0!important;padding:4px 9px;gap:4px 7px;flex-wrap:wrap;justify-content:center;align-items:center;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)}
+#fsbar button{padding:5px 10px;min-height:0;font-size:.72rem;line-height:1.2;border-radius:9px}
+#fsbar>button.ghost,#fsbar .row button.ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.18)}
+#fsbar>button.ghost:hover,#fsbar .row button.ghost:hover{border-color:var(--cyan);box-shadow:0 0 12px -2px var(--cyan)}
+#fsbar .row button{padding:4px 8px}
+#fsbar .note,#fsbar label{font-size:.72rem;white-space:nowrap}
+#fsbar .row>b{font-size:.72rem;min-width:3.2ch;text-align:right;color:var(--gold)}
+#fsbar input[type=range]{flex:none;min-width:0;width:88px!important;accent-color:var(--pink)}
+/* shorter labels in the bar (the full label is still there for screen readers) */
+#fsbar #vRow>label,#fsbar #sRow>label{font-size:0}
+#fsbar #vRow>label::before{content:"🔊 Music";font-size:.72rem}
+#fsbar #sRow>label::before{content:"🎙 Mic";font-size:.72rem}
+@media (pointer:coarse){body.fs #fsbar button{min-height:38px}}
+
+/* ---- narrow screens (tablet / phone portrait): art + score side by side in a top row, controls full width at the bottom ---- */
+@media (max-width:900px) and (min-height:521px){
+  body.fs{--art:clamp(132px,20vw,200px);--bar-r:clamp(116px,24vh,200px)}
+  body.fs #side,body.fs #stage>#ytslot{top:var(--gt);bottom:auto}
+  body.fs #stage:not([style*="none"]){padding-top:calc(var(--gt) + var(--art) + var(--gut));padding-bottom:calc(var(--bar-r) + var(--gb) + var(--gut)/2)}
+  body.fs #stage>.live{top:var(--gt);bottom:auto;height:var(--art);width:min(260px,calc(100vw - var(--art) - var(--gl) - var(--gr) - var(--gut)))}
+  body.fs #stage>#fsbar{left:var(--gl);right:var(--gr);width:auto;max-width:none;max-height:var(--bar-r);margin-inline:0}
+  body.fs #stage>#reactBar{right:8px}
+  body.fs #fsbar input[type=range]{width:90px!important}
+}
+@media (max-width:900px) and (min-height:521px) and (max-height:700px){body.fs #stage>#avStage{display:none}}   /* keep the lyrics tall on small phones; the title already says who is singing */
+
+/* ---- phone landscape / any short screen: art top-right, tiny score top-left, one scrolling control row ---- */
+@media (max-height:520px){
+  body.fs{--art:120px;--gut:8px}
+  body.fs #side,body.fs #stage>#ytslot{top:var(--gt);right:var(--gr);left:auto;bottom:auto}
+  body.fs #stage:not([style*="none"]){padding:var(--gt) var(--gr) 60px var(--gl)}
+  body.fs #stage>#nowRow{padding-inline:calc(var(--art) + var(--gut))}
+  body.fs #stage>#avStage{display:none}
+  body.fs #stage>#lyrics{padding-inline:calc(var(--art) + var(--gut))}
+  body.fs .ln{font-size:calc(clamp(1rem,min(3.4vw,7vh),1.6rem)*var(--fs,1));padding:3px 0}
+  body.fs .ln.now{font-size:calc(clamp(1.5rem,min(5.4vw,12vh),2.6rem)*var(--fs,1));margin:2px 0}
+  body.fs #stage>.live{top:var(--gt);bottom:auto;left:var(--gl);right:auto;width:auto;height:auto;padding:4px 12px;border-radius:12px}
+  body.fs .live::before,body.fs #stage>.live #combo{display:none}
+  body.fs #stage>.live #liveScore{font-size:1.6rem}
+  body.fs #stage>#fsbar{left:var(--gl);right:var(--gr);bottom:var(--gb);width:auto;max-width:none;max-height:none;margin-inline:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;-webkit-overflow-scrolling:touch}
+  body.fs #stage>#fsbar>.row{flex-wrap:nowrap}
 }
