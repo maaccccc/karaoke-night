@@ -2,7 +2,7 @@
 (function () {
   // ===== Where the Windows installer lives. Put your own link here (GitHub Releases, Google Drive, OneDrive...). =====
   // The default is a file inside the website's public/downloads folder, but a 76 MB file is better hosted elsewhere (see the README).
-  var INSTALLER_URL = 'https://drive.google.com/file/d/1WIqcLtnSxQ3twlKCY2XEixu8Fy_dHZwg/view?usp=drive_link';
+  var INSTALLER_URL = 'https://drive.google.com/file/d/1GIYj5po865Zc7Zl2ExMQNZfkAQPcoZtw/view?usp=drive_link';
 
   var ua = navigator.userAgent || '', plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
   var isWindows = /Windows NT/i.test(ua) || /^Win/i.test(plat);
