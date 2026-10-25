@@ -23,6 +23,13 @@ function loadYT() {
 // A mic that "sings" just as much in the breaks as on the lines is echoing the music, and its score is cut (see echoLevel).
 const MAXP = { Singing: 45, Tone: 25, Volume: 15, Timing: 15 };
 let S = null;
+// Fresh per-song scoring stats. singing.js calls this at the start of every song.
+function newStats(ls) {
+  return { voiced: 0, rms: 0, db: 0, db2: 0, nf: 0, nfN: 0, pn: 0, ps: 0, ps2: 0, gf: 0, gv: 0, clear: 0, clip: 0,
+    lf: ls.map(() => 0), lv: ls.map(() => 0), hit: ls.map(() => 0),
+    gb: [], bg: 0, vh: 0, run: 0, lt: 0, lb: 0, gdb: 0, gdn: 0, echoWarn: false,
+    lastSt: 0, hist: new Array(100).fill(0), sn: 0, ai: 0, aiS: 0 };
+}
 const clamp01 = x => Math.max(0, Math.min(1, x));
 function echoLevel() {      // 0 = clean, 1 = the mic is clearly just replaying the music
   if (!S || S.gf < 60 || S.lt < 60) return 0;                                  // need about a second of clear break and of own lines to judge
