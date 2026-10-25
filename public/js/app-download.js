@@ -12,7 +12,7 @@
   try { if (localStorage.getItem('knDlHidden') === '1') return; } catch (e) {}
 
   var wrap = document.createElement('div'); wrap.id = 'appDl';
-  var a = document.createElement('a'); a.href = INSTALLER_URL; a.setAttribute('download', ''); a.rel = 'noopener';
+  var a = document.createElement('a'); a.href = INSTALLER_URL; a.target = '_blank'; a.rel = 'noopener';
   a.innerHTML = '<span aria-hidden="true">⬇</span> Download the app'; a.title = 'Install Karaoke Night for Windows';
   var x = document.createElement('button'); x.type = 'button'; x.className = 'ghost'; x.textContent = '×'; x.setAttribute('aria-label', 'Hide the download button'); x.title = 'Hide';
   x.onclick = function () { wrap.remove(); try { localStorage.setItem('knDlHidden', '1'); } catch (e) {} };

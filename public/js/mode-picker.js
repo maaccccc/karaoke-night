@@ -245,9 +245,16 @@ addEventListener('pagehide', e => {
   $('#lSolo').onclick = () => { $('#rStat').textContent = ''; enter(false); };
   $('#lMicBtn').onclick = () => openMicTest();
   $('#homeBtn').onclick = () => {
-    if (!confirm(room.on ? 'Leave the room and go back to the home page?' : 'Go back to the home page? Your queue on this device will be cleared.')) return;
-    try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB })); sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
-    location.href = location.pathname;
+    const d = $('#homedlg');
+    $('#hmTitle').textContent = room.on ? 'Leave the room?' : 'Go back home?';
+    $('#hmText').textContent = room.on ? 'You will leave the room and go back to the home page.' : 'Your queue on this device will be cleared.';
+    $('#hmStay').onclick = () => d.close();
+    $('#hmLeave').onclick = () => {
+      d.close();
+      try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB })); sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
+      location.href = location.pathname;
+    };
+    d.showModal(); $('#hmStay').focus();
   };
   $('#rName').onkeydown = e => { if (e.key === 'Enter') go(!$('#rCode').value.trim()); };
   $('#rCode').onkeydown = e => { if (e.key === 'Enter') go(false); };
