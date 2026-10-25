@@ -17,9 +17,12 @@ const avTxt = n => { const a = avOf(n); return a ? a.e + ' ' : ''; };
 function buildPickers() {
   ['#avPick', '#avPick2'].forEach(id => {
     const box = $(id); if (!box) return; box.textContent = ''; const wrap = el('div', null, 'pk');
+    if (id === '#avPick2') { const pv = el('div', myAv.e, 'pkprev'); pv.style.setProperty('--ac', myAv.c); pv.setAttribute('aria-hidden', 'true'); box.appendChild(pv); }   // live preview of your look
     EMOJI.forEach(e => { const b = el('button', e, 'ghost' + (e === myAv.e ? ' on' : '')); b.type = 'button'; b.onclick = () => setAv({ e, c: myAv.c }); wrap.appendChild(b); });
     box.appendChild(wrap); const cw = el('div', null, 'pk');
-    COLORS.forEach(c => { const d = el('i', null, c === myAv.c ? 'on' : ''); d.style.background = c; d.onclick = () => setAv({ e: myAv.e, c }); cw.appendChild(d); });
+    COLORS.forEach(c => { const d = el('i', null, c === myAv.c ? 'on' : ''); d.style.background = c; d.onclick = () => setAv({ e: myAv.e, c });
+      d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', 'Colour ' + c); d.setAttribute('aria-pressed', c === myAv.c);
+      d.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); d.onclick(); } }; cw.appendChild(d); });
     box.appendChild(cw);
   });
 }
@@ -111,6 +114,7 @@ function applyState(m) {
   renderSkip(m);
   if (active) crowdBuild();
   $('#roomBtn').textContent = (m.public ? '🌐 Room ' : '🔒 Room ') + room.code + ' · ' + m.peers.length;
+  const wc = $('#whoCode'); if (wc) wc.textContent = room.code;
   if (pkIn && $('#pickdlg').classList.contains('show')) renderPick();
   if (active && room.on && isSinger() && rtc.stream) connectPeers();
 }
@@ -167,6 +171,7 @@ function renderSkip(m) {
   const tip = host ? 'You are the host: this skips the song for everybody right away' : 'The song is skipped when more than half of the room votes. Press again to take your vote back';
   [$('#skipBtn'), $('#skipBtn2')].forEach(b => { if (b) { b.textContent = txt; b.title = tip; } });
 }
+$('#inviteBtn').onclick = () => $('#roomBtn').click();      // same as the Room button in the header: invite link + QR code
 $('#skipBtn').onclick = $('#skipBtn2').onclick = () => roomOp({ op: room.host === room.id ? 'skip' : 'skipvote' });
 
 // ---- host tools, public/private, and muting people just for you

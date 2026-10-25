@@ -1,0 +1,67 @@
+/* ===== Room card + Lobby (loaded last, so it can tidy the older rules) ===== */
+
+/* ---- Room card: title + room code on the left, actions on the right, then a "Your look" panel ---- */
+body.inroom #cWho{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px}
+#cWho>h2{grid-column:1;grid-row:1;margin:0}
+#cWho>.row{grid-column:2;grid-row:1;margin:0;gap:8px;justify-content:flex-end}
+#cWho>.lookbox,#cWho>#whoNote{grid-column:1/-1}
+.rcode{font:600 .72rem Rubik,sans-serif;letter-spacing:.16em;text-transform:uppercase;padding:3px 10px;border-radius:99px;color:var(--cyan);border:1px dashed color-mix(in srgb,var(--cyan) 55%,transparent);background:color-mix(in srgb,var(--cyan) 8%,transparent);text-shadow:none}
+.rcode:empty{display:none}
+
+#cWho .row button{min-height:34px;padding:0 14px;font-size:.82rem;border-radius:99px;box-shadow:none;white-space:nowrap}
+#cWho #inviteBtn{border-color:color-mix(in srgb,var(--cyan) 55%,transparent);color:var(--cyan);background:color-mix(in srgb,var(--cyan) 8%,transparent)}
+#cWho #inviteBtn:hover{box-shadow:0 0 16px -4px var(--cyan)}
+#cWho #skipBtn{border-color:rgba(255,200,61,.45);color:var(--gold);background:rgba(255,200,61,.08)}
+#cWho #skipBtn:not(:disabled):hover{background:rgba(255,200,61,.16);box-shadow:0 0 16px -4px var(--gold)}
+#cWho #skipBtn:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line);color:var(--mute);background:transparent;transform:none}
+
+#cWho .lookbox{margin-top:16px;padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid var(--line)}
+#cWho .lookhead{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin-bottom:12px}
+#cWho .lookhead b{font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan)}
+#cWho .lookhead .note{font-size:.82rem}
+
+#avPick2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 20px;align-items:center}
+#avPick2 .pkprev{grid-row:1/3;width:88px;height:88px;border-radius:50%;display:grid;place-items:center;font-size:2.8rem;background:var(--ac,#888);box-shadow:0 0 0 3px rgba(255,255,255,.22),0 0 32px -4px var(--ac,var(--pink)),inset 0 -8px 14px rgba(0,0,0,.25);animation:bob 2.6s ease-in-out infinite}
+#avPick2 .pk{margin:0;gap:6px}
+#avPick2 .pk button{width:42px;height:42px;min-height:0;padding:0;display:grid;place-items:center;font-size:1.3rem;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);box-shadow:none;transition:transform .15s,border-color .15s,background .15s,box-shadow .15s}
+#avPick2 .pk button:hover{transform:translateY(-2px);border-color:var(--cyan)}
+#avPick2 .pk button.on{outline:0;border-color:var(--gold);background:rgba(255,200,61,.15);box-shadow:0 0 14px -2px var(--gold)}
+#avPick2 .pk i{width:28px;height:28px;box-shadow:inset 0 -3px 6px rgba(0,0,0,.25),0 0 0 2px rgba(0,0,0,.35);transition:transform .15s}
+#avPick2 .pk i:hover{transform:scale(1.15)}
+#avPick2 .pk i.on{outline:0;box-shadow:0 0 0 3px #150a22,0 0 0 5px #fff}
+#avPick2 .pk i:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+@media (pointer:coarse){#avPick2 .pk button{width:46px;height:46px}#avPick2 .pk i{width:32px;height:32px}}
+
+#whoNote{display:flex;align-items:flex-start;gap:8px;margin:12px 0 0}
+#whoNote::before{content:"ⓘ";color:var(--cyan);font-style:normal}
+
+/* ---- Lobby: every person is a tile; you are highlighted; tags and actions are tidy ---- */
+#cLobby #visRow{justify-content:space-between;padding:8px 10px;margin:0 0 6px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+#cLobby #visNote{margin:0 0 12px!important;font-size:.8rem}
+#lobList{display:grid;gap:8px}
+#lobList .pr{position:relative;gap:6px 8px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);transition:border-color .2s,background .2s}
+#lobList .pr:last-child{border-bottom:1px solid var(--line)}
+#lobList .pr:hover{border-color:rgba(255,255,255,.3)}
+#lobList .pr:has(.me){border-color:color-mix(in srgb,var(--pink) 60%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--pink) 15%,transparent),rgba(255,255,255,.03))}
+#lobList .pr .av{width:36px;height:36px;font-size:1.2rem;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+#lobList .pr b{flex:1 0 calc(100% - 46px);min-width:0;font-size:.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lobList .pr b+.tg{margin-left:44px}      /* the tags line up under the name, not under the picture */
+#lobList .pr .tg{font-size:.7rem;padding:2px 9px;border:1px solid transparent;background:rgba(255,255,255,.08)}
+#lobList .pr .tg.ok{color:#8ff0bd;background:rgba(59,229,138,.12);border-color:rgba(59,229,138,.35)}
+#lobList .pr .tg.bad{color:#ff9aa6;background:rgba(255,59,80,.14);border-color:rgba(255,59,80,.4)}
+#lobList .pr .lmeter{margin:4px 0 2px}
+#lobList .pr .acts{margin-top:2px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.14)}
+#lobList .pr .acts button:not(:first-child):nth-last-child(-n+2){color:#ff9aa6;border-color:rgba(255,82,82,.45)}   /* Kick and Ban (host only) */
+#lobList .pr .acts button:not(:first-child):nth-last-child(-n+2):hover{background:rgba(255,82,82,.15)}
+
+/* ---- phones ---- */
+@media (max-width:560px){
+  body.inroom #cWho{grid-template-columns:minmax(0,1fr)}
+  #cWho>.row{grid-column:1;grid-row:2;justify-content:stretch;margin-top:12px}
+  #cWho>.row button{flex:1 1 0}
+  #avPick2{grid-template-columns:minmax(0,1fr);justify-items:center}
+  #avPick2 .pkprev{grid-row:auto;width:76px;height:76px;font-size:2.4rem}
+  #avPick2 .pk{justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){#avPick2 .pkprev{animation:none}}
+body.lite #avPick2 .pkprev{animation:none;box-shadow:0 0 0 3px rgba(255,255,255,.22)}

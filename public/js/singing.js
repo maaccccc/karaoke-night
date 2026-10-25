@@ -31,8 +31,16 @@ async function loadAndRun() {
   stopPreview();      // a search preview must never play over the song
   const s = current.song;
   try {
-    const r = await fetch('/api/lyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration }));
-    const d = await r.json(); if (!r.ok) throw new Error(d.error);
+    let d = null, fail = null;      // the lyrics service can hiccup: try a few times before skipping the song
+    for (let tryN = 0; tryN < 4 && !d; tryN++) {
+      if (tryN) { say('Loading lyrics… (trying again)'); await new Promise(ok => setTimeout(ok, 700 * tryN)); }
+      try {
+        const r = await fetch('/api/lyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration }));
+        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'the lyrics service did not answer');
+        d = j;
+      } catch (e) { fail = e; }
+    }
+    if (!d) throw fail || new Error('the lyrics service did not answer');
     lines = parseLrc(d.lrc); if (!lines.length) throw new Error('no timed lyrics found');
     lyricDur = d.lyricDuration || 0; lyricId = d.id || null;
     const cs = calcScale(); autoScale = cs.scale; warn = cs.warn;

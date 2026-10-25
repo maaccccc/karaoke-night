@@ -8,9 +8,12 @@
     <p class="note" id="startNote" style="margin:8px 0 0">The person whose song is next chooses Solo, Duet or Tournament first, then everyone gets the “Are you ready?” check.</p>
   </div>
   <div class="card" id="cWho">
-    <h2>Room</h2>
-    <div class="row"><button class="ghost" id="skipBtn">Skip current song</button></div>
-    <p class="note" style="margin-bottom:0">Your look</p><div id="avPick2"></div>
+    <h2>Room <span class="rcode" id="whoCode"></span></h2>
+    <div class="row"><button class="ghost" id="inviteBtn" type="button">🔗 Invite friends</button><button class="ghost" id="skipBtn">Skip current song</button></div>
+    <div class="lookbox">
+      <div class="lookhead"><b>Your look</b><span class="note">Pick an emoji and a colour. Everyone in the room sees it.</span></div>
+      <div id="avPick2"></div>
+    </div>
     <p class="note" id="whoNote">A mic marked “untested” can be checked in Settings before the song starts.</p>
   </div>
   <div class="card" id="cSingers">

@@ -43,6 +43,23 @@ def get_json(url):
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.load(r)
 
+class LyricsBusy(Exception):
+    """The lyrics service could not be reached (timeout, 429, 5xx). Different from "this song has no lyrics"."""
+
+def lr_json(url, tries=3):
+    """LRCLIB request. Returns None when the song is not there (404), retries hiccups, raises LyricsBusy if it keeps failing."""
+    err = None
+    for i in range(tries):
+        try:
+            return get_json(url)
+        except urllib.error.HTTPError as e:
+            if e.code == 404: return None
+            err = e
+        except Exception as e:
+            err = e
+        if i + 1 < tries: time.sleep(0.5 * (i + 1))
+    raise LyricsBusy(str(err))
+
 def norm(s):
     return re.sub(r'[\W_]+', '', (s or '').lower())
 
@@ -59,34 +76,59 @@ def make_key(title, artist, duration):
         return (not tm, not am, abs((x.get('duration') or 0) - duration))
     return key
 
-def candidates(title, artist, duration):
-    """LRCLIB results that have timed lyrics, best match first (title, then artist, then length)."""
+def candidates(title, artist, duration, strict=False):
+    """LRCLIB results that have timed lyrics, best match first (title, then artist, then length).
+    strict=True raises LyricsBusy when the lookups failed and nothing was found (so "service down" is not mistaken for "no lyrics")."""
     first = (artist or '').split(',')[0].strip()
-    seen, out = set(), []
+    seen, out, fails = set(), [], 0
     for params in ({'track_name': title, 'artist_name': first}, {'q': (title + ' ' + first).strip()}):
         try:
-            for x in get_json('https://lrclib.net/api/search?' + urllib.parse.urlencode(params)):
+            for x in lr_json('https://lrclib.net/api/search?' + urllib.parse.urlencode(params)) or []:
                 if x.get('syncedLyrics') and x.get('id') not in seen:
                     seen.add(x['id']); out.append(x)
-        except Exception:
-            pass
+        except LyricsBusy:
+            fails += 1
+    if strict and fails and not out:
+        raise LyricsBusy('lyrics lookup failed')
     key = make_key(title, artist, duration)
     return sorted(out, key=key), key
 
+LYR = {}; _lyr_lock = threading.Lock()
+LYR_TTL = 6 * 3600
 def synced_lyrics(title, artist, duration):
-    """Best timed lyrics (LRC text, lyric duration, id) from LRCLIB. Swap this to use a licensed provider."""
+    """Best timed lyrics (LRC text, lyric duration, id) from LRCLIB. Swap this to use a licensed provider.
+    Found lyrics are remembered, so the "synced lyrics" badge and the song itself share one lookup.
+    Raises LyricsBusy if the service kept failing and nothing was found; ('', 0, None) means it really has none."""
+    k = (title, artist, int(duration or 0))
+    with _lyr_lock:
+        hit = LYR.get(k)
+    if hit and time.time() - hit[3] < LYR_TTL:
+        return hit[0], hit[1], hit[2]
     first = (artist or '').split(',')[0].strip()
+    res, busy = None, False
     try:
-        d = get_json('https://lrclib.net/api/get?' + urllib.parse.urlencode(
-            {'track_name': title, 'artist_name': first, 'duration': int(duration)}))
-        if d.get('syncedLyrics'):
-            return d['syncedLyrics'], d.get('duration') or 0, d.get('id')
-    except Exception:
-        pass
-    ranked, key = candidates(title, artist, duration)
-    if ranked and not key(ranked[0])[0]:      # only accept a result whose title really matches
-        b = ranked[0]
-        return b['syncedLyrics'], b.get('duration') or 0, b.get('id')
+        d = lr_json('https://lrclib.net/api/get?' + urllib.parse.urlencode(
+            {'track_name': title, 'artist_name': first, 'duration': int(duration or 0)}))
+        if d and d.get('syncedLyrics'):
+            res = (d['syncedLyrics'], d.get('duration') or 0, d.get('id'))
+    except LyricsBusy:
+        busy = True
+    if not res:
+        try:
+            ranked, key = candidates(title, artist, duration, strict=True)
+            if ranked and not key(ranked[0])[0]:      # only accept a result whose title really matches
+                b = ranked[0]
+                res = (b['syncedLyrics'], b.get('duration') or 0, b.get('id'))
+        except LyricsBusy:
+            busy = True
+    if res:
+        with _lyr_lock:
+            if len(LYR) > 400:                        # keep it small: drop the oldest entries
+                for old_k in sorted(LYR, key=lambda x: LYR[x][3])[:100]: LYR.pop(old_k, None)
+            LYR[k] = res + (time.time(),)
+        return res
+    if busy:
+        raise LyricsBusy('The lyrics service is busy right now')
     return '', 0, None
 
 HAS = {}
@@ -95,7 +137,10 @@ def has_lyrics(title, artist, duration):
     k = (title, artist, int(duration or 0))
     hit = HAS.get(k)
     if hit is None or (not hit[0] and time.time() - hit[1] > 600):   # "no" answers expire after 10 minutes (could have been a network hiccup)
-        hit = HAS[k] = (bool(synced_lyrics(title, artist, duration)[0]), time.time())
+        try:
+            hit = HAS[k] = (bool(synced_lyrics(title, artist, duration)[0]), time.time())
+        except LyricsBusy:
+            return bool(hit and hit[0])               # not remembered: ask again next time
     return hit[0]
 
 def lyric_versions(title, artist, duration):
@@ -1352,7 +1397,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/lyrics':
                 g = lambda k: q.get(k, [''])[0]
                 if g('id').isdigit():
-                    d = get_json('https://lrclib.net/api/get/' + g('id'))
+                    d = lr_json('https://lrclib.net/api/get/' + g('id')) or {}
                     return self.send_json(200, {'lrc': d.get('syncedLyrics') or '', 'lyricDuration': d.get('duration') or 0, 'id': d.get('id')})
                 lrc, ld, lid = synced_lyrics(g('title'), g('artist'), float(g('duration') or 0))
                 return self.send_json(200, {'lrc': lrc, 'lyricDuration': ld, 'id': lid})
