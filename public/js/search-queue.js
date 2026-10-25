@@ -79,12 +79,23 @@ async function addSong(s, singer, btn) {
     if (room.on) { roomOp({ op: 'qadd', song }); say('Queued: ' + s.title + note); return true; }
     queue.push({ song, singer, file: null }); renderQueue(); say('Queued: ' + s.title + note); return true;
 }
-async function search() {
-  const q = $('#q').value.trim(); if (q.length < 2) return; badgeQ.length = 0; dupeBtns.length = 0; stopPreview();
+let searchSeq = 0, searchCtl = null, lastQ = '', searchTimer = 0;
+async function search(force) {
+  clearTimeout(searchTimer);
+  const q = $('#q').value.trim();
+  if (q.length < 2) {     // typed too little (or cleared the box): drop any search still running and empty the list
+    searchSeq++; if (searchCtl) searchCtl.abort(); lastQ = '';
+    if (!q.length) { badgeQ.length = 0; dupeBtns.length = 0; stopPreview(); $('#results').textContent = ''; say(''); }
+    return;
+  }
+  if (!force && q === lastQ) return;       // same words as the results already on screen
+  lastQ = q; const mySeq = ++searchSeq; if (searchCtl) searchCtl.abort(); searchCtl = new AbortController();
+  badgeQ.length = 0; dupeBtns.length = 0; stopPreview();
   say('Searching…');
   try {
-    const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const r = await fetch('/api/search?q=' + encodeURIComponent(q), { signal: searchCtl.signal });
     const list = await r.json(); if (!r.ok) throw new Error(list.error);
+    if (mySeq !== searchSeq) return;        // a newer search started while this one was loading
     const box = $('#results'); box.textContent = '';
     if (!list.length) box.appendChild(el('p', 'No songs found. Try different words.', 'note'));
     list.forEach(s => {
@@ -95,7 +106,7 @@ async function search() {
         sel = el('select'); sel.setAttribute('aria-label', 'Singer for ' + s.title);
         (players.length ? players : ['Anyone']).forEach(p => sel.appendChild(el('option', p)));
       }
-      const bd = el('span', 'checking lyrics…', 'bdg'); info.firstChild.appendChild(bd); badgeQ.push([s, bd]); runBadges();
+      const bd = el('span', 'checking lyrics…', 'bdg'); info.firstChild.appendChild(bd); badgeQ.push([s, bd]);
       const add = el('button', room.on ? 'Add to my queue' : 'Add to queue');
       add.onclick = () => addSong(s, sel ? sel.value : '', add);
       dupeBtns.push([song0(s), add, add.textContent]);
@@ -106,10 +117,14 @@ async function search() {
       row.append(...(sel ? [info, sel, acts] : [info, acts])); box.appendChild(row);
     });
     markDupes(); say('Pick a song to add to the queue.');
-  } catch (e) { say('Search failed: ' + e.message); }
+    setTimeout(() => { if (mySeq === searchSeq) runBadges(); }, 800);   // lyric badges wait until typing has settled, so live search does not flood the server
+  } catch (e) { if (e.name === 'AbortError' || mySeq !== searchSeq) return; lastQ = ''; say('Search failed: ' + e.message); }
 }
-$('#searchBtn').onclick = search;
-$('#q').onkeydown = e => { if (e.key === 'Enter') search(); };
+$('#searchBtn').onclick = () => search(true);
+$('#q').onkeydown = e => { if (e.key === 'Enter') search(true); };
+$('#q').addEventListener('input', () => {      // live search: runs shortly after you stop typing, no Enter needed
+  clearTimeout(searchTimer); searchTimer = setTimeout(search, 450);
+});
 
 // ---- queue
 // Fair queue for same-device play: people take turns, so one person queuing five songs does not block the others.
