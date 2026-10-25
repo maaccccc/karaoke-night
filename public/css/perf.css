@@ -24,9 +24,14 @@ body.lite button.ghost{transition:none}
 /* lyrics: the highlighted line repaints every frame, so keep it cheap (no glow layers, no filter, no scroller mask) */
 body.lite #lyrics{-webkit-mask-image:none;mask-image:none}
 body.lite .ln.now,body.lite[data-theme] .ln.now{filter:none!important;text-shadow:none!important;animation:none}
-body.lite .ln .ball i{box-shadow:none}
+body.lite .ln.now .o::after{box-shadow:none}
 body.lite #liveScore{text-shadow:none}
 
 /* avatars: no animated glow radius */
 body.lite .avs .big{animation:none;box-shadow:0 0 0 3px rgba(255,255,255,.18),0 0 16px var(--ac,var(--pink))}
 body.lite .cav.hit{animation:none}
+
+/* ===== Sliders: the generic input box (padding, border, dark fill, glow on focus) must not apply to range sliders. It inset the thumb from both ends, so 0% / max did not sit at the ends of the bar. ===== */
+input[type=range]{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;min-height:0;height:20px;margin:0;vertical-align:middle;cursor:pointer}
+input[type=range]:focus{border:0;box-shadow:none}   /* keyboard focus still shows the cyan outline from base.css */
+@media (pointer:coarse){input[type=range]{height:32px}}
