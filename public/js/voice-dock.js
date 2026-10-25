@@ -16,8 +16,10 @@
     if (matchMedia('(max-width:999px), (hover:none) and (pointer:coarse)').matches) { panel.style.left = panel.style.top = ''; return; }   // phones: CSS makes it a bottom sheet
     const w = panel.offsetWidth, h = panel.offsetHeight;
     panel.style.left = (pos.side === 'r' ? Math.max(M, innerWidth - M - S - 8 - w) : Math.min(innerWidth - w - M, M + S + 8)) + 'px';
-    panel.style.top = Math.max(M, Math.min(t + S - h, innerHeight - h - M)) + 'px';
+    panel.style.top = Math.max(M, Math.min(t + S / 2 - h / 2, innerHeight - h - M)) + 'px';      // centered on the bubble, always fully on screen
   }
+  // the panel changes height when you join or leave voice chat (mute button, sliders, tip appear): put it back in the right place every time
+  if (window.ResizeObserver) new ResizeObserver(() => { if (!panel.hidden && !panel.classList.contains('floating')) place(); }).observe(panel);
   const vpane = document.getElementById('vcVoicePane'), cpane = document.getElementById('vcChatPane'), tabs = [...panel.querySelectorAll('.vct')];
   let tab = 'voice';
   function setTab(t) {

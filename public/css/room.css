@@ -65,3 +65,22 @@ body.inroom #cWho{display:grid;grid-template-columns:minmax(0,1fr) auto;align-it
 }
 @media (prefers-reduced-motion:reduce){#avPick2 .pkprev{animation:none}}
 body.lite #avPick2 .pkprev{animation:none;box-shadow:0 0 0 3px rgba(255,255,255,.22)}
+
+/* ---- Voice chat panel: slimmer and tidier (the positioning itself is in js/voice-dock.js) ---- */
+#vcPanel{width:min(300px,calc(100vw - 20px));max-height:min(560px,calc(100dvh - 20px));padding:10px 12px 12px;border-radius:16px;border-color:rgba(255,255,255,.18);box-shadow:0 16px 44px rgba(0,0,0,.6),0 0 30px -14px var(--pink)}
+#vcPanel .vcph{margin-bottom:10px}
+#vcPanel .vct{min-height:0;padding:5px 12px;font-size:.8rem;font-weight:600}
+#vcPanel .vcbtns{gap:4px}
+#vcPanel .vcbtns .mini{min-width:28px;min-height:28px;width:28px;height:28px;padding:0;display:grid;place-items:center;border-radius:9px;font-size:.9rem;line-height:1}
+#vcBox>.row{display:flex;flex-wrap:nowrap;gap:8px}
+#vcBox #vcJoin,#vcBox #vcMute{min-height:36px;padding:0 12px;font-size:.85rem;border-radius:11px;white-space:nowrap}
+#vcBox #vcJoin{flex:1 1 auto}
+#vcBox #vcJoin.on{background:rgba(59,229,138,.16);border:1px solid rgba(59,229,138,.5);box-shadow:none}
+#vcBox #vcMute{flex:none}
+#vcPeers{margin-top:6px}
+#vcPeers .vcp{padding:6px 0;font-size:.85rem}
+#vcHint{margin:8px 0 0!important;padding:7px 9px;border-radius:10px;background:rgba(255,255,255,.04);font-size:.72rem;line-height:1.4;color:var(--mute)}
+#vcBox label{margin-top:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;font-size:.78rem;font-weight:600;color:var(--ink)}
+#vcBox label b{float:none;font-size:.78rem}
+#vcBox label input[type=range]{grid-column:1/-1;width:100%;margin:4px 0 0}
+#vcNote{margin:12px 0 0;font-size:.74rem;line-height:1.4;opacity:.8}
