@@ -24,7 +24,7 @@ body.lite button.ghost{transition:none}
 /* lyrics: the highlighted line repaints every frame, so keep it cheap (no glow layers, no filter, no scroller mask) */
 body.lite #lyrics{-webkit-mask-image:none;mask-image:none}
 body.lite .ln.now,body.lite[data-theme] .ln.now{filter:none!important;text-shadow:none!important;animation:none}
-body.lite .ln.now .o::after{box-shadow:none}
+body.lite .ln .ball i{box-shadow:none}
 body.lite #liveScore{text-shadow:none}
 
 /* avatars: no animated glow radius */

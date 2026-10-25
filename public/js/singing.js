@@ -3,6 +3,24 @@ let frames = 0, offset = 0, active = false, lines = [], warn = '';
 let prebuf = false, holding = false, loadedSent = false;   // pre-loading the video silently before the shared start
 let scale = 1, autoScale = 1, lyricDur = 0, lyricId = null, force = false;
 let getT = () => 0, isPlay = () => false, stopMedia = () => {};
+// Moves the gold fill and the bouncing dot along the line being sung. A long line wraps onto several rows; the fill (CSS, one sliced inline box) runs through
+// them in reading order and this puts the dot at the matching spot on the right row. Positions are measured in the line's own (untransformed) units,
+// so the beat-pulse scale and the pop-in animation do not throw it off.
+function fillLine(n, pv) {
+  const o = n.firstElementChild; if (!o) return;
+  const key = o.offsetWidth + 'x' + o.offsetHeight + 'x' + innerWidth + 'x' + n.offsetWidth;
+  if (n._pf === pv && n._gk === key) return;
+  n._pf = pv; n.style.setProperty('--fill', pv + '%');
+  let b = n._ball; if (!b) { b = n._ball = el('span', null, 'ball'); b.appendChild(document.createElement('i')); n.appendChild(b); }
+  if (n._gk !== key) {                                           // geometry only changes with the font size, window size or text
+    n._gk = key; const nr = n.getBoundingClientRect(), k = nr.width / (n.offsetWidth || 1) || 1;
+    n._geo = [...o.getClientRects()].filter(r => r.width > 0.5).map(r => ({ x: (r.left - nr.left) / k, y: (r.top - nr.top) / k, w: r.width / k }));
+  }
+  const g = n._geo; if (!g || !g.length) return;
+  const W = g.reduce((t, r) => t + r.w, 0); let d = pv / 100 * W, i = 0;
+  while (i < g.length - 1 && d > g[i].w) { d -= g[i].w; i++; }
+  b.style.transform = 'translate(' + (g[i].x + d).toFixed(1) + 'px,' + g[i].y.toFixed(1) + 'px)';
+}
 // Karaoke versions: lyrics are always fetched for the ORIGINAL song (current.song.title/artist/duration), but the video that
 // plays can be a karaoke track (current.song.kv). Saved timing is kept per PLAYING video, so a karaoke track never inherits
 // (or overwrites) the shift you fixed for the original recording.
@@ -31,16 +49,8 @@ async function loadAndRun() {
   stopPreview();      // a search preview must never play over the song
   const s = current.song;
   try {
-    let d = null, fail = null;      // the lyrics service can hiccup: try a few times before skipping the song
-    for (let tryN = 0; tryN < 4 && !d; tryN++) {
-      if (tryN) { say('Loading lyrics… (trying again)'); await new Promise(ok => setTimeout(ok, 700 * tryN)); }
-      try {
-        const r = await fetch('/api/lyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration }));
-        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'the lyrics service did not answer');
-        d = j;
-      } catch (e) { fail = e; }
-    }
-    if (!d) throw fail || new Error('the lyrics service did not answer');
+    const r = await fetch('/api/lyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration }));
+    const d = await r.json(); if (!r.ok) throw new Error(d.error);
     lines = parseLrc(d.lrc); if (!lines.length) throw new Error('no timed lyrics found');
     lyricDur = d.lyricDuration || 0; lyricId = d.id || null;
     const cs = calcScale(); autoScale = cs.scale; warn = cs.warn;
@@ -271,7 +281,7 @@ async function runSong() {
         : idx < 0 ? 'Song time ' + fmt(raw) + ' · first lyric line at ' + fmt(Math.max(0, first)) + ' (in ' + Math.max(0, Math.round(first - raw)) + 's)'
         : 'Song time ' + fmt(raw) + ' · line ' + (idx + 1) + ' of ' + lines.length;
     }
-    if (idx >= 0 && playing) { const a = lines[idx].t * scale, gap = lineEnd(idx) - a, est = Math.min(gap * 0.95, Math.max(1, (lines[idx].text || '').length * 0.14)), p = Math.max(0, Math.min(1, (t - a) / Math.max(0.5, est))); const n = $('#l' + idx), pv = Math.round(p * 200) / 2; if (n && n._pf !== pv) { n._pf = pv; n.style.setProperty('--fill', pv + '%'); } }
+    if (idx >= 0 && playing) { const a = lines[idx].t * scale, gap = lineEnd(idx) - a, est = Math.min(gap * 0.95, Math.max(1, (lines[idx].text || '').length * 0.14)), p = Math.max(0, Math.min(1, (t - a) / Math.max(0.5, est))); const n = $('#l' + idx), pv = Math.round(p * 200) / 2; if (n) fillLine(n, pv); }
     { let cn = 0, cl = '';
       if (!playing) { const toGo = room.on && room.startAt ? room.startAt - (Date.now() + room.skew) : 0; if (toGo > 0 && toGo <= 9000) { cn = Math.ceil(toGo / 1000); cl = 'Song starts in'; } else cl = everPlayed ? 'Waiting for the music…' : 'Song starting…'; }
       else { everPlayed = true; const nx = lines[idx + 1];
