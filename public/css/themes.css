@@ -75,3 +75,5 @@ body[data-theme="jazz"] .ln.now{font-family:Georgia,'Times New Roman',serif;font
 /* ===== No theme: a plain black background, no beams and no animated layers (the accent colours stay the default ones) ===== */
 body[data-theme="none"] .bg{background:#000}
 body[data-theme="none"] .bg .th{opacity:0 !important;display:none}
+body[data-theme="none"]::before,body[data-theme="none"]::after,body[data-theme="none"] .curtains,body[data-theme="none"] .vinyl,body[data-theme="none"] .discoball,body[data-theme="none"] #fxDust,body[data-theme="none"] .bgdim{display:none!important}
+body[data-theme="none"] .ln.now{filter:none!important;text-shadow:none!important}
