@@ -174,3 +174,15 @@ body[data-theme="jazz"]{--btn-a:#a2531a;--btn-b:#8a5a2b}
   button.mini{min-height:36px}
   input[type=checkbox],input[type=radio]{width:22px;height:22px}
 }
+
+/* My songs */
+#mysongs{width:min(580px,94vw)}
+#mysongs .msTabs{display:flex;gap:var(--s2);flex-wrap:wrap;margin:var(--s3) 0}
+#mysongs .msTabs button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+#msList{max-height:52vh;overflow:auto;margin-top:var(--s2)}
+#msList .item{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+#msList .item>div:first-child{min-width:0}
+#msList .item span,#msList .item small{display:block;overflow:hidden;text-overflow:ellipsis}
+.favbtn{min-width:var(--ctl-sm);padding:0 var(--s2);font-size:1.1rem;color:var(--gold)}
+.favbtn[aria-pressed=true]{color:var(--gold);text-shadow:0 0 10px var(--gold)}
+#mysongs{background:rgba(22,11,36,.98);backdrop-filter:none}

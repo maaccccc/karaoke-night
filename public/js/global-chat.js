@@ -3,8 +3,7 @@
 (function () {
   const log = document.getElementById('gLog'); if (!log) return;
   const inp = document.getElementById('gIn'), note = document.getElementById('gNote'), empty = document.getElementById('gEmpty');
-  let id = ''; try { id = sessionStorage.getItem('karaokeGid') || ''; } catch (e) {}
-  if (!id) { id = rid(); try { sessionStorage.setItem('karaokeGid', id); } catch (e) {} }
+  const id = deviceId('gchat');
   let last = null, sending = false;
   const myName = () => $('#rName').value.trim();
   const clock = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

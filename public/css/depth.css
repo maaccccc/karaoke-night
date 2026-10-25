@@ -1,0 +1,136 @@
+/* ===== Depth layer (loaded after system.css): the same design with more 3D feel.
+   PC (mouse + normal mode): layered shadows, raised keycap buttons, tilting action cards, receding lyrics, parallax background.
+   Phones / smooth mode (body.lite) / reduced motion: no tilt and no heavy effects, only a cheap pressed-button feel and phone ergonomics. ===== */
+:root{--edge-k:.52}                                              /* how dark a raised button's side wall is */
+
+/* ---------- everywhere: cheap, no animation ---------- */
+html{-webkit-tap-highlight-color:transparent}
+button,summary,select,.item,.lbtn{touch-action:manipulation}    /* no double-tap zoom delay on phones */
+button:not(.ghost):not(.seg):active{transform:translateY(2px)}
+
+/* ---------- PC depth: mouse + full-quality mode + motion allowed ---------- */
+@media (hover:hover) and (pointer:fine) and (min-width:900px) and (prefers-reduced-motion:no-preference){
+  /* parallax background: the glow blobs drift opposite to the mouse */
+  body:not(.lite) .bg{transform:translate3d(calc(var(--px,0)*-16px),calc(var(--py,0)*-11px),0);transition:transform .25s ease-out}
+
+  /* the big title: a solid extruded edge plus a soft cast shadow */
+  body:not(.lite) #landing .lhero h1{filter:drop-shadow(0 2px 0 rgba(0,0,0,.45)) drop-shadow(0 5px 0 rgba(0,0,0,.28)) drop-shadow(0 18px 18px rgba(0,0,0,.45))}
+
+  /* cards: thickness (a dark bottom edge), a lit top edge and a deeper cast shadow */
+  body:not(.lite) .card{box-shadow:0 2px 0 rgba(0,0,0,.4),0 22px 38px -22px rgba(0,0,0,.85),0 40px 70px -40px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.35)}
+  body:not(.lite) .fold{box-shadow:0 2px 0 rgba(0,0,0,.35),0 14px 26px -16px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.2)}
+
+  /* the three big actions float in 3D and tilt towards the mouse (js/tilt.js sets --rx --ry --mx --my) */
+  #cStart.lactions{perspective:1100px}
+  body:not(.lite) .lact{transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--lift,0px));
+    transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;will-change:transform}
+  body:not(.lite) .lact.tilting{transition:transform .08s linear,box-shadow .35s;--lift:-8px;
+    box-shadow:0 2px 0 rgba(0,0,0,.4),0 38px 60px -26px rgba(0,0,0,.9),0 0 46px -10px color-mix(in srgb,var(--pink) 65%,transparent),inset 0 1px 0 rgba(255,255,255,.35)}
+  body:not(.lite) .lact::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;
+    background:radial-gradient(420px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.22),transparent 55%)}
+  body:not(.lite) .lact.tilting::after{opacity:1}
+  body:not(.lite) .lact .ic{transform:translateZ(46px);box-shadow:0 14px 22px -8px rgba(0,0,0,.7),0 0 22px -6px var(--pink),inset 0 1px 0 rgba(255,255,255,.5)}
+  body:not(.lite) .lact>h2{transform:translateZ(30px)}
+  body:not(.lite) .lact>p,body:not(.lite) .lact .visp,body:not(.lite) .lact .vlab{transform:translateZ(14px)}
+  body:not(.lite) #cStart .lact .lbtn,body:not(.lite) #cStart .lact .ljoin{transform:translateZ(38px)}
+
+  /* keycap buttons: a solid side wall that you press down */
+  body:not(.lite) button:not(.ghost):not(.seg):not(.on):not(.favbtn):not(.mini){
+    --edge:color-mix(in srgb,var(--btn-a,color-mix(in srgb,var(--pink) 76%,#000)) calc(var(--edge-k)*100%),#000);
+    box-shadow:0 4px 0 var(--edge),0 12px 18px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 0 rgba(0,0,0,.18);
+    transition:transform .12s,box-shadow .12s,background-position .5s}
+  body:not(.lite) button:not(.ghost):not(.seg):not(.on):not(.favbtn):not(.mini):hover{transform:translateY(-2px);
+    box-shadow:0 6px 0 var(--edge),0 18px 26px -8px rgba(0,0,0,.7),0 0 26px -6px color-mix(in srgb,var(--pink) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 0 rgba(0,0,0,.18)}
+  body:not(.lite) button:not(.ghost):not(.seg):not(.on):not(.favbtn):not(.mini):active{transform:translateY(4px);
+    box-shadow:0 0 0 var(--edge),0 4px 8px -4px rgba(0,0,0,.7),inset 0 2px 6px rgba(0,0,0,.25)}
+  body:not(.lite) #cStart .lact .lbtn{--edge-k:.5;box-shadow:0 6px 0 var(--edge),0 16px 24px -10px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
+  body:not(.lite) button.ghost{box-shadow:0 2px 0 rgba(0,0,0,.35),0 8px 14px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.22)}
+  body:not(.lite) button.ghost:active{transform:translateY(2px);box-shadow:0 0 0 rgba(0,0,0,.35),inset 0 2px 6px rgba(0,0,0,.3)}
+
+  /* inputs feel sunk into the card */
+  body:not(.lite) input:not([type=range]):not([type=checkbox]):not([type=radio]),body:not(.lite) select{box-shadow:inset 0 3px 10px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.08),0 1px 0 rgba(255,255,255,.1)}
+
+  /* singing stage: lyrics recede into the distance like a rolling credits screen */
+  body:not(.lite) #lyrics{perspective:760px;perspective-origin:50% 38%}
+  body:not(.lite) .ln{transform-origin:50% 50%;transition:opacity .3s,color .3s,transform .45s cubic-bezier(.2,.8,.2,1)}
+  body:not(.lite) .ln.past{transform:rotateX(38deg) scale(.9)}
+  body:not(.lite) .ln:not(.now):not(.next):not(.past){transform:rotateX(-34deg) scale(.9)}
+  body:not(.lite) .ln.now{transform:translateZ(46px)}
+  body:not(.lite) .ln.now .o{filter:drop-shadow(0 3px 0 rgba(0,0,0,.45)) drop-shadow(0 12px 14px rgba(0,0,0,.45))}
+  /* singers and the score: raised and embossed */
+  body:not(.lite) #avStage .av,body:not(.lite) #avStage .big{box-shadow:0 16px 24px -10px rgba(0,0,0,.8),0 0 30px -8px var(--pink),inset 0 2px 0 rgba(255,255,255,.45),inset 0 -4px 8px rgba(0,0,0,.3)}
+  body:not(.lite) #liveScore{text-shadow:0 1px 0 #7a5200,0 2px 0 #6a4600,0 3px 0 #5a3c00,0 4px 0 #4a3200,0 14px 16px rgba(0,0,0,.55)}
+  body:not(.lite) #stageTools,body:not(.lite) #judge{box-shadow:0 2px 0 rgba(0,0,0,.35),0 16px 28px -16px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.18)}
+  /* dialogs swing in */
+  body:not(.lite) dialog[open]{animation:dlg3d .38s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes dlg3d{from{opacity:0;transform:perspective(900px) rotateX(12deg) translateY(22px) scale(.95)}to{opacity:1;transform:none}}
+}
+
+/* ---------- phones: reach, readability and cheap effects ---------- */
+@media (max-width:640px), (pointer:coarse) and (max-width:900px){
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}                 /* no pull-to-refresh bounce in the middle of a song */
+  #lyrics,#msList,#queue,#sideCards,#chatLog{overscroll-behavior:contain}
+  /* one light, solid shadow instead of stacked glow: much cheaper to draw and still raised */
+  .card{box-shadow:0 10px 20px -12px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.18)}
+  .lact{box-shadow:0 14px 26px -14px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.22)}
+  button:not(.ghost):not(.seg):not(.on):not(.favbtn){box-shadow:0 3px 0 color-mix(in srgb,var(--btn-a,color-mix(in srgb,var(--pink) 76%,#000)) 50%,#000),0 8px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.4)}
+  button:not(.ghost):not(.seg):not(.on):not(.favbtn):active{box-shadow:0 0 0 transparent,inset 0 2px 5px rgba(0,0,0,.3)}
+  /* welcome page: the three actions are big, full width and reachable with a thumb */
+  #landing{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+  #cStart .lact .lbtn,#cStart .lact .ljoin button{min-height:58px;font-size:1.15rem}
+  /* singing: lyrics get the screen, the key controls stick to the bottom where the thumb is */
+  #lyrics{height:clamp(200px,calc(100dvh - 400px),520px)}      /* leaves room for the header, singers, the score and the control bar in one screen */
+  body.instage #msg{display:none}
+  body.instage #avStage .av,body.instage #avStage .big{width:48px;height:48px;font-size:1.5rem}
+  body.instage #stage .live{margin:0}
+  #stage .stagebar{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom));z-index:6;margin:var(--s3) 0 0;padding:var(--s2) 64px var(--s2) var(--s3);
+    border-radius:var(--rad);background:rgba(22,11,36,.94);border:1px solid var(--line);box-shadow:0 -10px 24px -14px rgba(0,0,0,.9)}   /* right padding keeps the voice bubble off Finish early */
+  /* header: one swipeable row of chips instead of four rows of buttons, so the song gets the screen */
+  .top{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:var(--s2);scrollbar-width:none;-webkit-overflow-scrolling:touch;
+    -webkit-mask-image:linear-gradient(90deg,#000 90%,transparent);mask-image:linear-gradient(90deg,#000 90%,transparent)}
+  .top::-webkit-scrollbar{display:none}
+  .top h1{flex:none;font-size:1.15rem}
+  .top button.icon,.top #sideToggle{flex:0 0 auto;min-height:40px;padding:0 var(--s3);font-size:.85rem}
+  /* control bar: one slim row (volume + Finish early) */
+  #stage .stagebar{flex-wrap:nowrap;gap:var(--s3);padding:var(--s2) 62px var(--s2) var(--s3)}
+  #stage .stagebar #vRow{flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+  #stage .stagebar #vRow>label{font-size:0}                                          /* keep only the speaker icon */
+  #stage .stagebar #vRow>label::first-letter{font-size:1.2rem}
+  #stage .stagebar #vRow input[type=range]{flex:1 1 auto;width:auto!important;min-width:60px}
+  #stage .stagebar #sVolV{display:none}
+  #stage .stagebar #finRow button{min-height:40px;padding:0 var(--s3);font-size:.85rem;white-space:nowrap}
+  #lyrics::before,#lyrics::after{height:34%}
+  #avStage{min-height:0;margin-top:0}
+  #aiNote,#micNote:not(:empty){display:none}                                         /* less clutter while singing */
+  .ln.now{text-wrap:balance}
+  dialog{width:min(520px,96vw);max-height:92dvh;overflow:auto}
+}
+/* tablets (touch, wider than a phone): the raised look without any mouse-only effects, two-column room kept, big touch targets */
+@media (pointer:coarse) and (min-width:641px){
+  .card{box-shadow:0 2px 0 rgba(0,0,0,.35),0 16px 28px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.22)}
+  .lact{box-shadow:0 2px 0 rgba(0,0,0,.35),0 22px 34px -18px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.26)}
+  button:not(.ghost):not(.seg):not(.on):not(.favbtn){box-shadow:0 4px 0 color-mix(in srgb,var(--btn-a,color-mix(in srgb,var(--pink) 76%,#000)) 50%,#000),0 10px 16px -8px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.45)}
+  button:not(.ghost):not(.seg):not(.on):not(.favbtn):active{box-shadow:0 0 0 transparent,inset 0 2px 6px rgba(0,0,0,.3)}
+  #cStart.lactions{grid-template-columns:repeat(3,minmax(0,1fr))}              /* three big cards side by side on a tablet too */
+  #cStart .lact .lbtn,#cStart .lact .ljoin button{min-height:60px}
+  #lyrics{height:clamp(300px,calc(100dvh - 380px),600px)}
+  body.instage #stage{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+}
+/* small phones: keep the title and buttons from crowding */
+@media (max-width:360px){
+  #landing .lhero h1{font-size:2rem}
+  .lact{padding:var(--s4)}
+  #stage .stagebar{padding-right:58px}
+}
+/* phone in landscape: lyrics get everything, the side tools stay out of the way */
+@media (max-height:520px) and (orientation:landscape){
+  #lyrics{height:clamp(120px,calc(100dvh - 200px),320px)}
+  #stage .stagebar{position:static;padding-right:var(--s3)}
+  #avStage{display:none}
+}
+/* people who asked for less motion get none of the 3D movement at all */
+@media (prefers-reduced-motion:reduce){
+  .lact,.ln,#lyrics,.bg{transform:none!important;transition:none!important}
+  dialog[open]{animation:none!important}
+}

@@ -1,8 +1,7 @@
 // Live "people online" status on the home page. Sends a small heartbeat; the server only counts, it never stores names.
 (function () {
   const box = document.getElementById('onl'); if (!box) return;
-  let id = ''; try { id = sessionStorage.getItem('karaokeVid') || ''; } catch (e) {}
-  if (!id) { id = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, '0')).join(''); try { sessionStorage.setItem('karaokeVid', id); } catch (e) {} }
+  const id = deviceId('online');       // one id per device, so ten tabs count as one person online
   function show(d) {
     const n = d.online || 0; if (!n) { box.hidden = true; return; }
     let t = n + (n === 1 ? ' person' : ' people') + ' online now';
@@ -16,5 +15,5 @@
     } catch (e) { box.hidden = true; }
   }
   ping(); setInterval(ping, 20000);
-  addEventListener('pagehide', () => { try { navigator.sendBeacon('/api/online', JSON.stringify({ id, leave: true })); } catch (e) {} });
+  // (no "leave" message on close: other tabs of this device may still be open, and the entry expires by itself a few seconds later)
 })();

@@ -63,6 +63,22 @@ function markDupes() {
     btn.disabled = d || btn.dataset.busy === '1'; btn.textContent = d ? '✓ Already queued' : label; btn.title = d ? 'This song is already in the queue (or playing now)' : '';
   });
 }
+// Adds a song to the queue (own queue in a room, the shared device queue in solo). Used by the search results and by My songs.
+async function addSong(s, singer, btn) {
+    const song = { videoId: s.videoId, title: s.title, artist: s.artist, duration: s.duration };
+    if (dupeOf(song)) { markDupes(); say('“' + s.title + '” is already in the queue, so it was not added again.'); return false; }
+    let note = '';
+    if (prefs.kar) {      // swap in a karaoke (instrumental) video; the lyrics still come from the original song
+      if (btn) { btn.disabled = true; btn.dataset.busy = '1'; } say('Finding a karaoke version of ' + s.title + '…');
+      const kv = await findKaraoke(song);
+      if (kv) { song.kv = kv; note = ' (karaoke version)'; }
+      else note = kv === null ? ' ⚠ no karaoke version found, so the ORIGINAL (with the singer) will play. Press “🎤 Find karaoke” on it in the queue to try again.' : ' ⚠ could not look for a karaoke version, so the original will play. Press “🎤 Find karaoke” on it in the queue to try again.';
+      if (btn) { btn.disabled = false; btn.dataset.busy = ''; }
+      if (dupeOf(song)) { markDupes(); say('“' + s.title + '” was just added by someone else, so it was not added again.'); return false; }   // queued while the karaoke lookup ran
+    }
+    if (room.on) { roomOp({ op: 'qadd', song }); say('Queued: ' + s.title + note); return true; }
+    queue.push({ song, singer, file: null }); renderQueue(); say('Queued: ' + s.title + note); return true;
+}
 async function search() {
   const q = $('#q').value.trim(); if (q.length < 2) return; badgeQ.length = 0; dupeBtns.length = 0; stopPreview();
   say('Searching…');
@@ -81,24 +97,12 @@ async function search() {
       }
       const bd = el('span', 'checking lyrics…', 'bdg'); info.firstChild.appendChild(bd); badgeQ.push([s, bd]); runBadges();
       const add = el('button', room.on ? 'Add to my queue' : 'Add to queue');
-      add.onclick = async () => {
-        const song = { videoId: s.videoId, title: s.title, artist: s.artist, duration: s.duration }, singer = sel ? sel.value : '';
-        if (dupeOf(song)) { markDupes(); say('“' + s.title + '” is already in the queue, so it was not added again.'); return; }
-        let note = '';
-        if (prefs.kar) {      // swap in a karaoke (instrumental) video; the lyrics still come from the original song
-          add.disabled = true; add.dataset.busy = '1'; say('Finding a karaoke version of ' + s.title + '…');
-          const kv = await findKaraoke(song);
-          if (kv) { song.kv = kv; note = ' (karaoke version)'; }
-          else note = kv === null ? ' ⚠ no karaoke version found, so the ORIGINAL (with the singer) will play. Press “🎤 Find karaoke” on it in the queue to try again.' : ' ⚠ could not look for a karaoke version, so the original will play. Press “🎤 Find karaoke” on it in the queue to try again.';
-          add.disabled = false; add.dataset.busy = '';
-          if (dupeOf(song)) { markDupes(); say('“' + s.title + '” was just added by someone else, so it was not added again.'); return; }   // queued while the karaoke lookup ran
-        }
-        if (room.on) { roomOp({ op: 'qadd', song }); say('Queued: ' + s.title + note); return; }
-        queue.push({ song, singer, file: null }); renderQueue(); say('Queued: ' + s.title + note);
-      };
+      add.onclick = () => addSong(s, sel ? sel.value : '', add);
       dupeBtns.push([song0(s), add, add.textContent]);
       const pv = el('button', '▶ Preview', 'ghost pvbtn'); pv.type = 'button'; pv.title = 'Listen to a 30 second clip to check it is the right song'; pv.onclick = () => startPreview(s, pv, row);
-      const acts = el('div', null, 'pvact'); acts.append(pv, add);
+      const fb = el('button', Mine.isFav(s.videoId) ? '★' : '☆', 'ghost favbtn'); fb.type = 'button'; fb.title = 'Save to My songs (favourites)'; fb.setAttribute('aria-label', 'Favourite ' + s.title); fb.setAttribute('aria-pressed', String(Mine.isFav(s.videoId)));
+      fb.onclick = () => { const on = Mine.toggleFav(song0(s)); fb.textContent = on ? '★' : '☆'; fb.setAttribute('aria-pressed', String(on)); };
+      const acts = el('div', null, 'pvact'); acts.append(fb, pv, add);
       row.append(...(sel ? [info, sel, acts] : [info, acts])); box.appendChild(row);
     });
     markDupes(); say('Pick a song to add to the queue.');

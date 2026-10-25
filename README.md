@@ -167,8 +167,15 @@ The timed lyrics match the original recording, and a karaoke track usually has a
 | `TRUST_PROXY` | `1` reads the visitor address from the proxy (`CF-Connecting-IP`). On by default on Render. |
 | `RATE_SCALE` | Multiplies every rate limit (`2` = twice as generous, `0.5` = half). Limits only cover search, lyric timing, chat, joining rooms, playlists and romanizing, and are set well above normal use. |
 | `MAX_ROOMS`, `MAX_ROOM_CLIENTS` | Caps on open rooms (default 400) and people per room (default 40). |
+| `MAX_PER_IP` | Most people from one network address inside one room (default 10, `0` = no limit). A party on one Wi-Fi is fine; this stops one person flooding a room from many windows. |
 | `CSP` | `on` (default), `report` (log problems without blocking) or `off`. If something from a new site stops loading, try `report` first, then add that site to `csp_value()` in `server.py`. |
 | `JUDGE_LIMIT` | Optional cap on judge comments per visitor per 10 minutes (default: no limit). |
 
 The server sends compressed files with ETags (a page reload re-downloads nothing that has not changed), keeps connections open, and sets security headers. Lyric-timing fixes are shared by everyone, so the value people see is the median of the latest fixes from different visitors; one visitor cannot overwrite it. On Render, start with `python server.py` and add your variables under Environment.
+
+### One seat per device, and My songs
+Each browser makes a random secret once (`karaokeDev` in localStorage). The ids the server sees are one-way hashes of it, one per room, so every tab of one browser is the same person in a room: opening the room in a second tab moves the seat to the new tab and tells the old one to stop. A private window, another browser or cleared site data counts as a new device (there are no accounts), which is what `MAX_PER_IP` is for. "⭐ My songs" (favourites, history, most sung) is stored in the same browser (`karaokeFavs`, `karaokeHist`) and never sent to the server.
+
+### The 3D look
+`css/depth.css` and `js/tilt.js` add the depth on top of the normal design. Three tiers: **PC** (mouse, window 900px or wider, normal mode) gets tilting cards, raised keycap buttons, receding lyrics and a drifting background; **tablets and phones** get static layered shadows, pressed-button feedback and a phone layout that fits the song, score and controls on one screen; **Smooth mode** (Settings, or chosen automatically on slow devices) and "reduce motion" remove the movement. To tone the PC effect down, lower `MAX` in `js/tilt.js` (tilt degrees) or delete the `.lact` rules in `depth.css`.
 

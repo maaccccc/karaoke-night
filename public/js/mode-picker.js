@@ -21,7 +21,7 @@ function renderPick() {
   }
   if (two) others.forEach(p => {
     const on = pkSel.ops.includes(p.name), b = el('button', '', 'ghost' + (on ? ' on' : '')); b.type = 'button';
-    const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888'; decorAv(av, p.av);
+    const av = el('span', (p.av || {}).e || '🎤', 'av'); av.style.background = (p.av || {}).c || '#888';
     b.append(av, el('span', (on && multi ? '✓ ' : '') + p.name));
     b.onclick = () => { pkSel.ops = multi ? (on ? pkSel.ops.filter(n => n !== p.name) : pkSel.ops.concat(p.name)) : [p.name]; renderPick(); }; pl.appendChild(b);
   });
@@ -204,7 +204,7 @@ $('#roomBtn').onclick = async () => {
 addEventListener('pagehide', e => {
   if (!room.on) return;
   try { const l = JSON.parse(localStorage.getItem('karaokeLast') || 'null'); if (l) { l.t = Date.now(); localStorage.setItem('karaokeLast', JSON.stringify(l)); } } catch (x) {}
-  if (!e.persisted) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id }));
+  if (!e.persisted) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB }));
 });
 {
   const qs = new URLSearchParams(location.search); let nm = '';
@@ -234,7 +234,7 @@ addEventListener('pagehide', e => {
         const l = JSON.parse(localStorage.getItem('karaokeLast') || 'null');
         if (l && l.code && Date.now() - l.t < 12 * 3600 * 1000 && (!inv || inv === l.code)) {
           sr = l.code; sessionStorage.setItem('karaokeRoom', l.code);
-          if (l.id) sessionStorage.setItem('karaokeId', l.id); if (l.key) sessionStorage.setItem('karaokeKey', l.key);   // same person, same host key
+          // (the room id comes from the device and the room key from localStorage, so nothing else needs restoring)
         }
       } catch (e) {}
     }
@@ -246,7 +246,7 @@ addEventListener('pagehide', e => {
   $('#lMicBtn').onclick = () => openMicTest();
   $('#homeBtn').onclick = () => {
     if (!confirm(room.on ? 'Leave the room and go back to the home page?' : 'Go back to the home page? Your queue on this device will be cleared.')) return;
-    try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id })); sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
+    try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB })); sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
     location.href = location.pathname;
   };
   $('#rName').onkeydown = e => { if (e.key === 'Enter') go(!$('#rCode').value.trim()); };

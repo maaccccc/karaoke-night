@@ -683,20 +683,26 @@ def room_prune():
         if not r['clients'] and now - r['empty'] > 600:
             del ROOMS[code]
 
-def room_join(code, cid, name, av=None, vis=None, key=None):
+def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip=''):
     with RLOCK:
         room_prune()
         if code not in ROOMS and len(ROOMS) >= MAX_ROOMS: raise RuntimeError('The server is busy right now. Please try again in a few minutes.')
         r = ROOMS.setdefault(code, {'code': code, 'public': vis == 'public', 'timer': None, 'clients': {}, 'queue': [], 'chat': [], 'hist': [], 'sung': {}, 'turn': 0, 'tv': {}, 'scores': {}, 'now': None, 'ready': None, 'pick': None, 'nid': 0, 'empty': time.time(), 'host': cid, 'bans': [], 'kicked': {}})
         r.setdefault('bans', []); r.setdefault('kicked', {})
         if cid not in r['clients'] and len(r['clients']) >= MAX_ROOM_CLIENTS: raise RuntimeError('This room is full.')
+        if MAX_PER_IP and ip and cid not in r['clients']:
+            same = sum(1 for i, c in r['clients'].items() if c.get('ip') == ip and not c.get('leaving') and time.time() - c['seen'] < 25)
+            if same >= MAX_PER_IP: raise RuntimeError('Too many people are joining this room from the same network.')
         for b in r['bans']:
             if b['id'] == cid or b['name'].lower() == name.lower():
                 raise RuntimeError('You have been banned from this room by the host.')
         r['kicked'].pop(cid, None)           # joining on purpose again (a plain kick only removes you)
         cur = r['clients'].get(cid)
         if cur and not cur.get('leaving') and time.time() - cur['seen'] < 25 and key != cur.get('key'):
-            raise RuntimeError('That seat is already in use.')   # someone else cannot take over your seat (or the host role) by copying your id
+            raise RuntimeError('You are already in this room (another tab, or someone else is using this seat). Close the other one, or try again in a few seconds.')   # nobody can take your seat (or the host role) by copying your id
+        if cur and tab and cur.get('tab') and cur['tab'] != tab:
+            try: cur['q'].put({'type': 'replaced'})      # same device, newer tab wins: the older tab is told to stop instead of both fighting over one seat
+            except Exception: pass
         inherit = None
         # same person coming back (refresh / new tab id): take over their old seat by name
         for i, c in list(r['clients'].items()):
@@ -711,7 +717,7 @@ def room_join(code, cid, name, av=None, vis=None, key=None):
             name = '%s %d' % (base[:17], n); n += 1
         old = r['clients'].get(cid)
         mykey = os.urandom(8).hex()
-        r['clients'][cid] = {'name': name, 'key': mykey, 'q': _queue.Queue(), 'seen': time.time(), 'mic': (old or {}).get('mic') or inherit or 'untested',
+        r['clients'][cid] = {'name': name, 'key': mykey, 'tab': tab, 'ip': ip, 'q': _queue.Queue(), 'seen': time.time(), 'mic': (old or {}).get('mic') or inherit or 'untested',
                                 'av': clean_av(av) if av else (old or {}).get('av') or clean_av(None)}
         r['scores'].setdefault(name, 0)
         if r.get('host') not in r['clients']: r['host'] = cid
@@ -731,20 +737,21 @@ def room_join(code, cid, name, av=None, vis=None, key=None):
             r['clients'][cid]['q'].put({'type': 'live', 'item': sm['item'], 'sids': sm['sids'], 'seed': sm['seed'], 'at': nw.get('at', 0), 'prep': not nw.get('went')})
         return {'id': cid, 'name': name, 'key': mykey, 'now': int(time.time() * 1000)}
 
-def room_leave(code, cid):
+def room_leave(code, cid, tab=''):
     with RLOCK:
         r = ROOMS.get(code)
-        if r and cid in r['clients']:
+        if r and cid in r['clients'] and not (tab and r['clients'][cid].get('tab') and r['clients'][cid]['tab'] != tab):   # a replaced tab closing must not remove the new one
             r['clients'][cid]['leaving'] = time.time(); room_push(r, room_state(r))   # dropped after GRACE seconds
             maybe_go(r)
 
-def room_poll(code, cid, wait=20):
+def room_poll(code, cid, wait=20, tab=''):
     with RLOCK:
         room_prune()
         r = ROOMS.get(code); c = r and r['clients'].get(cid)
         if not c:
             k = r and r.get('kicked', {}).get(cid)
             return [{'type': 'kicked', 'ban': k['ban']}] if k else None
+        if tab and c.get('tab') and c['tab'] != tab: return [{'type': 'replaced'}]
         c['seen'] = time.time(); c.pop('leaving', None); q = c['q']
     msgs = []
     try:
@@ -758,12 +765,13 @@ def room_poll(code, cid, wait=20):
             ROOMS[code]['clients'][cid]['seen'] = time.time()
     return msgs
 
-def room_send(code, cid, typ, data, to=None):
+def room_send(code, cid, typ, data, to=None, tab=''):
     """Handle one action from a room member. Returns an optional message for that person."""
     with RLOCK:
         r = ROOMS.get(code); me = r and r['clients'].get(cid)
         if not me:
             raise RuntimeError('You are not in the room any more. Reload the page.')
+        if tab and me.get('tab') and me['tab'] != tab: raise RuntimeError('This room was opened in another tab on this device. Use that tab.')
         me['seen'] = time.time()
         if typ == 'rtc':                       # relay WebRTC signalling to one person
             if to in r['clients']:
@@ -1181,6 +1189,7 @@ BEHIND_PROXY = os.getenv('TRUST_PROXY', '1' if os.getenv('RENDER') else '0') == 
 RATE_SCALE = float(os.getenv('RATE_SCALE', '1') or 1)
 MAX_ROOMS = int(os.getenv('MAX_ROOMS', '400'))
 MAX_ROOM_CLIENTS = int(os.getenv('MAX_ROOM_CLIENTS', '40'))
+MAX_PER_IP = int(os.getenv('MAX_PER_IP', '10'))      # people from one network address in one room (0 = no limit). A party on one Wi-Fi is fine; a flood is not.
 CSP_MODE = os.getenv('CSP', 'on').lower()
 # bucket: (requests allowed, per this many seconds), counted per visitor address. Only abuse-prone routes are limited, set well above normal
 # use (a whole family on one Wi-Fi shares an address). Live room polling is deliberately not limited.
@@ -1323,7 +1332,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/room/time':
                 return self.send_json(200, {'now': int(time.time() * 1000)})
             if u.path == '/api/room/poll':
-                msgs = room_poll(clean_code(q.get('room', [''])[0]), clean_id(q.get('id', [''])[0]))
+                msgs = room_poll(clean_code(q.get('room', [''])[0]), clean_id(q.get('id', [''])[0]), tab=clean_id(q.get('tab', [''])[0]))
                 return self.send_json(410, {'error': 'gone'}) if msgs is None else self.send_json(200, {'msgs': msgs})
             if u.path == '/api/haslyrics':
                 g = lambda k: q.get(k, [''])[0]
@@ -1372,13 +1381,13 @@ class Handler(BaseHTTPRequestHandler):
                     raise RuntimeError('Enter a room code.')
                 check_name(data.get('name'))
                 if data.get('vis') == 'public' and is_blocked(code): raise RuntimeError("That room code isn't allowed.")
-                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis'), data.get('key')))
+                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis'), data.get('key'), clean_id(data.get('tab')), self.client_ip()))
             if u.path == '/api/room/leave':
-                room_leave(clean_code(data.get('room')), clean_id(data.get('id')))
+                room_leave(clean_code(data.get('room')), clean_id(data.get('id')), clean_id(data.get('tab')))
                 return self.send_json(200, {'ok': True})
             if u.path == '/api/room/send':
                 msg = room_send(clean_code(data.get('room')), clean_id(data.get('id')), str(data.get('type')),
-                                data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None)
+                                data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None, clean_id(data.get('tab')))
                 return self.send_json(200, {'ok': True, 'msg': msg})
             if u.path == '/api/judge':
                 return self.send_json(200, judge_comment(data, self.client_ip()))
