@@ -140,3 +140,5 @@ body:not(.instage) #upNext{display:none}
 #prefs details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:4px}
 #prefs details>.grp:last-child{margin-bottom:14px}
 #prefs .grp>label>input[type=checkbox]{flex:none}
+
+.top h1{display:flex;align-items:center;gap:10px}.top h1 .logo{width:34px;height:34px;flex:none;filter:drop-shadow(0 2px 8px rgba(255,61,139,.45))}
