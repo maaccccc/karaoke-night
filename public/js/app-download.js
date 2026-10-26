@@ -8,7 +8,7 @@
   try { if (localStorage.getItem('knDlHidden') === '1') return; } catch (e) {}
 
   var wrap = document.createElement('div'); wrap.id = 'appDl';
-  var a = document.createElement('a'); a.href = 'download.html';
+  var a = document.createElement('a'); a.href = '/download';
   a.innerHTML = '<span aria-hidden="true">⬇</span> Download the app'; a.title = 'Download Karaoke Night';
   var x = document.createElement('button'); x.type = 'button'; x.className = 'ghost'; x.textContent = '×'; x.setAttribute('aria-label', 'Hide the download button'); x.title = 'Hide';
   x.onclick = function () { wrap.remove(); try { localStorage.setItem('knDlHidden', '1'); } catch (e) {} };

@@ -1304,6 +1304,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
 
     def serve_static(self, u):
+        if u.path == '/download': u = u._replace(path='/download.html')      # clean address: /download instead of /download.html
         page = u.path in ('/', '/index.html')
         if page:
             path = find_page()
