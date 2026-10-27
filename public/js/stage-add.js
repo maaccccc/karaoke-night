@@ -17,16 +17,17 @@
   }
   const stageOn = () => { const s = document.getElementById('stage'); return !!s && s.style.display !== 'none'; };
   function open() {
-    build(); panel.hidden = false; document.body.classList.add('apOpen'); refresh(); input.focus();
+    build(); const sd = document.getElementById('side'); if (sd) sd.classList.remove('open');   // on phones the lobby drawer would cover the panel
+    panel.hidden = false; document.body.classList.add('apOpen'); refresh(); input.focus();
     clearInterval(tick); tick = setInterval(() => { if (!stageOn()) { close(); return; } refresh(); }, 1000);
   }
   function close() {
     if (!panel || panel.hidden) return;
     panel.hidden = true; document.body.classList.remove('apOpen'); clearInterval(tick); clearTimeout(timer); if (ctl) ctl.abort();
-    const b = document.getElementById('addBtn'); if (b) b.focus();
+    const b = [...document.querySelectorAll('.addSongsBtn')].find(x => x.offsetParent); if (b) b.focus();
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && panel && !panel.hidden) close(); });   // Esc when focus is outside the panel (the Add button disables itself after a click)
-  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#addBtn'); if (!b) return; if (panel && !panel.hidden) close(); else open(); });
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.addSongsBtn'); if (!b) return; if (panel && !panel.hidden) close(); else open(); });
   function refresh() {          // the queue summary, and which results are already queued
     const n = queue.length;
     qBox.textContent = n ? 'Queue (' + n + '): ' + queue.slice(0, 4).map((it, i) => (i + 1) + '. ' + it.song.title + (it.singer ? ' · ' + it.singer : '')).join('   ') + (n > 4 ? '   …' : '') : 'Nothing queued yet.';

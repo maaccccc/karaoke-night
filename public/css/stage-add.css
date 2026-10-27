@@ -12,3 +12,5 @@
 #addPanel .apInfo small{display:block;opacity:.75;overflow-wrap:anywhere}
 #addPanel .apRow button{white-space:nowrap}
 body.fs #addPanel{top:calc(14px + env(safe-area-inset-top,0px))}
+.addSongsBtn{width:100%;margin:2px 0 10px}
+body:not(.instage) .addSongsBtn{display:none}   /* only offered while a song is on stage, not in the lobby */
