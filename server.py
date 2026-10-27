@@ -895,7 +895,7 @@ def room_send(code, cid, typ, data, to=None, tab=''):
                 else:
                     sv['ids'].add(cid)
                     if not skip_check(r):
-                        room_push(r, {'type': 'notice', 'text': me['name'] + ' voted to skip (' + str(len(skip_votes(r))) + '/' + str(skip_need(r)) + ').'})
+                        room_push(r, {'type': 'notice', 'text': me['name'] + ' voted to skip this song (' + str(len(skip_votes(r))) + '/' + str(skip_need(r)) + ').'})
         elif op == 'tvote':        # vote for the stage look during the ready check (only when the singer chose "Room votes")
             rd = r['ready']
             if rd and time.time() < rd['until'] and rd['item'].get('theme') == 'vote' and data.get('t') in THEMES_PICK:

@@ -1,5 +1,17 @@
 // the themed confirm/alert boxes come from dialog.js; if that file is not installed, fall back to the browser's own boxes
 if (!window.kConfirm) { window.kConfirm = async m => window.confirm(m); window.kAlert = async m => { window.alert(m); }; }
+// A message from the room ("Sam voted to skip this song", "Sam is now the host"...) is also shown over the stage, because the home page text is hidden while a song plays.
+let roomToastEl = null, roomToastT = 0;
+function roomToast(text) {
+  if (!document.body.classList.contains('instage') || !text) return;
+  if (!roomToastEl) {
+    roomToastEl = document.createElement('div'); roomToastEl.setAttribute('role', 'status'); roomToastEl.setAttribute('aria-live', 'polite');
+    roomToastEl.style.cssText = 'position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:96;max-width:min(92vw,460px);padding:10px 16px;border-radius:14px;background:rgba(21,10,34,.95);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:.95rem;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s';
+    document.body.appendChild(roomToastEl);
+  }
+  roomToastEl.textContent = (/voted to skip/i.test(text) ? '🗳 ' : '') + text; roomToastEl.style.opacity = '1';
+  clearTimeout(roomToastT); roomToastT = setTimeout(() => { roomToastEl.style.opacity = '0'; }, 5000);
+}
 // Public / Private choice for newly created rooms. Lives here (not in lobbies.js) so Create a room always works.
 let roomVis = 'private';
 try { if (localStorage.getItem('karaokeVis') === 'public') roomVis = 'public'; } catch (e) {}
@@ -84,7 +96,7 @@ function handleMsg(m) {
   if (m.type === 'state') applyState(m);
   else if (m.type === 'kicked') kickedOut(m.ban);
   else if (m.type === 'replaced') replacedOut();
-  else if (m.type === 'notice') say(m.text);
+  else if (m.type === 'notice') { say(m.text); roomToast(m.text); }
   else if (m.type === 'shift') { if (room.live) room.live.at = m.at; if (room.startAt) { room.startAt = m.at; lastSeek = 0; } }   // a singer skipped the intro: the shared clock moved forward, the sync loop seeks every video
   else if (m.type === 'pick') showPick(m);
   else if (m.type === 'pickcancel') { hidePick(); nextStop(); say(m.reason || 'The start was cancelled.'); }
