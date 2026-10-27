@@ -1,3 +1,5 @@
+// the themed confirm/alert boxes come from dialog.js; if that file is not installed, fall back to the browser's own boxes
+if (!window.kConfirm) { window.kConfirm = async m => window.confirm(m); window.kAlert = async m => { window.alert(m); }; }
 // Public / Private choice for newly created rooms. Lives here (not in lobbies.js) so Create a room always works.
 let roomVis = 'private';
 try { if (localStorage.getItem('karaokeVis') === 'public') roomVis = 'public'; } catch (e) {}

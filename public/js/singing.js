@@ -96,16 +96,37 @@ $('#rstTiming').onclick = () => {
   offset = 0; $('#off').textContent = '0.0s'; setScale(autoScale, false); anchor = null; force = true; shareTimingSoon();
   $('#markHint').textContent = 'Timing reset. If the lyrics are still off, click a line and press Mark when you hear it.';
 };
-[['s5', .5], ['s1', .1], ['l1', -.1], ['l5', -.5]].forEach(([id, d]) => $('#' + id).onclick = () => setOffset(offset + d));
+// Learning from nudges: once the lyrics were nudged into line, that moment is a fact ("at video time T the lyric time L is right").
+// Two such moments 45+ s apart give both the shift AND the speed of this track (a karaoke version is a different recording), so drift is fixed without the Mark routine.
+let fixPts = [], fixPend = null, fixTimer = 0;
+function toastMsg(txt) {
+  let tt = $('#syncToast'); if (!tt) { tt = el('div'); tt.id = 'syncToast'; tt.setAttribute('role', 'status'); document.body.appendChild(tt); }
+  tt.textContent = txt; tt.classList.add('show'); clearTimeout(nudgeT); nudgeT = setTimeout(() => tt.classList.remove('show'), 2600);
+}
+function learnFix(p) {
+  if (fixPts.length && Math.abs(p.T - fixPts[fixPts.length - 1].T) < 20) fixPts[fixPts.length - 1] = p; else fixPts.push(p);   // nudging again soon after refines the same moment
+  if (fixPts.length > 4) fixPts.shift();
+  const a = fixPts[0], b = fixPts[fixPts.length - 1];
+  if (fixPts.length < 2 || b.T - a.T < 45 || b.L - a.L <= 0) return;
+  const k = (b.T - a.T) / (b.L - a.L);
+  if (!(k > .88 && k < 1.12) || Math.abs(k - scale) < .003) return;
+  setScale(k); setOffset(k * b.L - b.T - tweak()); force = true;
+  toastMsg('Learned from your nudges: lyrics speed ' + (k >= 1 ? '+' : '') + ((k - 1) * 100).toFixed(1) + '%, saved for this track.');
+}
+function nudge(d) {
+  setOffset(offset + d);
+  if (!active || !lines.length || !isPlay()) return;
+  const T = getT(); fixPend = { T, L: (T + offset + tweak()) / scale };
+  clearTimeout(fixTimer); fixTimer = setTimeout(() => { const p = fixPend; fixPend = null; if (p && active) learnFix(p); }, 4000);   // 4 s without nudging = it is right now
+}
+[['s5', .5], ['s1', .1], ['l1', -.1], ['l5', -.5]].forEach(([id, d]) => $('#' + id).onclick = () => nudge(d));
 let nudgeT = 0;
 addEventListener('keydown', e => {          // [ = lyrics sooner, ] = lyrics later; Shift = bigger steps
   if (!active || e.ctrlKey || e.metaKey || e.altKey || (e.key !== '[' && e.key !== ']' && e.key !== '{' && e.key !== '}')) return;
   const t = e.target; if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
   e.preventDefault(); const sooner = e.key === '[' || e.key === '{', step = e.shiftKey || e.key === '{' || e.key === '}' ? .5 : .1;
-  setOffset(offset + (sooner ? step : -step));
-  let tt = $('#syncToast'); if (!tt) { tt = el('div'); tt.id = 'syncToast'; tt.setAttribute('role', 'status'); document.body.appendChild(tt); }
-  tt.textContent = 'Lyrics ' + step.toFixed(1) + 's ' + (sooner ? 'sooner' : 'later') + ' (shift ' + (offset > 0 ? '+' : '') + offset.toFixed(1) + 's)'; tt.classList.add('show');
-  clearTimeout(nudgeT); nudgeT = setTimeout(() => tt.classList.remove('show'), 1400);
+  nudge(sooner ? step : -step);
+  toastMsg('Lyrics ' + step.toFixed(1) + 's ' + (sooner ? 'sooner' : 'later') + ' (shift ' + (offset > 0 ? '+' : '') + offset.toFixed(1) + 's)');
 });
 
 function setScale(v, save = true) {
@@ -184,6 +205,7 @@ $('#ver').onchange = async () => {
   } catch (e) { say('Could not switch lyrics: ' + e.message); }
 };
 async function runSong() {
+  fixPts = []; fixPend = null; clearTimeout(fixTimer);      // forget the nudge moments of the previous song
   $('#home').style.display = 'none'; $('#stage').style.display = 'block'; $('#rate').style.display = 'none'; document.body.classList.add('instage');
   $('#now').textContent = whoTxt(current) + (current.singer2 ? ' are singing' : ' is singing') + ': ' + current.song.title + (current.mode && current.mode !== 'solo' ? ' (' + modeName[current.mode] + ')' : ''); $('#liveScore').textContent = '0';
   const box = $('#lyrics'); box.textContent = '';
@@ -205,7 +227,7 @@ async function runSong() {
   if (shared) { saved = shared.o; sv = shared.s; }
   setOffset(saved, false);
   if (shared) $('#markHint').textContent = 'Using the lyric timing that was already fixed for this track (shift ' + saved.toFixed(1) + 's).' + (isSinger() ? ' Nudge it with Sooner / Later or Mark if it is still off; the fix is kept for everyone.' : '');
-  else if (current.song.kv) $('#markHint').textContent = 'First time with this karaoke track: if the lyrics are early or late, click the first lyric line and press Mark when you hear it begin. The fix is saved for everyone.';
+  else if (current.song.kv) $('#markHint').textContent = 'First time with this karaoke track: if the lyrics are early or late, press [ or ] to nudge them (Shift = bigger steps). Fix it once near the start and once about a minute later and the app learns the track’s speed too. The fix is saved for everyone.';
   else if (Math.abs(saved) >= 2) $('#markHint').textContent = 'This song still has a saved timing shift of ' + saved.toFixed(1) + 's from an earlier try. Press Reset timing if the lyrics do not match.';
   setScale(isNaN(sv) ? autoScale : sv, false); loadVersions();
 
