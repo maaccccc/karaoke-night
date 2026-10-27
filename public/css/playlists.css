@@ -1,0 +1,5 @@
+/* Playlists tab inside "My songs" (js/mysongs.js) */
+#mysongs .plbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px}
+#mysongs .plbar h3{margin:0;flex:1;min-width:120px;font-size:1.05rem;overflow-wrap:anywhere}
+#mysongs .plnew{margin:6px 0 10px}
+.plbtn{color:var(--ink)!important;text-shadow:none!important}

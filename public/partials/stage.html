@@ -2,6 +2,7 @@
   <div id="nowRow"><h2 id="now"></h2><button class="ghost icon" id="fsBtn" title="Fullscreen lyrics (F)" aria-label="Fullscreen lyrics">⛶ Fullscreen</button></div>
   <div id="avStage"></div>
   <div id="lyCountWrap" aria-hidden="true"><div id="lyCount"><span id="lyLbl"></span><b id="lyNum"></b><span id="lyDots"></span></div></div>
+  <div id="skipWrap"><button type="button" class="ghost" id="skipIntro" style="display:none">⏭ Skip intro</button></div>
   <div id="lyrics" aria-live="polite"></div>
   <div class="live"><span class="note">Live score</span><span id="combo"></span><span id="liveScore">0</span></div>
   <div class="vu" id="vu" role="img" aria-label="Microphone volume meter"></div>
@@ -21,7 +22,7 @@
     <audio id="rv" autoplay playsinline></audio>
     <div class="row" id="tmRow"><span class="note">Lyrics timing:</span><button class="ghost" id="s5">Sooner 0.5s</button><button class="ghost" id="s1">Sooner 0.1s</button><button class="ghost" id="l1">Later 0.1s</button><button class="ghost" id="l5">Later 0.5s</button><b id="off">0.0s</b><button class="ghost" id="rstTiming">Reset timing</button></div>
     <div class="row"><button id="syncNow">First line starts now</button><button class="ghost" id="markBtn">Mark picked line</button></div>
-    <div class="note" id="markHint">Click a lyric line, then press Mark the moment you hear it start. Mark a second line near the end to fix drift too.</div>
+    <div class="note" id="markHint">Tip: press [ or ] during a song to move the lyrics 0.1s sooner or later (Shift = 0.5s). Or click a lyric line, then press Mark the moment you hear it start. Mark a second line near the end to fix drift too.</div>
     <div class="note" id="clock"></div>
     <div class="row"><label for="spd" class="note">Lyrics stretch</label><input type="range" id="spd" min="0.88" max="1.12" step="0.002" value="1" style="width:200px"><b id="spdv">0.0%</b><button class="ghost" id="spdAuto">Auto</button></div>
     <div class="row"><label for="ver" class="note">Lyrics version</label><select id="ver" style="max-width:100%"><option value="">Loading versions…</option></select></div>

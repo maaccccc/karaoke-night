@@ -14,3 +14,12 @@
 @keyframes lyIn{from{opacity:0}}
 body.fs #stage>#lyCountWrap{display:block;flex:none}   /* fullscreen.css hides every other stage child */
 @media (prefers-reduced-motion:reduce){#lyNum,#lyCount.wait #lyLbl,#lyCount.show{animation:none}}
+
+/* "Skip intro" button (js/singing.js): floats at the top of the lyrics area, also in fullscreen */
+#skipWrap{position:relative;height:0;z-index:5}
+#skipIntro{position:absolute;left:50%;top:10px;transform:translateX(-50%);white-space:nowrap;backdrop-filter:blur(6px);background:rgba(21,10,34,.75)}
+body.fs #stage>#skipWrap{display:block;flex:none}
+
+/* small message when the lyrics are nudged with [ and ] (js/singing.js) */
+#syncToast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:95;padding:8px 14px;border-radius:999px;background:rgba(21,10,34,.92);border:1px solid var(--line);color:var(--ink);font-size:.85rem;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
+#syncToast.show{opacity:1;transform:translate(-50%,0)}

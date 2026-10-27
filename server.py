@@ -612,6 +612,8 @@ AUTO_DELAY = 8   # seconds between songs before the next one starts by itself
 
 PREP_MAX = 15      # seconds to wait for slow devices to finish loading before starting anyway
 GO_DELAY = 4000    # milliseconds of on-screen countdown once everybody is loaded
+PREP_TARGET = 9000   # a song whose first lyric line comes at once gets a longer countdown, so there are about this many ms between "go" and the first line
+PREP_EXTRA_MAX = 5000   # ...but never more than this much extra
 
 def maybe_go(r, force=False):
     """Everyone has loaded the lyrics and the video (or we ran out of patience): start the countdown for all at once."""
@@ -623,7 +625,11 @@ def maybe_go(r, force=False):
         nw['went'] = True
         if nw.get('prep_t'):
             nw['prep_t'].cancel()
-        nw['at'] = int(time.time() * 1000) + GO_DELAY      # remembered, so someone who joins mid-song can sync to the same clock
+        try:
+            extra = int(max(0, min(PREP_EXTRA_MAX, PREP_TARGET - GO_DELAY - float(nw.get('first', 99)) * 1000)))
+        except (TypeError, ValueError):
+            extra = 0
+        nw['at'] = int(time.time() * 1000) + GO_DELAY + extra      # remembered, so someone who joins mid-song can sync to the same clock
         room_push(r, {'type': 'go', 'at': nw['at']})
 
 def force_go(code, token):
@@ -844,7 +850,28 @@ def room_send(code, cid, typ, data, to=None, tab=''):
         elif op == 'loaded':       # this browser has the lyrics and the video ready
             nw = r['now']
             if nw and not nw.get('went'):
-                nw['loaded'].add(cid); maybe_go(r)
+                nw['loaded'].add(cid)
+                try:       # when the first lyric line is (seconds into the song); the earliest report wins
+                    f = float(data.get('first'))
+                    if 0 <= f < 3600:
+                        nw['first'] = min(nw.get('first', f), f)
+                except (TypeError, ValueError):
+                    pass
+                maybe_go(r)
+            return None
+        elif op == 'skipintro':    # a singer skips a long instrumental intro: move the shared clock forward, every video follows
+            nw = r['now']
+            if not nw or not nw.get('went') or nw.get('skipped') or me['name'] not in nw['singers']:
+                return None
+            try:
+                d = float(data.get('delta'))
+            except (TypeError, ValueError):
+                return None
+            if not (1 <= d <= 900):
+                return None
+            nw['skipped'] = True; nw['at'] -= int(d * 1000)
+            room_push(r, {'type': 'shift', 'at': nw['at']})
+            room_push(r, {'type': 'notice', 'text': me['name'] + ' skipped the intro.'})
             return None
         elif op == 'mic':
             if data.get('mic') in ('untested', 'tested', 'blocked', 'none', 'error'): me['mic'] = data['mic']

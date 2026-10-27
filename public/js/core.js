@@ -45,5 +45,7 @@ $('#devBtn').onclick = () => loadDevices(true);
 
 // Writing a CSS variable on <body> restyles the whole page, so do it only when the value really changed (and never in lite mode).
 const _fv = {};
-function fxVar(name, v, step) { if (document.body.classList.contains('lite')) return; const q = Math.round(v / step) * step; if (_fv[name] !== q) { _fv[name] = q; document.body.style.setProperty(name, q.toFixed(2)); } }
-fxVar.reset = name => { delete _fv[name]; document.body.style.removeProperty(name); };
+const _fvOnly = { '--lights': ['bg', 'bgdim'] };   // variables only the background layers read are set on those layers, so a change does not restyle every element on the page
+const _fvEls = name => { const c = _fvOnly[name]; if (!c) return [document.body]; const o = []; c.forEach(k => { for (const e of document.getElementsByClassName(k)) o.push(e); }); return o; };
+function fxVar(name, v, step) { if (document.body.classList.contains('lite')) return; const q = Math.round(v / step) * step; if (_fv[name] !== q) { _fv[name] = q; const s = q.toFixed(2); _fvEls(name).forEach(e => e.style.setProperty(name, s)); } }
+fxVar.reset = name => { delete _fv[name]; _fvEls(name).forEach(e => e.style.removeProperty(name)); };

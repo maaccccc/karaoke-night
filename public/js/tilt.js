@@ -7,7 +7,7 @@
   addEventListener('pointermove', e => {                         // background parallax, one cheap update per frame
     if (!on() || e.pointerType !== 'mouse') return;
     px = e.clientX / innerWidth - .5; py = e.clientY / innerHeight - .5;
-    if (!raf) raf = requestAnimationFrame(() => { raf = 0; const s = document.documentElement.style; s.setProperty('--px', px.toFixed(3)); s.setProperty('--py', py.toFixed(3)); });
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; const b = document.querySelector('.bg'); if (!b) return; const s = b.style; s.setProperty('--px', px.toFixed(3)); s.setProperty('--py', py.toFixed(3)); });
   }, { passive: true });
   const MAX = 7;                                                  // degrees
   document.querySelectorAll('.lact').forEach(c => {

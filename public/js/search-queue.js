@@ -113,7 +113,9 @@ async function search(force) {
       const pv = el('button', '▶ Preview', 'ghost pvbtn'); pv.type = 'button'; pv.title = 'Listen to a 30 second clip to check it is the right song'; pv.onclick = () => startPreview(s, pv, row);
       const fb = el('button', Mine.isFav(s.videoId) ? '★' : '☆', 'ghost favbtn'); fb.type = 'button'; fb.title = 'Save to My songs (favourites)'; fb.setAttribute('aria-label', 'Favourite ' + s.title); fb.setAttribute('aria-pressed', String(Mine.isFav(s.videoId)));
       fb.onclick = () => { const on = Mine.toggleFav(song0(s)); fb.textContent = on ? '★' : '☆'; fb.setAttribute('aria-pressed', String(on)); };
-      const acts = el('div', null, 'pvact'); acts.append(fb, pv, add);
+      const lb = el('button', '📂', 'ghost favbtn plbtn'); lb.type = 'button'; lb.title = 'Add to a playlist'; lb.setAttribute('aria-label', 'Add ' + s.title + ' to a playlist');
+      lb.onclick = async () => { const n = await Mine.addToPlaylistUI(song0(s)); if (n) say('Added “' + s.title + '” to ' + n + '.'); };
+      const acts = el('div', null, 'pvact'); acts.append(fb, lb, pv, add);
       row.append(...(sel ? [info, sel, acts] : [info, acts])); box.appendChild(row);
     });
     markDupes(); say('Pick a song to add to the queue.');

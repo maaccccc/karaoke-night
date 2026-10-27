@@ -1,6 +1,7 @@
 // ---- singing
 let frames = 0, offset = 0, active = false, lines = [], warn = '';
 let prebuf = false, holding = false, loadedSent = false;   // pre-loading the video silently before the shared start
+const AUTO_STRETCH = false;   // true = stretch the lyrics to the video's length when it differs by 2-12% (drifts when the difference is only extra intro/outro)
 let scale = 1, autoScale = 1, lyricDur = 0, lyricId = null, force = false;
 let getT = () => 0, isPlay = () => false, stopMedia = () => {};
 // Moves the gold fill and the bouncing dot along the line being sung. A long line wraps onto several rows; the fill (CSS, one sliced inline box) runs through
@@ -34,7 +35,10 @@ function calcScale() {      // -> { scale, warn } for the video that will play
     if (lyricDur && pd && Math.abs(pd - lyricDur) > 3) w = ' This karaoke track is ' + Math.round(Math.abs(pd - lyricDur)) + 's ' + (pd > lyricDur ? 'longer' : 'shorter') + ' than the lyrics’ version, so the lyrics may start a little early or late. Click the first lyric line and press Mark when you hear it begin; it is remembered for this track.';
   } else {
     const diff = lyricDur && pd ? pd / lyricDur : 1;
-    if (Math.abs(diff - 1) > .02 && Math.abs(diff - 1) < .12) { sc = diff; w = ' Lyrics were stretched ' + ((diff - 1) * 100).toFixed(1) + '% to fit the song’s speed.'; }
+    if (Math.abs(diff - 1) > .02 && Math.abs(diff - 1) < .12) {
+      if (AUTO_STRETCH) { sc = diff; w = ' Lyrics were stretched ' + ((diff - 1) * 100).toFixed(1) + '% to fit the song’s speed.'; }
+      else w = ' This video is ' + Math.round(Math.abs(pd - lyricDur)) + 's ' + (pd > lyricDur ? 'longer' : 'shorter') + ' than the lyrics’ version (extra intro or outro?). If the lyrics drift during the song, press [ or ] to nudge them, or use Mark on a line near the start and one near the end.';
+    }
     else if (lyricDur && pd && Math.abs(lyricDur - pd) > 3) w = ' These lyrics are for a version ' + Math.round(Math.abs(lyricDur - pd)) + 's different in length. Try another lyrics version below.';
   }
   return { scale: sc, warn: w };
@@ -63,7 +67,7 @@ async function loadAndRun() {
   }
   runSong();
 }
-function loadedOnce() { if (room.on && room.prep && !loadedSent) { loadedSent = true; roomOp({ op: 'loaded' }); } }
+function loadedOnce() { if (room.on && room.prep && !loadedSent) { loadedSent = true; roomOp({ op: 'loaded', first: lines && lines.length ? Math.max(0, +(lines[0].t * scale - offset).toFixed(2)) : 99 }); } }
 // The lyrics are timed to the ORIGINAL recording, so a karaoke track usually needs a shift. Once someone fixes it, the fix is kept on the server
 // for that track (for everybody, every time), and in a room it is sent to everyone live, so each person does not have to fix it on their own.
 const canShareTiming = () => !room.on || isSinger() || room.host === room.id;
@@ -93,6 +97,16 @@ $('#rstTiming').onclick = () => {
   $('#markHint').textContent = 'Timing reset. If the lyrics are still off, click a line and press Mark when you hear it.';
 };
 [['s5', .5], ['s1', .1], ['l1', -.1], ['l5', -.5]].forEach(([id, d]) => $('#' + id).onclick = () => setOffset(offset + d));
+let nudgeT = 0;
+addEventListener('keydown', e => {          // [ = lyrics sooner, ] = lyrics later; Shift = bigger steps
+  if (!active || e.ctrlKey || e.metaKey || e.altKey || (e.key !== '[' && e.key !== ']' && e.key !== '{' && e.key !== '}')) return;
+  const t = e.target; if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  e.preventDefault(); const sooner = e.key === '[' || e.key === '{', step = e.shiftKey || e.key === '{' || e.key === '}' ? .5 : .1;
+  setOffset(offset + (sooner ? step : -step));
+  let tt = $('#syncToast'); if (!tt) { tt = el('div'); tt.id = 'syncToast'; tt.setAttribute('role', 'status'); document.body.appendChild(tt); }
+  tt.textContent = 'Lyrics ' + step.toFixed(1) + 's ' + (sooner ? 'sooner' : 'later') + ' (shift ' + (offset > 0 ? '+' : '') + offset.toFixed(1) + 's)'; tt.classList.add('show');
+  clearTimeout(nudgeT); nudgeT = setTimeout(() => tt.classList.remove('show'), 1400);
+});
 
 function setScale(v, save = true) {
   scale = Math.min(1.12, Math.max(.88, v)); $('#spd').value = scale;
@@ -164,9 +178,9 @@ $('#ver').onchange = async () => {
     const r = await fetch('/api/lyrics?id=' + encodeURIComponent(id)), d = await r.json(); if (!r.ok) throw new Error(d.error);
     const nl = parseLrc(d.lrc); if (!nl.length) throw new Error('that version has no timed lyrics');
     lines = nl; lyricId = id; lyricDur = d.lyricDuration || 0;
-    const cs = calcScale(); autoScale = cs.scale; warn = cs.warn; $('#micNote').textContent = $('#micNote').textContent.replace(/ (Lyrics were stretched|These lyrics are for a version|This karaoke track is).*$/, '') + warn;
+    const cs = calcScale(); autoScale = cs.scale; warn = cs.warn; $('#micNote').textContent = $('#micNote').textContent.replace(/ (Lyrics were stretched|This video is|These lyrics are for a version|This karaoke track is).*$/, '') + warn;
     S.lf = lines.map(() => 0); S.lv = lines.map(() => 0); S.hit = lines.map(() => 0);
-    buildLyrics(); labelTurns(); setScale(autoScale); force = true;
+    buildLyrics(); labelTurns(); try { localStorage.removeItem('spd:' + pvid()); } catch (e) {} setScale(autoScale, false); force = true;
   } catch (e) { say('Could not switch lyrics: ' + e.message); }
 };
 async function runSong() {
@@ -226,12 +240,25 @@ async function runSong() {
     const cv = el('div', null, 'ytcover'); cv.style.backgroundImage = 'url("https://i.ytimg.com/vi/' + encodeURIComponent(current.song.videoId) + '/hqdefault.jpg")';
     cv.append(el('span', '🎤', 'em'), el('b', current.song.title), el('small', current.song.artist)); wrap.appendChild(cv);
   }
+  // A song whose first line comes almost at once gives no time to get ready. Solo: count down first (rooms: the server lengthens the shared countdown).
+  const cin = !room.on && lines.length && lines[0].t * scale - offset - tweak() < 5 ? Math.min(6, Math.max(3, Math.round(7 - (lines[0].t * scale - offset - tweak())))) : 0;
+  const countIn = secs => {
+    const cd = $('#cd'), num = $('#cdNum'), end = performance.now() + secs * 1000;
+    $('#cdWho').textContent = 'Get ready: ' + current.song.title; num.textContent = secs; cd.classList.add('show');
+    const iv = setInterval(() => {
+      const ms = end - performance.now();
+      if (!active) { clearInterval(iv); cd.classList.remove('show'); return; }
+      if (ms <= 0) { clearInterval(iv); num.textContent = '🎤'; try { player.playVideo(); } catch (x) {} setTimeout(() => cd.classList.remove('show'), 700); }
+      else num.textContent = Math.ceil(ms / 1000);
+    }, 100);
+  };
   player = new YT.Player('yt', { width: 200, height: 200, videoId: pvid(),
-    playerVars: { autoplay: (room.on && (room.startAt || room.prep)) ? 0 : 1, playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, origin: location.origin },
+    playerVars: { autoplay: ((room.on && (room.startAt || room.prep)) || cin) ? 0 : 1, playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, origin: location.origin },
     events: {
       onReady: e => {
         try { e.target.setVolume(prefs.vol); } catch (x) {}
-        if (room.on && room.prep) {        // load the video silently now, so it starts the instant everyone is ready
+        if (cin) countIn(cin);
+        else if (room.on && room.prep) {        // load the video silently now, so it starts the instant everyone is ready
           prebuf = true; try { e.target.mute(); } catch (x) {} e.target.playVideo();
           setTimeout(() => { if (prebuf) { prebuf = false; try { e.target.unMute(); } catch (x) {} loadedOnce(); } }, 9000);
         } else if (!(room.on && room.startAt)) e.target.playVideo();
@@ -254,13 +281,20 @@ async function runSong() {
   setTimeout(() => {
     const st = player && player.getPlayerState ? player.getPlayerState() : -1;
     if (active && (!room.on || room.startAt) && st !== 1 && st !== 3) $('#micNote').textContent = 'The video isn’t playing. Use Chrome, Edge, or Brave, or tap Finish early to skip.';
-  }, 8000 + (room.on && room.startAt ? Math.max(0, room.startAt - (Date.now() + room.skew)) : 0));
+  }, 8000 + cin * 1000 + (room.on && room.startAt ? Math.max(0, room.startAt - (Date.now() + room.skew)) : 0));
 
   const endT = () => lines[lines.length - 1].t * scale + 8, fb = new Float32Array(2048);
   const lineEnd = i => Math.min(lines[i + 1] ? lines[i + 1].t * scale : lines[i].t * scale + 4, lines[i].t * scale + 6);
   let last = -1, lvl = 0, peak = 0, pkT = 0, clr = 0, liveT = 0, clkT = 0;
   // Countdown in the lyrics area, so everyone knows when to come in: while the music is starting, before the first line, and after long instrumental breaks.
   const lyC = $('#lyCount'), lyN = $('#lyNum'), lyL = $('#lyLbl'), lyD = $('#lyDots'); let lyKey = '', everPlayed = false;
+  const skipBtn = $('#skipIntro') || { style: {} }; let skShown = false;       // "Skip intro": offered to the singer while a long instrumental intro is playing
+  skipBtn.onclick = () => {
+    const raw = getT(), target = Math.max(0, lines[0].t * scale - offset - tweak() - 4), d = target - raw;   // land 4 s before the first line
+    if (!(d >= 2)) return; skipBtn.style.display = 'none';
+    if (room.on) roomOp({ op: 'skipintro', delta: +d.toFixed(2) });                                          // the room clock moves forward, every video follows
+    else try { player.seekTo(target, true); } catch (e) {}
+  };
   const lyShow = (n, label) => {      // n = whole seconds left (0 = just show the message), label '' = hide
     const key = label ? n + '|' + label : ''; if (key === lyKey) return; lyKey = key;
     if (!label) { lyC.classList.remove('show'); return; }
@@ -269,13 +303,14 @@ async function runSong() {
     lyC.classList.toggle('wait', !n); lyC.classList.remove('show'); void lyC.offsetWidth; lyC.classList.add('show');   // restart the pop animation for every new number
   };
   const tick = now => {
-    if (!active) { lyShow(0, ''); return; }
+    if (!active) { lyShow(0, ''); skipBtn.style.display = 'none'; skShown = false; return; }
     const playing = isPlay(), t = playing ? getT() + offset + tweak() : -1;
     if (playing && current.song.bpm) { const ph = (((getT() - (current.song.lead || 0)) * current.song.bpm / 60) % 1 + 1) % 1; fxVar('--beat', Math.pow(1 - ph, 3), .05); }
     let idx = -1; for (let i = 0; i < lines.length; i++) if (lines[i].t * scale <= t) idx = i;
     gateTurns(t);
     if (now - clkT > 250) {
       clkT = now; const raw = playing ? getT() : 0, first = lines[0].t * scale - offset - tweak();
+      { const sk = playing && idx < 0 && isSinger() && first - raw > 12; if (sk !== skShown) { skShown = sk; skipBtn.style.display = sk ? '' : 'none'; } }
       const pr = $('#prog'); if (pr && playDur()) pr.style.width = Math.min(100, raw / playDur() * 100) + '%';
       $('#clock').textContent = !playing ? 'Waiting for the music to start…'
         : idx < 0 ? 'Song time ' + fmt(raw) + ' · first lyric line at ' + fmt(Math.max(0, first)) + ' (in ' + Math.max(0, Math.round(first - raw)) + 's)'
@@ -289,13 +324,13 @@ async function runSong() {
       lyShow(cn, cl); }
     if (idx !== last || force) { force = false;
       last = idx;
-      lines.forEach((_, i) => { const e = $('#l' + i); e.classList.toggle('now', i === idx); e.classList.toggle('past', i < idx); e.classList.toggle('next', i === idx + 1); });
+      lines.forEach((_, i) => { const e = document.getElementById('l' + i); e.classList.toggle('now', i === idx); e.classList.toggle('past', i < idx); e.classList.toggle('next', i === idx + 1); });
       const d = $('#l' + Math.max(idx, 0)); box.scrollTo({ top: d.offsetTop - box.clientHeight / 2 + d.offsetHeight / 2, behavior: prefs.calm ? 'auto' : 'smooth' });
     }
     if (an && playing) {
       an.getFloatTimeDomainData(fb); let s = 0, mx = 0, dc = 0;
-      for (const v of fb) { dc += v; const a = Math.abs(v); if (a > mx) mx = a; }
-      dc /= fb.length; for (const v of fb) s += (v - dc) * (v - dc);                  // level without the mic's DC offset
+      for (let i = 0; i < fb.length; i++) { const v = fb[i]; dc += v; const a = Math.abs(v); if (a > mx) mx = a; }
+      dc /= fb.length; for (let i = 0; i < fb.length; i++) { const v = fb[i] - dc; s += v * v; }                  // level without the mic's DC offset
       const rms = Math.sqrt(s / fb.length);
       lvl = Math.max(Math.min(1, rms * 5), lvl * .86);
       if (lvl >= peak) { peak = lvl; pkT = now; } else if (now - pkT > 600) peak = Math.max(lvl, peak - .02);

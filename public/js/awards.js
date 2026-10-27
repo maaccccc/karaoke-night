@@ -70,7 +70,7 @@ function openNight() {
   }
   const row = el('div', null, 'row'); row.style.justifyContent = 'center';
   const keep = el('button', 'Keep singing'); keep.onclick = () => o.classList.remove('show');
-  const neu = el('button', 'Start a new night', 'ghost'); neu.onclick = () => { if (!confirm('Clear all scores and start a fresh night?')) return; o.classList.remove('show'); newNight(); };
+  const neu = el('button', 'Start a new night', 'ghost'); neu.onclick = async () => { if (!await kConfirm('Clear all scores and start a fresh night?', { title: 'Start a new night?', ok: 'Start new night', cancel: 'Keep scores', danger: true })) return; o.classList.remove('show'); newNight(); };
   row.append(keep, neu); box.appendChild(row); o.classList.add('show'); confetti(100);
 }
 function newNight() {

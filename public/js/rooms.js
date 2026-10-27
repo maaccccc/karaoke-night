@@ -83,6 +83,7 @@ function handleMsg(m) {
   else if (m.type === 'kicked') kickedOut(m.ban);
   else if (m.type === 'replaced') replacedOut();
   else if (m.type === 'notice') say(m.text);
+  else if (m.type === 'shift') { if (room.live) room.live.at = m.at; if (room.startAt) { room.startAt = m.at; lastSeek = 0; } }   // a singer skipped the intro: the shared clock moved forward, the sync loop seeks every video
   else if (m.type === 'pick') showPick(m);
   else if (m.type === 'pickcancel') { hidePick(); nextStop(); say(m.reason || 'The start was cancelled.'); }
   else if (m.type === 'ready') { hidePick(); showReady(m); }
@@ -154,9 +155,9 @@ function renderWho(m) {
       const acts = el('span', null, 'acts'), btn = (txt, tip, fn) => { const b = el('button', txt, 'ghost mini'); b.type = 'button'; b.title = tip; b.onclick = fn; acts.appendChild(b); };
       btn(isMuted(p.name) ? '🔊 Unmute' : '🔇 Mute', 'Only you stop hearing and seeing ' + p.name, () => toggleMute(p.name));
       if (m.host === room.id) {
-        btn('👑 Make host', 'Hand the host role to ' + p.name, () => { if (confirm('Make ' + p.name + ' the host? You will lose the host tools.')) roomOp({ op: 'host', id: p.id }); });
-        btn('Kick', 'Remove ' + p.name + ' (they can join again)', () => { if (confirm('Kick ' + p.name + ' out of the room? They can join again.')) roomOp({ op: 'kick', id: p.id }); });
-        btn('Ban', 'Remove ' + p.name + ' and block them from rejoining', () => { if (confirm('Ban ' + p.name + '? They will not be able to rejoin this room.')) roomOp({ op: 'ban', id: p.id }); });
+        btn('👑 Make host', 'Hand the host role to ' + p.name, async () => { if (await kConfirm('Make ' + p.name + ' the host? You will lose the host tools.', { title: 'Hand over the host role?', ok: 'Make host' })) roomOp({ op: 'host', id: p.id }); });
+        btn('Kick', 'Remove ' + p.name + ' (they can join again)', async () => { if (await kConfirm('Kick ' + p.name + ' out of the room? They can join again.', { title: 'Kick ' + p.name + '?', ok: 'Kick', danger: true })) roomOp({ op: 'kick', id: p.id }); });
+        btn('Ban', 'Remove ' + p.name + ' and block them from rejoining', async () => { if (await kConfirm('Ban ' + p.name + '? They will not be able to rejoin this room.', { title: 'Ban ' + p.name + '?', ok: 'Ban', danger: true })) roomOp({ op: 'ban', id: p.id }); });
       }
       row.appendChild(acts);
     }
@@ -182,14 +183,15 @@ function setRoomKey(k, code) {
   try { const m = JSON.parse(localStorage.getItem('karaokeKeys') || '{}'), now = Date.now(); m[code] = { k, t: now }; Object.keys(m).forEach(c => { if (now - m[c].t > 24 * 3600 * 1000) delete m[c]; }); localStorage.setItem('karaokeKeys', JSON.stringify(m)); } catch (e) {}
 }
 // This room was opened in another tab of the same device: that tab now holds the seat, so this one stops (it must NOT rejoin, or the tabs would fight).
-function replacedOut() {
+let _roomGone = false;   // show the "you were disconnected" box once, even if the server tells us twice
+async function replacedOut() {
   room.on = false; try { sessionStorage.removeItem('karaokeRoom'); } catch (e) {}
-  alert('This room was opened in another tab on this device, so this tab was disconnected. You can only be in a room once per device.');
+  if (_roomGone) return; _roomGone = true; await kAlert('This room was opened in another tab on this device, so this tab was disconnected. You can only be in a room once per device.', { title: 'Disconnected', ok: 'OK' });
   location.href = location.pathname;
 }
-function kickedOut(banned) {
+async function kickedOut(banned) {
   room.on = false; try { sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
-  alert(banned ? 'The host banned you from this room.' : 'The host removed you from the room.'); location.href = location.pathname;
+  if (_roomGone) return; _roomGone = true; await kAlert(banned ? 'The host banned you from this room.' : 'The host removed you from the room.', { title: banned ? 'You were banned' : 'You were removed', ok: 'OK' }); location.href = location.pathname;
 }
 function renderVis(m) {
   const t = $('#visTag'), b = $('#visBtn'), host = m.host === room.id;
