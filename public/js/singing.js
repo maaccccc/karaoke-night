@@ -1,5 +1,5 @@
 // ---- singing
-let frames = 0, offset = 0, active = false, lines = [], warn = '';
+let frames = 0, offset = 0, active = false, lines = [], warn = '', anchors = [], nudgeBase = null;
 let prebuf = false, holding = false, loadedSent = false;   // pre-loading the video silently before the shared start
 const AUTO_STRETCH = false;   // true = stretch the lyrics to the video's length when it differs by 2-12% (drifts when the difference is only extra intro/outro)
 let scale = 1, autoScale = 1, lyricDur = 0, lyricId = null, force = false;
@@ -32,7 +32,7 @@ function calcScale() {      // -> { scale, warn } for the video that will play
   if (current.song.kv) {
     // A karaoke track is the same arrangement, so the speed is the same. A length difference is almost always extra intro/outro,
     // which needs a SHIFT (one Mark click), never a stretch, so the lyrics are not stretched here.
-    if (lyricDur && pd && Math.abs(pd - lyricDur) > 3) w = ' This karaoke track is ' + Math.round(Math.abs(pd - lyricDur)) + 's ' + (pd > lyricDur ? 'longer' : 'shorter') + ' than the lyrics’ version, so the lyrics may start a little early or late. Click the first lyric line and press Mark when you hear it begin; it is remembered for this track.';
+    if (lyricDur && pd && Math.abs(pd - lyricDur) > 3) w = ' This karaoke track is ' + Math.round(Math.abs(pd - lyricDur)) + 's ' + (pd > lyricDur ? 'longer' : 'shorter') + ' than the lyrics’ version, so the lyrics may start a little early or late. Press [ or ] to nudge the lyrics into line near the start and again later in the song: each fix is a sync point that is remembered for this track.';
   } else {
     const diff = lyricDur && pd ? pd / lyricDur : 1;
     if (Math.abs(diff - 1) > .02 && Math.abs(diff - 1) < .12) {
@@ -77,13 +77,14 @@ function shareTimingSoon() {
   clearTimeout(tmTimer);
   tmTimer = setTimeout(() => {
     const v = pvid(), o = offset, s = scale;
-    rpost('/api/timing', { v, l: lyricId || '', o, s }).catch(() => {});
-    if (room.on) roomOp({ op: 'timing', v, o, s });
+    const a = anchors.map(p => [p.L, p.V]);
+    rpost('/api/timing', { v, l: lyricId || '', o, s, a }).catch(() => {});
+    if (room.on) roomOp({ op: 'timing', v, o, s, a });
   }, 700);
 }
 function onTiming(m) {       // the singer (or host) fixed the timing: use it right away
   if (!active || !current || m.v !== pvid() || m.by === room.name) return;
-  setOffset(m.o, false); setScale(m.s, false); force = true;
+  anchors = cleanAnchors(m.a); applyWarp(); setOffset(m.o, false); setScale(m.s, false); force = true;
   $('#markHint').textContent = (m.by || 'The singer') + ' adjusted the lyric timing for everyone.';
 }
 function setOffset(v, share = true) {
@@ -92,32 +93,78 @@ function setOffset(v, share = true) {
   if (share) shareTimingSoon();
 }
 $('#rstTiming').onclick = () => {
-  try { localStorage.removeItem('off:' + pvid()); localStorage.removeItem('spd:' + pvid()); } catch (e) {}
-  offset = 0; $('#off').textContent = '0.0s'; setScale(autoScale, false); anchor = null; force = true; shareTimingSoon();
-  $('#markHint').textContent = 'Timing reset. If the lyrics are still off, click a line and press Mark when you hear it.';
+  try { localStorage.removeItem('off:' + pvid()); localStorage.removeItem('spd:' + pvid()); localStorage.removeItem('anc:' + pvid()); } catch (e) {}
+  offset = 0; $('#off').textContent = '0.0s'; setScale(autoScale, false); anchors = []; nudgeBase = null; applyWarp(); force = true; shareTimingSoon();
+  $('#markHint').textContent = 'Timing reset (all sync points cleared). If the lyrics are still off, press [ or ] to nudge them into line, or click a line and press Mark when you hear it.';
 };
-// Learning from nudges: once the lyrics were nudged into line, that moment is a fact ("at video time T the lyric time L is right").
-// Two such moments 45+ s apart give both the shift AND the speed of this track (a karaoke version is a different recording), so drift is fixed without the Mark routine.
-let fixPts = [], fixPend = null, fixTimer = 0;
+let fixPend = null, fixTimer = 0;
+// <sync-points>
+// SYNC POINTS (piecewise timing). A karaoke track is a different recording from the one the lyrics were timed to, so the lyric file
+// and the video drift apart by different amounts in different parts of the song (longer intro, extra instrumental break, ...).
+// One shift + one stretch cannot describe that. A sync point is one fact: "this lyric line (original time L) really starts at video time V".
+// The lyrics are warped through all sync points: exact at each one, evenly spread in between, and a plain shift before the first / after the last.
+// With one sync point this is exactly the old single shift; every extra one fixes the next stretch of the song. The result is baked into
+// lines[i].t (the original time stays in lines[i].t0), so the rest of the app (scale / offset / scoring / rooms) keeps working unchanged.
+function cleanAnchors(a) {      // -> sorted [{L, V}], both times strictly increasing, believable speed between neighbours (same rules as the server)
+  const pts = (Array.isArray(a) ? a : []).slice(0, 24).map(p => Array.isArray(p) ? { L: +p[0], V: +p[1] } : { L: +(p && p.L), V: +(p && p.V) })
+    .filter(p => isFinite(p.L) && isFinite(p.V) && p.L >= 0 && p.L <= 1800 && p.V >= 0 && p.V <= 2400).sort((x, y) => x.L - y.L);
+  const out = [];
+  for (const p of pts) {
+    const q = out[out.length - 1];
+    if (q) { const dl = p.L - q.L, dv = p.V - q.V; if (dl < 1 || dv <= 0 || dv / dl < .5 || dv / dl > 2) continue; }
+    out.push({ L: Math.round(p.L * 100) / 100, V: Math.round(p.V * 100) / 100 });
+  }
+  return out.slice(0, 12);
+}
+function warpT(L) {             // lyric time -> video time
+  const a = anchors; if (!a.length) return L;
+  if (L <= a[0].L) return L + a[0].V - a[0].L;
+  for (let i = 1; i < a.length; i++) if (L <= a[i].L) return a[i - 1].V + (a[i].V - a[i - 1].V) * (L - a[i - 1].L) / (a[i].L - a[i - 1].L);
+  const z = a[a.length - 1]; return L + z.V - z.L;
+}
+function unwarpT(V) {           // video time -> lyric time
+  const a = anchors; if (!a.length) return V;
+  if (V <= a[0].V) return V - a[0].V + a[0].L;
+  for (let i = 1; i < a.length; i++) if (V <= a[i].V) return a[i - 1].L + (a[i].L - a[i - 1].L) * (V - a[i - 1].V) / (a[i].V - a[i - 1].V);
+  const z = a[a.length - 1]; return V - z.V + z.L;
+}
+function applyWarp() {          // bake the sync points into the line times
+  lines.forEach(l => { if (l.t0 === undefined) l.t0 = l.t; l.t = warpT(l.t0); });
+  force = true;
+  try { if (anchors.length) localStorage.setItem('anc:' + pvid(), JSON.stringify(anchors)); else localStorage.removeItem('anc:' + pvid()); } catch (e) {}
+}
+function bakeGlobal() {         // fold the shift / speed controls into the sync points, so a new sync point does not change the rest of the song
+  if (offset === 0 && scale === 1) return;
+  let a = anchors.map(p => ({ L: p.L, V: p.V * scale - offset }));
+  if (!a.length && lines.length) {                // no sync points yet: the old shift + speed becomes one or two of them
+    const f = lines[0].t0, e = lines[lines.length - 1].t0;
+    a = scale === 1 || e - f < 5 ? [{ L: f, V: f * scale - offset }] : [{ L: f, V: f * scale - offset }, { L: e, V: e * scale - offset }];
+  }
+  setOffset(0, false); setScale(1, false); anchors = cleanAnchors(a);
+}
+function addAnchor(L, V, base) {   // line with original time L really starts at video time V (tweak-free). base = the shift / speed to keep for the rest of the song
+  if (base) { const o = offset, sc = scale; offset = base.o; scale = base.s; bakeGlobal(); offset = o; scale = sc; }
+  else bakeGlobal();
+  setOffset(0, false); setScale(1, false);
+  anchors = cleanAnchors(anchors.filter(p => Math.abs(p.L - L) > 8).concat([{ L, V }]));    // marking again near the same moment refines it
+  applyWarp(); shareTimingSoon();
+  return anchors.length;
+}
+// </sync-points>
 function toastMsg(txt) {
   let tt = $('#syncToast'); if (!tt) { tt = el('div'); tt.id = 'syncToast'; tt.setAttribute('role', 'status'); document.body.appendChild(tt); }
   tt.textContent = txt; tt.classList.add('show'); clearTimeout(nudgeT); nudgeT = setTimeout(() => tt.classList.remove('show'), 2600);
 }
-function learnFix(p) {
-  if (fixPts.length && Math.abs(p.T - fixPts[fixPts.length - 1].T) < 20) fixPts[fixPts.length - 1] = p; else fixPts.push(p);   // nudging again soon after refines the same moment
-  if (fixPts.length > 4) fixPts.shift();
-  const a = fixPts[0], b = fixPts[fixPts.length - 1];
-  if (fixPts.length < 2 || b.T - a.T < 45 || b.L - a.L <= 0) return;
-  const k = (b.T - a.T) / (b.L - a.L);
-  if (!(k > .88 && k < 1.12) || Math.abs(k - scale) < .003) return;
-  setScale(k); setOffset(k * b.L - b.T - tweak()); force = true;
-  toastMsg('Learned from your nudges: lyrics speed ' + (k >= 1 ? '+' : '') + ((k - 1) * 100).toFixed(1) + '%, saved for this track.');
-}
-function nudge(d) {
-  setOffset(offset + d);
+function nudge(d) {             // [ ] / Sooner / Later: once you stop nudging for 4 s the lyrics are "right" at that moment = a new sync point
+  if (!nudgeBase) nudgeBase = { o: offset, s: scale };
+  setOffset(offset + d);       // shared live (rooms see it at once); the sync point below makes it permanent
   if (!active || !lines.length || !isPlay()) return;
-  const T = getT(); fixPend = { T, L: (T + offset + tweak()) / scale };
-  clearTimeout(fixTimer); fixTimer = setTimeout(() => { const p = fixPend; fixPend = null; if (p && active) learnFix(p); }, 4000);   // 4 s without nudging = it is right now
+  const T = getT(); fixPend = { T, b: (T + offset + tweak()) / scale };
+  clearTimeout(fixTimer); fixTimer = setTimeout(() => {
+    const p = fixPend; fixPend = null; if (!p || !active) return;
+    const n = addAnchor(unwarpT(p.b), p.T + tweak(), nudgeBase); nudgeBase = null;
+    toastMsg(n < 2 ? 'Sync point saved for this track.' : 'Sync point ' + n + ' saved. The lyrics between your sync points are spaced to fit.');
+  }, 4000);
 }
 [['s5', .5], ['s1', .1], ['l1', -.1], ['l5', -.5]].forEach(([id, d]) => $('#' + id).onclick = () => nudge(d));
 let nudgeT = 0;
@@ -135,20 +182,14 @@ function setScale(v, save = true) {
   if (save) { try { localStorage.setItem('spd:' + pvid(), String(scale)); } catch (e) {} shareTimingSoon(); }
 }
 const tweak = () => (prefs.lead || 0) - (prefs.delay || 0);
-let anchor = null, pick = -1;
-function markLine(i) {       // you heard line i begin: fix the offset, and with a second mark the stretch too
+let pick = -1;
+function markLine(i) {       // you heard line i begin: that is a sync point (the lyrics are warped through all of them)
   const hint = $('#markHint');
   if (!isPlay() || i < 0 || i >= lines.length) { hint.textContent = 'Click a lyric line first, and make sure the music is playing.'; return; }
   const R = getT() - 0.15;   // allow for your reaction time
-  let msg;
-  if (anchor && anchor.i !== i && Math.abs(lines[i].t - lines[anchor.i].t) > 20) {
-    const k = (R - anchor.R) / (lines[i].t - lines[anchor.i].t);
-    if (k > .88 && k < 1.12) {
-      setScale(k); setOffset(lines[anchor.i].t * scale - anchor.R - tweak());
-      msg = 'Locked in: stretch ' + ((k - 1) * 100).toFixed(1) + '%, shift ' + offset.toFixed(1) + 's.'; anchor = null;
-    } else { setOffset(lines[i].t * scale - R - tweak()); anchor = { i, R }; msg = 'Those two marks don’t fit one song (speed off by more than 12%). Only the shift was updated.'; }
-  } else { setOffset(lines[i].t * scale - R - tweak()); anchor = { i, R }; msg = 'Saved. Now pick a line near the end of the song and press Mark again for the best accuracy.'; }
-  hint.textContent = msg; force = true;
+  const n = addAnchor(lines[i].t0, R + tweak(), null); nudgeBase = null;
+  hint.textContent = n < 2 ? 'Sync point 1 saved. For the best accuracy, mark a line after any long instrumental break and one near the end.'
+    : 'Sync point ' + n + ' saved. The lyrics between your sync points are spaced evenly, so add one after each long instrumental break.';
 }
 $('#syncNow').onclick = () => markLine(0);
 $('#markBtn').onclick = () => markLine(pick);
@@ -201,11 +242,11 @@ $('#ver').onchange = async () => {
     lines = nl; lyricId = id; lyricDur = d.lyricDuration || 0;
     const cs = calcScale(); autoScale = cs.scale; warn = cs.warn; $('#micNote').textContent = $('#micNote').textContent.replace(/ (Lyrics were stretched|This video is|These lyrics are for a version|This karaoke track is).*$/, '') + warn;
     S.lf = lines.map(() => 0); S.lv = lines.map(() => 0); S.hit = lines.map(() => 0);
-    buildLyrics(); labelTurns(); try { localStorage.removeItem('spd:' + pvid()); } catch (e) {} setScale(autoScale, false); force = true;
+    buildLyrics(); labelTurns(); try { localStorage.removeItem('spd:' + pvid()); } catch (e) {} setScale(autoScale, false); anchors = []; nudgeBase = null; applyWarp(); force = true;
   } catch (e) { say('Could not switch lyrics: ' + e.message); }
 };
 async function runSong() {
-  fixPts = []; fixPend = null; clearTimeout(fixTimer);      // forget the nudge moments of the previous song
+  fixPend = null; nudgeBase = null; clearTimeout(fixTimer);      // forget the pending nudge of the previous song
   $('#home').style.display = 'none'; $('#stage').style.display = 'block'; $('#rate').style.display = 'none'; document.body.classList.add('instage');
   $('#now').textContent = whoTxt(current) + (current.singer2 ? ' are singing' : ' is singing') + ': ' + current.song.title + (current.mode && current.mode !== 'solo' ? ' (' + modeName[current.mode] + ')' : ''); $('#liveScore').textContent = '0';
   const box = $('#lyrics'); box.textContent = '';
@@ -224,10 +265,12 @@ async function runSong() {
   let sv = NaN; try { sv = parseFloat(localStorage.getItem('spd:' + pvid())); } catch (e) {}
   let shared = null;      // a timing fix someone already made for this exact track beats a guess
   try { const r = await Promise.race([fetch('/api/timing?' + new URLSearchParams({ v: pvid(), l: lyricId || '' })), new Promise((_, no) => setTimeout(no, 1500))]); shared = (await r.json()).timing || null; } catch (e) {}
-  if (shared) { saved = shared.o; sv = shared.s; }
+  let sa = []; try { sa = JSON.parse(localStorage.getItem('anc:' + pvid()) || '[]'); } catch (e) {}
+  if (shared) { saved = shared.o; sv = shared.s; sa = shared.a || []; }
+  anchors = cleanAnchors(sa); applyWarp();
   setOffset(saved, false);
-  if (shared) $('#markHint').textContent = 'Using the lyric timing that was already fixed for this track (shift ' + saved.toFixed(1) + 's).' + (isSinger() ? ' Nudge it with Sooner / Later or Mark if it is still off; the fix is kept for everyone.' : '');
-  else if (current.song.kv) $('#markHint').textContent = 'First time with this karaoke track: if the lyrics are early or late, press [ or ] to nudge them (Shift = bigger steps). Fix it once near the start and once about a minute later and the app learns the track’s speed too. The fix is saved for everyone.';
+  if (shared) $('#markHint').textContent = 'Using the lyric timing that was already fixed for this track (' + (anchors.length ? anchors.length + ' sync point' + (anchors.length > 1 ? 's' : '') : 'shift ' + saved.toFixed(1) + 's') + ').' + (isSinger() ? ' Nudge it with Sooner / Later or Mark if it is still off; the fix is kept for everyone.' : '');
+  else if (current.song.kv) $('#markHint').textContent = 'First time with this karaoke track: if the lyrics are early or late, press [ or ] to nudge them into line (Shift = bigger steps) and wait 4 seconds: that becomes a sync point. Do it again after any long instrumental break and near the end, and the lyrics follow the whole track. Saved for everyone.';
   else if (Math.abs(saved) >= 2) $('#markHint').textContent = 'This song still has a saved timing shift of ' + saved.toFixed(1) + 's from an earlier try. Press Reset timing if the lyrics do not match.';
   setScale(isNaN(sv) ? autoScale : sv, false); loadVersions();
 

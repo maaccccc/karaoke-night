@@ -159,6 +159,13 @@ The timed lyrics match the original recording, and a karaoke track usually has a
 - **Reset timing** puts the shift back to 0 for that track. If a wrong fix was saved, fix it again or reset it. To wipe everything, delete `timing.json`.
 - `/api/timing?v=VIDEOID&l=LYRICID` shows what is stored for a track.
 
+## Sync points (close-to-exact lyric timing on karaoke tracks)
+Lyric files are timed to the original recording, and a karaoke upload is a different recording (longer intro, an extra instrumental break, slightly different speed). One shift plus one stretch cannot fix that, so the app keeps **sync points** instead. A sync point says: *this lyric line really starts at this moment of the video*.
+- **How to make one:** press **[** or **]** (or Sooner / Later) until the lyrics are right and wait 4 seconds, or click a line and press **Mark** when you hear it begin. Do it near the start, again after any long instrumental break, and once near the end.
+- **How it is used:** the lyrics are exact at every sync point and spread evenly between them. Before the first one and after the last one they simply keep that point's shift. One sync point behaves exactly like the old single shift.
+- **Saved for everybody** per video + lyrics version in `timing.json`, and sent live to the room. Because sync points cannot be averaged, the server keeps the one vote that is closest to all the others, so a single bad vote cannot move it. **Reset timing** clears all of them.
+- **Better video choice:** karaoke videos are now ranked by how close their length is to the song (`exact` within 2 s, `close` within 5 s, `loose` within 10 s, `far` beyond). A near-exact length is almost always the same arrangement, so one shift lines it up. `/api/karaoke?...&debug=1` shows each video's `fit`.
+
 ## Settings, security and deploying (optional environment variables)
 
 | Variable | What it does |

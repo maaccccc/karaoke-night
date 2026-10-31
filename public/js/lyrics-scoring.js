@@ -3,7 +3,7 @@ function parseLrc(lrc) {
   const out = [];
   lrc.split('\n').forEach(line => {
     const m = line.match(/^\s*\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$/);
-    if (m && m[3].trim()) out.push({ t: +m[1] * 60 + parseFloat(m[2]), text: m[3].trim() });
+    if (m && m[3].trim()) { const t = +m[1] * 60 + parseFloat(m[2]); out.push({ t, t0: t, text: m[3].trim() }); }   // t0 = the time in the lyrics file; t = after the sync points (see singing.js)
   });
   return out.sort((a, b) => a.t - b.t);
 }

@@ -170,6 +170,11 @@ def _secs(r):
 
 KARA_MAX_DIFF = 20     # seconds: a backing track further from the song's length than this is a different arrangement, so the lyrics could never line up
 KARA_SURE_DIFF = 6     # an upload that does not name the artist (and is not from a known karaoke channel) must be this close to the song's length
+def _fit(diff):
+    """How likely a backing track this far (seconds) from the song's length is the SAME arrangement the lyrics were timed to.
+    0 = within 2 s (almost certainly identical, so one shift lines it up), 1 = within 5 s, 2 = within 10 s, 3 = further (extra intro / break: needs sync points)."""
+    return 0 if diff <= 2 else 1 if diff <= 5 else 2 if diff <= 10 else 3
+KARA_FIT = ('exact', 'close', 'loose', 'far')
 KARA_FOR = re.compile(r'(?:originally (?:performed|made famous|recorded|sung) by|as made famous by|made famous by|in the style of|as performed by)\s*[:\-]?\s*(.+)', re.I)
 
 def _has_name(name, text):
@@ -227,8 +232,8 @@ def rank_karaoke(results, title, artist, refs, why=None):
             if not latin: no(t, 'cannot confirm the artist, and the title is in another script'); continue
             if refs and diff > KARA_SURE_DIFF: no(t, 'artist not named and length is %d s off (needs <= %d s)' % (diff, KARA_SURE_DIFF)); continue
         seen.add(vid)
-        out.append(((int(diff // 4), not am, not trusted, diff), {
-            'videoId': vid, 'title': t[:200], 'channel': chan[:80], 'duration': dur, 'diff': round(diff, 1)}))
+        out.append(((_fit(diff), not am, not trusted, diff), {
+            'videoId': vid, 'title': t[:200], 'channel': chan[:80], 'duration': dur, 'diff': round(diff, 1), 'fit': KARA_FIT[_fit(diff)]}))
     out.sort(key=lambda x: x[0])
     return [x[1] for x in out]
 
@@ -271,13 +276,49 @@ except Exception:
 def timing_key(v, l):
     v = str(v or ''); l = re.sub(r'[^0-9]', '', str(l or ''))[:12]
     return v + ':' + l if re.fullmatch(r'[A-Za-z0-9_-]{6,20}', v) else None
+def clean_anchors(a):
+    """Sync points [[lyric_time, video_time], ...] (sanitised): at most 12, both times strictly increasing, believable speed between neighbours.
+    lyric_time = when the line starts in the lyrics file (the original recording), video_time = when it really starts in the video that plays."""
+    pts = []
+    try:
+        for p in list(a or [])[:24]:
+            try: pts.append((float(p[0]), float(p[1])))
+            except Exception: pass          # one junk entry must not throw the good ones away
+    except Exception:
+        return []
+    pts.sort(key=lambda p: p[0])
+    out = []
+    for L, V in pts:
+        if not (0 <= L <= 1800 and 0 <= V <= 2400): continue
+        if out:
+            dl, dv = L - out[-1][0], V - out[-1][1]
+            if dl < 1 or dv <= 0 or not (0.5 <= dv / dl <= 2.0): continue
+        out.append([round(L, 2), round(V, 2)])
+    return out[:12]
+def _warp(a, L):
+    """Video time of lyric time L through the sync points (same maths as warpT() in singing.js)."""
+    if not a: return L
+    if L <= a[0][0]: return L + a[0][1] - a[0][0]
+    for (l0, v0), (l1, v1) in zip(a, a[1:]):
+        if L <= l1: return v0 + (v1 - v0) * (L - l0) / (l1 - l0)
+    return L + a[-1][1] - a[-1][0]
+def _consensus(votes):
+    """The vote whose timing is closest to everybody else's (a medoid), compared over the whole song. Sync points cannot be averaged
+    number by number, and picking the most typical whole vote means one bad vote still cannot move the result. None if nobody sent sync points."""
+    vs = list(votes.values())
+    if not any(len(x) > 3 and x[3] for x in vs): return None
+    top = max(240.0, max(x[3][-1][0] for x in vs if len(x) > 3 and x[3]) + 30)
+    Ls = [top * i / 24 for i in range(25)]
+    fns = [[_warp(x[3] if len(x) > 3 else [], L) * x[1] - x[0] for L in Ls] for x in vs]
+    best = min(range(len(vs)), key=lambda i: sum(abs(p - q) for f in fns for p, q in zip(fns[i], f)))
+    return vs[best]
 def timing_get(v, l):
     k = timing_key(v, l); t = TIMING.get(k) if k else None
-    return {'o': t['o'], 's': t['s'], 'n': t.get('n', 1)} if t else None
+    return {'o': t['o'], 's': t['s'], 'n': t.get('n', 1), 'a': t.get('a') or []} if t else None
 def _median(xs):
     xs = sorted(xs); n = len(xs)
     return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
-def timing_set(v, l, o, sc, voter='anon'):
+def timing_set(v, l, o, sc, voter='anon', anchors=None):
     # Everyone shares one lyric-timing fix per song, so a single visitor must not be able to wreck it for all. Each visitor gets one vote
     # (a new vote replaces their old one), and the value people see is the median of the latest votes, which one bad vote cannot move far.
     k = timing_key(v, l)
@@ -286,10 +327,12 @@ def timing_set(v, l, o, sc, voter='anon'):
     with TLOCK:
         old = TIMING.get(k) or {}
         votes = dict(old.get('v') or ({'legacy': [old['o'], old['s'], old.get('t', 0)]} if 'o' in old else {}))
-        votes[voter] = [round(o, 2), round(sc, 4), now]
+        votes[voter] = [round(o, 2), round(sc, 4), now, clean_anchors(anchors)]
         for kk, _ in sorted(votes.items(), key=lambda x: x[1][2])[:max(0, len(votes) - 9)]: votes.pop(kk, None)     # keep the 9 newest voters
         TIMING[k] = {'o': round(_median([x[0] for x in votes.values()]), 2), 's': round(_median([x[1] for x in votes.values()]), 4),
                      'n': old.get('n', 0) + 1, 't': now, 'v': votes}
+        cons = _consensus(votes)
+        if cons: TIMING[k].update({'o': cons[0], 's': cons[1], 'a': cons[3] if len(cons) > 3 else []})
         if len(TIMING) > 5000:      # keep the file small: forget the least recently fixed ones
             for kk, _ in sorted(TIMING.items(), key=lambda x: x[1].get('t', 0))[:500]: TIMING.pop(kk, None)
         try:
@@ -980,7 +1023,7 @@ def room_send(code, cid, typ, data, to=None, tab=''):
                 return None
             try: off = max(-60.0, min(60.0, float(data.get('o')))); sc = max(0.88, min(1.12, float(data.get('s') or 1)))
             except Exception: return None
-            room_push(r, {'type': 'timing', 'v': vid, 'o': off, 's': sc, 'by': me['name']})
+            room_push(r, {'type': 'timing', 'v': vid, 'o': off, 's': sc, 'a': clean_anchors(data.get('a')), 'by': me['name']})
             return None
         elif op == 'qkv':          # attach a karaoke video to a song that is already queued (the person who queued it, or the host)
             it = next((q for q in r['queue'] if q['id'] == data.get('id')), None); kv = clean_kv(data.get('kv'))
@@ -1465,7 +1508,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/judge':
                 return self.send_json(200, judge_comment(data, self.client_ip()))
             if u.path == '/api/timing':
-                timing_set(data.get('v'), data.get('l'), data.get('o') or 0, data.get('s') or 1, voter_id(self.client_ip()))
+                timing_set(data.get('v'), data.get('l'), data.get('o') or 0, data.get('s') or 1, voter_id(self.client_ip()), data.get('a'))
                 return self.send_json(200, {'ok': True})
             if u.path == '/api/romanize':
                 rl, miss = romanize_lines(data.get('lines') if isinstance(data.get('lines'), list) else [])
