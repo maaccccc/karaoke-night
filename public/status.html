@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#150a22">
+<title>Karaoke Night status</title>
+<link rel="icon" type="image/svg+xml" href="img/logo-mark.svg">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/status.css">
+</head>
+<body class="stpage">
+<div class="bg"><i></i><i></i><i></i></div>
+<main class="st-wrap">
+  <a class="st-back" href="./">← Back to Karaoke Night</a>
+  <h1>Service status</h1>
+  <p class="st-sub">Karaoke Night relies on a few outside services. If something will not load or play, check here first.</p>
+
+  <section class="st-banner" id="stBanner" data-state="load" role="status" aria-live="polite">
+    <span class="st-dot" aria-hidden="true"></span>
+    <div><b id="stTitle">Checking…</b><small id="stNote">This takes a few seconds.</small></div>
+    <button type="button" id="stAgain">Check again</button>
+  </section>
+
+  <div class="st-list" id="stList"></div>
+  <p class="st-foot" id="stFoot"></p>
+</main>
+<script src="js/status-page.js"></script>
+</body></html>

@@ -1344,8 +1344,8 @@ MAX_PER_IP = int(os.getenv('MAX_PER_IP', '10'))      # people from one network a
 CSP_MODE = os.getenv('CSP', 'on').lower()
 # bucket: (requests allowed, per this many seconds), counted per visitor address. Only abuse-prone routes are limited, set well above normal
 # use (a whole family on one Wi-Fi shares an address). Live room polling is deliberately not limited.
-RATE = {'search': (240, 60), 'timing': (30, 600), 'gchat': (20, 60), 'chat': (30, 30), 'join': (60, 60), 'playlist': (6, 60), 'romanize': (30, 60), 'lyrics': (900, 60)}
-GET_BUCKETS = {'/api/search': 'search', '/api/haslyrics': 'lyrics', '/api/karaoke': 'search', '/api/versions': 'search', '/api/lyrics': 'lyrics'}
+RATE = {'search': (240, 60), 'timing': (30, 600), 'gchat': (20, 60), 'chat': (30, 30), 'join': (60, 60), 'playlist': (6, 60), 'romanize': (30, 60), 'lyrics': (900, 60), 'status': (20, 60)}
+GET_BUCKETS = {'/api/search': 'search', '/api/haslyrics': 'lyrics', '/api/karaoke': 'search', '/api/versions': 'search', '/api/lyrics': 'lyrics', '/api/status': 'status'}
 POST_BUCKETS = {'/api/timing': 'timing', '/api/gchat': 'gchat', '/api/room/join': 'join', '/api/playlist': 'playlist', '/api/romanize': 'romanize'}
 _rl = {}; _rl_lock = threading.Lock()
 
@@ -1367,6 +1367,73 @@ def voter_id(ip): return hashlib.sha256((TIMING_SALT + str(ip)).encode()).hexdig
 COMPRESSIBLE = ('.html', '.js', '.css', '.svg', '.json', '.csv', '.txt', '.xml', '.webmanifest')
 _static = {}     # path -> (mtime_ns, size, etag, body, gzipped)
 _static_lock = threading.Lock()
+
+# ---- status page (/status, data from /api/status): checks every outside service the app depends on, in parallel, and caches the answer
+STATUS_TTL = 20
+_status = {'t': 0, 'data': None}; _status_lock = threading.Lock()
+def _probe(url, headers=None, timeout=6):
+    """One GET. Returns (http status code or 0 when unreachable, milliseconds)."""
+    t = time.time()
+    try:
+        req = urllib.request.Request(url, headers=dict({'User-Agent': UA}, **(headers or {})))
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            r.read(2048); code = r.status
+    except urllib.error.HTTPError as e:
+        code = e.code
+    except Exception:
+        code = 0
+    return code, int((time.time() - t) * 1000)
+def _check_search():
+    t = time.time()
+    try:
+        ok = bool(yt.search('karaoke', filter='songs', limit=1))
+    except Exception:
+        ok = False
+    return (200 if ok else 0), int((time.time() - t) * 1000)
+def _grade(code, ms, ok_codes=(200,)):
+    if code in ok_codes or 200 <= code < 400: return 'slow' if ms > 3000 else 'up'
+    if code == 429: return 'slow'               # reachable, but it is limiting us
+    return 'down'
+def _services():
+    j = bool(JUDGE_KEY)
+    return [
+        ('lyrics', 'Lyrics (LRCLIB)', 'Timed lyrics for every song.', 'If it is down, songs play without the moving lyrics. Songs saved before still work.',
+         lambda: _probe('https://lrclib.net/api/search?q=' + urllib.parse.quote('perfect ed sheeran'))),
+        ('search', 'Song search (YouTube Music)', 'Finding songs and karaoke versions.', 'If it is down, searching and adding new songs will not work.', _check_search),
+        ('player', 'YouTube player', 'Plays the music and karaoke videos.', 'If it is down, no song can play.',
+         lambda: _probe('https://www.youtube.com/iframe_api')),
+        ('images', 'YouTube images', 'Cover pictures for karaoke tracks.', 'If it is down, covers are blank. Songs still play.',
+         lambda: _probe('https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg')),
+        ('fonts', 'Google Fonts', 'The Karaoke Night lettering.', 'If it is down, plain fonts are shown. Nothing else changes.',
+         lambda: _probe('https://fonts.googleapis.com/css2?family=Bungee')),
+        ('judge', 'AI judge (Gemini)', 'The funny comment on the results screen.', 'If it is down, the results screen simply has no comment.',
+         (lambda: _probe('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', {'x-goog-api-key': JUDGE_KEY})) if j else None),
+    ]
+def status_report(fresh=False):
+    import concurrent.futures
+    with _status_lock:
+        now = time.time()
+        if _status['data'] and now - _status['t'] < (10 if fresh else STATUS_TTL):
+            return _status['data']
+        svcs = _services(); out = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(svcs)) as ex:
+            futs = [(sv, ex.submit(sv[4]) if sv[4] else None) for sv in svcs]
+            for (sid, name, what, impact, _fn), f in futs:
+                row = {'id': sid, 'name': name, 'what': what, 'impact': impact}
+                if f is None:
+                    row.update({'status': 'off', 'ms': 0, 'detail': 'Not set up (needs GEMINI_API_KEY). The app works without it.'})
+                else:
+                    try: code, ms = f.result(timeout=15)
+                    except Exception: code, ms = 0, 15000
+                    st = _grade(code, ms)
+                    row.update({'status': st, 'ms': ms, 'detail': {'up': 'Working normally.', 'slow': 'Answering slowly or limiting requests.' if code != 0 else 'Very slow.', 'down': ('Not reachable.' if code == 0 else 'Reported an error (HTTP %d).' % code)}[st]})
+                out.append(row)
+        bad = [r for r in out if r['status'] == 'down']
+        core = {'lyrics', 'search', 'player'}
+        overall = 'ok' if not bad and not any(r['status'] == 'slow' for r in out) else ('major' if any(r['id'] in core for r in bad) else 'minor')
+        data = {'checked': int(now), 'overall': overall, 'services': out, 'savedLyrics': len(LYR_DISK)}
+        _status['t'] = now; _status['data'] = data
+        return data
 
 def csp_value():
     return '; '.join(["default-src 'self'",
@@ -1410,7 +1477,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
 
     def serve_static(self, u):
-        if u.path == '/download': u = u._replace(path='/download.html')      # clean address: /download instead of /download.html
+        if u.path in ('/download', '/status'): u = u._replace(path=u.path + '.html')      # clean address: /download instead of /download.html
         page = u.path in ('/', '/index.html')
         if page:
             path = find_page()
@@ -1495,6 +1562,8 @@ class Handler(BaseHTTPRequestHandler):
                     why = []; found = find_karaoke(g('title'), g('artist'), float(g('duration') or 0), fresh=True, why=why)
                     return self.send_json(200, {'found': found, 'notes': why[:80]})
                 return self.send_json(200, find_karaoke(g('title'), g('artist'), float(g('duration') or 0), fresh=g('fresh') == '1'))
+            if u.path == '/api/status':
+                return self.send_json(200, status_report(q.get('fresh', [''])[0] == '1'))
             if u.path == '/api/timing':
                 g = lambda k: q.get(k, [''])[0]
                 return self.send_json(200, {'timing': timing_get(g('v'), g('l'))})

@@ -1,0 +1,43 @@
+/* status.html: are the outside services Karaoke Night uses working? */
+.st-wrap{max-width:760px;margin:0 auto;padding:28px 18px 60px}
+.st-back{display:inline-block;margin-bottom:18px;color:var(--mute);text-decoration:none;font-weight:600;font-size:.95rem}
+.st-back:hover{color:var(--ink)}
+.st-back:focus-visible{outline:3px solid var(--cyan);outline-offset:2px;border-radius:6px}
+.st-wrap h1{font-size:clamp(2rem,6vw,2.8rem);margin-bottom:6px}
+.st-sub{color:var(--mute);margin:0 0 22px}
+:root{--ok:#3be58a;--warn:#ffd23d;--bad:#ff5d6c;--off:#8a7399}
+
+.st-banner{display:flex;align-items:center;gap:14px;padding:16px 18px;margin-bottom:18px;border-radius:18px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.st-banner>div{flex:1;min-width:0}
+.st-banner b{display:block;font-size:1.1rem}
+.st-banner small{display:block;color:var(--mute);margin-top:2px}
+.st-banner .st-dot{width:16px;height:16px}
+.st-banner[data-state=ok]{border-color:color-mix(in srgb,var(--ok) 55%,transparent);background:color-mix(in srgb,var(--ok) 10%,transparent)}
+.st-banner[data-state=minor]{border-color:color-mix(in srgb,var(--warn) 55%,transparent);background:color-mix(in srgb,var(--warn) 10%,transparent)}
+.st-banner[data-state=major],.st-banner[data-state=err]{border-color:color-mix(in srgb,var(--bad) 60%,transparent);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.st-banner[data-state=ok] .st-dot{background:var(--ok);box-shadow:0 0 12px var(--ok)}
+.st-banner[data-state=minor] .st-dot{background:var(--warn);box-shadow:0 0 12px var(--warn)}
+.st-banner[data-state=major] .st-dot,.st-banner[data-state=err] .st-dot{background:var(--bad);box-shadow:0 0 12px var(--bad)}
+.st-banner[data-state=load] .st-dot{background:var(--off);animation:stpulse 1s ease-in-out infinite alternate}
+@keyframes stpulse{to{opacity:.3}}
+#stAgain{min-height:40px;padding:0 16px;border-radius:99px;font-size:.9rem;background:transparent;border:1px solid var(--line);box-shadow:none}
+#stAgain:disabled{opacity:.5;cursor:default;transform:none}
+
+.st-list{display:grid;gap:10px}
+.st-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05)}
+.st-dot{display:inline-block;flex:none;width:12px;height:12px;border-radius:50%;background:var(--off)}
+.st-row[data-s=up] .st-dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.st-row[data-s=slow] .st-dot{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.st-row[data-s=down] .st-dot{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.st-row[data-s=down]{border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.st-row h2{font:600 1rem Rubik,sans-serif;margin:0;letter-spacing:0}
+.st-row p{grid-column:2;margin:0;color:var(--mute);font-size:.88rem}
+.st-row .st-fx{grid-column:2/-1;color:var(--ink);opacity:.85}
+.st-pill{justify-self:end;font-size:.78rem;font-weight:600;padding:3px 12px;border-radius:99px;background:rgba(255,255,255,.08);white-space:nowrap}
+.st-row[data-s=up] .st-pill{color:#8ff0bd;background:rgba(59,229,138,.14)}
+.st-row[data-s=slow] .st-pill{color:#ffe38a;background:rgba(255,210,61,.14)}
+.st-row[data-s=down] .st-pill{color:#ff9aa6;background:rgba(255,93,108,.16)}
+.st-row small{color:var(--mute);font-weight:400;margin-left:6px}
+.st-foot{margin:16px 0 0;color:var(--mute);font-size:.82rem;text-align:center}
+@media (max-width:520px){.st-row{grid-template-columns:auto minmax(0,1fr)}.st-pill{grid-column:2;justify-self:start}.st-banner{flex-wrap:wrap}}
+@media (prefers-reduced-motion:reduce){.st-banner[data-state=load] .st-dot{animation:none}}
