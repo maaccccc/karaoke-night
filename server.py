@@ -95,6 +95,34 @@ def candidates(title, artist, duration, strict=False):
     return sorted(out, key=key), key
 
 LYR = {}; _lyr_lock = threading.Lock()
+# Found lyrics are also saved to lyrics_cache.json: they survive restarts, and they are what keeps songs you have already sung
+# working while LRCLIB is down. (Lyrics do not change, so a saved entry never expires.)
+LYR_FILE = os.path.join(HERE, 'lyrics_cache.json')
+LYR_DISK = {}
+try:
+    with open(LYR_FILE, encoding='utf-8') as _f: LYR_DISK = json.load(_f)
+except Exception:
+    LYR_DISK = {}
+_save_timer = None
+def _dk(k): return '%s|%s|%d' % (k[0], k[1], k[2])
+def _disk_flush():
+    global _save_timer
+    with _lyr_lock:
+        _save_timer = None
+        if len(LYR_DISK) > 1500:                      # keep the file small: forget the oldest
+            for old in sorted(LYR_DISK, key=lambda x: LYR_DISK[x][3])[:300]: LYR_DISK.pop(old, None)
+        snap = dict(LYR_DISK)
+    try:
+        tmp = LYR_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f: json.dump(snap, f, ensure_ascii=False)
+        os.replace(tmp, LYR_FILE)
+    except Exception:
+        pass
+def _disk_save_soon():       # a search can find 15 songs at once: write the file once, a few seconds later
+    global _save_timer
+    with _lyr_lock:
+        if _save_timer: return
+        _save_timer = threading.Timer(5.0, _disk_flush); _save_timer.daemon = True; _save_timer.start()
 LYR_TTL = 6 * 3600
 def synced_lyrics(title, artist, duration):
     """Best timed lyrics (LRC text, lyric duration, id) from LRCLIB. Swap this to use a licensed provider.
@@ -105,6 +133,11 @@ def synced_lyrics(title, artist, duration):
         hit = LYR.get(k)
     if hit and time.time() - hit[3] < LYR_TTL:
         return hit[0], hit[1], hit[2]
+    with _lyr_lock:
+        dh = LYR_DISK.get(_dk(k))
+    if dh:                                            # saved earlier (maybe before a restart): no need to ask LRCLIB again
+        with _lyr_lock: LYR[k] = (dh[0], dh[1], dh[2], time.time())
+        return dh[0], dh[1], dh[2]
     first = (artist or '').split(',')[0].strip()
     res, busy = None, False
     try:
@@ -127,6 +160,8 @@ def synced_lyrics(title, artist, duration):
             if len(LYR) > 400:                        # keep it small: drop the oldest entries
                 for old_k in sorted(LYR, key=lambda x: LYR[x][3])[:100]: LYR.pop(old_k, None)
             LYR[k] = res + (time.time(),)
+            LYR_DISK[_dk(k)] = [res[0], res[1], res[2], time.time()]
+        _disk_save_soon()
         return res
     if busy:
         raise LyricsBusy('The lyrics service is busy right now')

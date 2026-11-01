@@ -80,3 +80,6 @@ body.inroom #queueCard #endNight{grid-column:1/-1}
 #vcHead .vcub{background:var(--pink);animation:vcnew 1.4s ease-in-out infinite}
 @keyframes vcnew{0%,100%{box-shadow:0 0 0 0 rgba(255,61,139,.6)}50%{box-shadow:0 0 0 7px rgba(255,61,139,0)}}
 @media (prefers-reduced-motion:reduce){#vcHead .vcub{animation:none}}
+
+/* song without synced lyrics */
+#lyrics .nolyr{padding:28px 16px;font-size:1.15rem;line-height:1.5;color:var(--mute);text-wrap:balance}

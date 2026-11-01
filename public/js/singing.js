@@ -59,11 +59,9 @@ async function loadAndRun() {
     lyricDur = d.lyricDuration || 0; lyricId = d.id || null;
     const cs = calcScale(); autoScale = cs.scale; warn = cs.warn;
   } catch (e) {
-    const msg = 'Skipped “' + s.title + '”: ' + e.message + '.';
-    $('#cd').classList.remove('show'); room.prep = false; room.startAt = 0; leaveSong();   // never leave an empty stage or the countdown on screen
-    if (room.on) { if (isSinger()) roomOp({ op: 'skip', reason: msg + ' Pick a song marked “synced lyrics ✓”.' }); else say(msg); }
-    else { current = null; say(msg); }
-    return;
+    // No timed lyrics (none exist, or the lyrics service is down): the song still plays, just without the moving words.
+    lines = []; lyricDur = 0; lyricId = null; autoScale = 1; warn = '';
+    say('No synced lyrics for “' + s.title + '” right now (' + e.message + '), so it plays without them.');
   }
   runSong();
 }
@@ -257,6 +255,7 @@ async function runSong() {
     if (/[\u4E00-\u9FFF]/.test(l.text)) anyHan = true;
     box.appendChild(d);
   });
+  if (!lines.length) box.appendChild(el('div', '♪ Synced lyrics aren’t available for this song right now. It still plays: sing along with the video. ♪', 'nolyr'));
   box.className = 'm-' + $('#romMode').value; $('#romNote').style.display = anyRom || anyHan ? 'block' : 'none'; upgradeRomaji(lines);
   box.scrollTop = 0; frames = 0; active = true; drawMeter(0, 0); renderNow();
   labelTurns(); fxStart();

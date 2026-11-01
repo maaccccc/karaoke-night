@@ -5,3 +5,5 @@ __pycache__/
 oauth.json
 timing.json
 timing.json.tmp
+lyrics_cache.json
+lyrics_cache.json.tmp
