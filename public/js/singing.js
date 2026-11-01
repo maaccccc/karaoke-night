@@ -272,6 +272,8 @@ async function runSong() {
   else if (current.song.kv) $('#markHint').textContent = 'First time with this karaoke track: if the lyrics are early or late, press [ or ] to nudge them into line (Shift = bigger steps) and wait 4 seconds: that becomes a sync point. Do it again after any long instrumental break and near the end, and the lyrics follow the whole track. Saved for everyone.';
   else if (Math.abs(saved) >= 2) $('#markHint').textContent = 'This song still has a saved timing shift of ' + saved.toFixed(1) + 's from an earlier try. Press Reset timing if the lyrics do not match.';
   setScale(isNaN(sv) ? autoScale : sv, false); loadVersions();
+  if (lines.length && lines[0].t0 > 3 && lines[0].t * scale - offset - tweak() < 1)      // a saved / shared fix makes line 1 start at once: say so instead of silently lighting it
+    $('#markHint').textContent = 'Heads up: the saved timing for this track starts the first lyric line immediately, although the lyrics file puts it at ' + fmt(lines[0].t0) + '. That is usually an old or wrong shift. Press Reset timing, then nudge with [ ] if needed.';
 
   an = null; document.body.classList.toggle('aud', room.on && !isSinger());
   if (room.on && !isSinger()) {
@@ -349,7 +351,7 @@ async function runSong() {
 
   const endT = () => lines[lines.length - 1].t * scale + 8, fb = new Float32Array(2048);
   const lineEnd = i => Math.min(lines[i + 1] ? lines[i + 1].t * scale : lines[i].t * scale + 4, lines[i].t * scale + 6);
-  let last = -1, lvl = 0, peak = 0, pkT = 0, clr = 0, liveT = 0, clkT = 0;
+  let last = -1, lastNx = -2, lvl = 0, peak = 0, pkT = 0, clr = 0, liveT = 0, clkT = 0;
   // Countdown in the lyrics area, so everyone knows when to come in: while the music is starting, before the first line, and after long instrumental breaks.
   const lyC = $('#lyCount'), lyN = $('#lyNum'), lyL = $('#lyLbl'), lyD = $('#lyDots'); let lyKey = '', everPlayed = false;
   const skipBtn = $('#skipIntro') || { style: {} }; let skShown = false;       // "Skip intro": offered to the singer while a long instrumental intro is playing
@@ -386,9 +388,12 @@ async function runSong() {
       else { everPlayed = true; const nx = lines[idx + 1];
         if (nx) { const left = nx.t * scale - t; if (left > 0 && left <= 3 && (idx < 0 || nx.t * scale - lines[idx].t * scale >= 9)) { cn = Math.ceil(left); cl = idx < 0 ? 'First line in' : 'Next line in'; } } }
       lyShow(cn, cl); }
-    if (idx !== last || force) { force = false;
-      last = idx;
-      lines.forEach((_, i) => { const e = document.getElementById('l' + i); e.classList.toggle('now', i === idx); e.classList.toggle('past', i < idx); e.classList.toggle('next', i === idx + 1); });
+    // The upcoming line is only lit once it is really close: before the music runs, or while the first line is more than 5 s away,
+    // line 1 stays dim like the rest (it used to glow white at once, which looked like it was already being sung).
+    const nxt = idx >= 0 ? idx + 1 : (playing && lines[0].t * scale - t <= 5 ? 0 : -1);
+    if (idx !== last || nxt !== lastNx || force) { force = false;
+      last = idx; lastNx = nxt;
+      lines.forEach((_, i) => { const e = document.getElementById('l' + i); e.classList.toggle('now', i === idx); e.classList.toggle('past', i < idx); e.classList.toggle('next', i === nxt); });
       const d = $('#l' + Math.max(idx, 0)); box.scrollTo({ top: d.offsetTop - box.clientHeight / 2 + d.offsetHeight / 2, behavior: prefs.calm ? 'auto' : 'smooth' });
     }
     if (an && playing) {
