@@ -34,7 +34,6 @@ body.qside #queueCard{margin-bottom:12px}
 #vcChatPane #chat{display:flex!important;height:min(52vh,380px);height:min(52dvh,380px);border:0;border-radius:12px;background:rgba(0,0,0,.25)}
 #vcChatPane #chat .chead{display:none}
 #vcHead .vcub{position:absolute;left:-4px;bottom:-4px;margin:0;border:2px solid #1c0e2c;line-height:18px}
-@media (max-width:999px), (hover:none) and (pointer:coarse){body.inroom #chatBtn{display:none!important}}
 
 /* ---- detached: a floating window you can drag (title bar) and resize (corner) ---- */
 #vcPanel .vcph{touch-action:none}#vcPanel .vcbtns{display:flex;gap:6px}

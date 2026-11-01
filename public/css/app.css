@@ -97,7 +97,6 @@ summary{cursor:pointer;color:var(--mute);margin-top:6px}
 @media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
 .ln.dim{opacity:.5}.ln.dim.now{opacity:.9}.ln.mine[data-who]::before{font-weight:700}
 #turn{font-weight:600;margin-top:4px}
-#chatBtn{position:relative}#chatBtn .bd{display:none;position:absolute;top:-6px;right:-6px;background:var(--pink);color:#fff;border-radius:99px;font-size:.7rem;padding:0 6px;line-height:1.5}#chatBtn.unread .bd{display:block}
 .ln.now{animation:lnIn .35s ease-out}
 @keyframes lnIn{from{transform:scale(.94);opacity:.5}to{transform:scale(1);opacity:1}}
 /* The gold "sung so far" fill is drawn on a single inline box, so when a line wraps onto 2+ rows (always in fullscreen) it fills row 1 and THEN row 2,

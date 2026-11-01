@@ -74,4 +74,9 @@ body.inroom #queueCard #endNight{grid-column:1/-1}
 #vcPanel.floating #vcVoicePane{flex:none;max-height:40%}
 #vcPanel.floating #vcChatPane{flex:1}
 #vcPanel .vct{display:none!important}
-.top #chatBtn{display:none!important}   /* the bubble opens chat + voice now */
+
+/* ===== New-message notification: a small preview card beside the bubble ===== */
+#chatToast{position:fixed;bottom:auto;max-width:min(260px,calc(100vw - 100px));padding:8px 12px;border-radius:14px;font-size:.88rem;line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;border-color:color-mix(in srgb,var(--pink) 60%,transparent);box-shadow:0 10px 30px rgba(0,0,0,.55)}
+#vcHead .vcub{background:var(--pink);animation:vcnew 1.4s ease-in-out infinite}
+@keyframes vcnew{0%,100%{box-shadow:0 0 0 0 rgba(255,61,139,.6)}50%{box-shadow:0 0 0 7px rgba(255,61,139,0)}}
+@media (prefers-reduced-motion:reduce){#vcHead .vcub{animation:none}}

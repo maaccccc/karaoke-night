@@ -9,6 +9,14 @@
   const save = () => { try { localStorage.setItem('vcHead', JSON.stringify(pos)); } catch (e) {} };
   const top = () => { const lo = M + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0), hi = innerHeight - S - M; return Math.max(lo, Math.min(hi, lo + pos.y * (hi - lo))); };
 
+  function toastPlace() {      // the new-message preview sits beside the bubble, on the side facing the screen
+    const t = document.getElementById('chatToast'); if (!t || t.style.display === 'none') return;
+    const r = head.getBoundingClientRect(), h = t.offsetHeight;
+    t.style.top = Math.max(M, Math.min(innerHeight - h - M, r.top + r.height / 2 - h / 2)) + 'px'; t.style.bottom = 'auto';
+    if (pos.side === 'l') { t.style.left = (r.right + 10) + 'px'; t.style.right = 'auto'; } else { t.style.right = (innerWidth - r.left + 10) + 'px'; t.style.left = 'auto'; }
+  }
+  window.vcToastPlace = toastPlace;
+
   function place() {
     const t = top(); head.style.top = t + 'px'; head.style.bottom = 'auto';
     head.style.left = pos.side === 'l' ? M + 'px' : 'auto'; head.style.right = pos.side === 'r' ? M + 'px' : 'auto';
@@ -107,7 +115,7 @@
     bd.textContent = n ? String(n) : ''; bd.style.display = n ? 'grid' : 'none';
     const ub = document.getElementById('vcTabBd'), hu = head.querySelector('.vcub') || head.appendChild(Object.assign(document.createElement('span'), { className: 'vcub' })), un = (dock.classList.contains('phone') && typeof chatUnread === 'number') ? chatUnread : 0;
     [ub, hu].forEach(x => { x.textContent = un ? String(un) : ''; x.style.display = un ? 'inline-block' : 'none'; });
-    head.classList.toggle('live', !!vc.on); head.classList.toggle('muted', !!(vc.on && vc.muted));
+    toastPlace(); head.classList.toggle('live', !!vc.on); head.classList.toggle('muted', !!(vc.on && vc.muted));
     if (!inRoom && !panel.hidden) open(false);
   }, 400);
   chatPlace(); applyWin(); place();
