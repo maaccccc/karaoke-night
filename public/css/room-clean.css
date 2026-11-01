@@ -1,0 +1,44 @@
+/* ===== Clean room layout (loaded last): slim header, ornaments off in rooms, one calm column ===== */
+.top{display:flex;align-items:center;gap:10px;padding-top:max(8px,env(safe-area-inset-top));padding-bottom:8px}
+.top h1{display:flex;align-items:center;gap:8px;font-size:1.25rem;letter-spacing:.02em;filter:none;white-space:nowrap}
+.top h1 .logo{width:30px;height:30px;flex:none}
+.top .mic3d.mini,.top .eq{display:none}
+.top button.icon{min-height:36px;padding:0 14px;font-size:.88rem;border-radius:99px;white-space:nowrap}
+.top #roomBtn{color:var(--cyan);border:1px dashed color-mix(in srgb,var(--cyan) 55%,transparent);background:color-mix(in srgb,var(--cyan) 8%,transparent);font-weight:600;letter-spacing:.04em}
+.top::after{opacity:.4}
+/* More menu */
+.moreWrap{position:relative}
+.moreMenu{position:absolute;right:0;top:calc(100% + 8px);min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:14px;background:#1c0e2c;border:1px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:40}
+.moreMenu[hidden]{display:none}
+.moreMenu button{justify-content:flex-start;text-align:left;border:0;border-radius:10px;min-height:40px;width:100%}
+.moreMenu button:hover{background:rgba(255,255,255,.08);transform:none}
+/* ornaments belong on the landing page, not in a room */
+body:not(.home) .curtains,body:not(.home) .vinyl,body:not(.home) .discoball,body:not(.home) .mic3d.hero,body:not(.home) #fxDust{display:none!important}
+/* one calm column: search first, then queue, then room info */
+#home{display:flex;flex-direction:column;gap:14px;max-width:760px;margin:0 auto}
+#home>.card{margin:0}
+#home>.card:has(#q){order:1}
+#home>#queueCard{order:2}
+#home>#cWho{order:3}
+#home>#liveBar{order:0}
+#home>.disc{order:9;margin-top:6px}
+#queueCard>h2{display:inline-block}
+#queueCard>.addSongsBtn{float:right}
+#queueCard .row{margin-top:12px}
+#queueCard #startBtn{flex:1 1 auto;min-height:44px}
+#queueCard #endNight{margin-left:auto;opacity:.8}
+#startNote{margin:8px 0 0!important;font-size:.82rem}
+/* room card: compact, "your look" tucked in */
+body.inroom #cWho .lookbox{padding:10px 12px;margin-top:12px}
+#avPick2 .pkprev{width:56px;height:56px;font-size:1.8rem}
+#cWho #whoNote{display:none}
+#msg{max-width:760px;margin:0 auto 12px}
+/* phones: header stays one row */
+@media (max-width:640px){
+  .top{flex-wrap:nowrap;overflow:visible;-webkit-mask-image:none;mask-image:none;padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  .top h1{font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+  .top h1 .logo{width:24px;height:24px}
+  .top .grow{display:block;flex:1}
+  .top button.icon{padding:0 10px;font-size:.8rem;flex:none}
+  .top #roomBtn{order:0}
+}

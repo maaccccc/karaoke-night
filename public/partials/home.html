@@ -5,17 +5,17 @@
     <h2>Queue</h2>
     <button type="button" class="ghost addSongsBtn" aria-haspopup="dialog">＋ Add songs</button>
     <div id="queue"><p class="note">Nothing queued yet.</p></div>
-    <div class="row" style="margin-top:12px"><button id="startBtn">Start the next song</button><button class="ghost" id="saveBtn">Save queue as YouTube Music playlist</button><button class="ghost" id="endNight">🏁 End the night</button></div>
-    <p class="note" id="startNote" style="margin:8px 0 0">The person whose song is next chooses Solo, Duet or Tournament first, then everyone gets the “Are you ready?” check.</p>
+    <div class="row" style="margin-top:12px"><button id="startBtn">Start the next song</button><button class="ghost" id="saveBtn">Save as playlist</button><button class="ghost" id="endNight">🏁 End the night</button></div>
+    <p class="note" id="startNote" style="margin:8px 0 0">Whoever is up next picks Solo, Duet or Tournament.</p>
   </div>
   <div class="card" id="cWho">
     <h2>Room <span class="rcode" id="whoCode"></span></h2>
     <div class="row"><button class="ghost" id="inviteBtn" type="button">🔗 Invite friends</button><button class="ghost" id="skipBtn">Skip current song</button></div>
     <div class="lookbox">
-      <div class="lookhead"><b>Your look</b><span class="note">Pick an emoji and a colour. Everyone in the room sees it.</span></div>
+      <div class="lookhead"><b>Your look</b><span class="note">Everyone in the room sees it.</span></div>
       <div id="avPick2"></div>
     </div>
-    <p class="note" id="whoNote">A mic marked “untested” can be checked in Settings before the song starts.</p>
+    <p class="note" id="whoNote">Check your mic in ⋯ More → Mic test.</p>
   </div>
   <div class="card" id="cSingers">
     <h2>Singers</h2>
@@ -25,7 +25,7 @@
   <div class="card">
     <h2>Find a song</h2>
     <div class="row"><input id="q" type="search" placeholder="Start typing a song or artist…" aria-label="Search songs" autocomplete="off"></div>
-    <label class="karrow"><input type="checkbox" id="karOn"> <span>🎤 Karaoke versions (removes the original singer when a karaoke track exists)</span></label>
+    <label class="karrow"><input type="checkbox" id="karOn"> <span>🎤 Karaoke versions (no original singer)</span></label>
     <div id="results"></div>
   </div>
   <p class="disc">Karaoke Night is a free project made for fun, not a commercial service. It is a <b>karaoke / sing-along style</b> app: songs play through YouTube’s official embedded player (nothing is downloaded or stored here), synced lyrics come from LRCLIB, and karaoke versions are other people’s YouTube uploads. All songs, lyrics and videos belong to their owners. It is not affiliated with or endorsed by YouTube, YouTube Music or LRCLIB, and availability, lyric timing and karaoke quality are not guaranteed.</p>
