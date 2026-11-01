@@ -113,3 +113,10 @@ body .top button#sideToggle.icon{order:3}
 body .top button#gear.icon{order:4}
 body .top button#homeBtn.icon{order:5}
 body .top .moreWrap{order:6}
+
+/* Lyric line fit (fullscreen and normal view): the sung line is pushed toward the viewer (translateZ under perspective, plus the beat pulse in lite mode),
+   which magnifies it by roughly 6%. A line that already filled the box was therefore clipped at both edges by #lyrics{overflow:hidden}.
+   Side padding keeps every line narrower than the box, so the magnified line still fits, and long lines wrap instead of running off. */
+#lyrics .ln{padding-inline:6%;box-sizing:border-box;max-width:100%}
+#lyrics .ln .o,#lyrics .ln .r{overflow-wrap:break-word;white-space:normal}
+#lyrics .ln.now{text-wrap:balance}
