@@ -22,26 +22,24 @@
   if (window.ResizeObserver) new ResizeObserver(() => { if (!panel.hidden && !panel.classList.contains('floating')) place(); }).observe(panel);
   const vpane = document.getElementById('vcVoicePane'), cpane = document.getElementById('vcChatPane'), tabs = [...panel.querySelectorAll('.vct')];
   let tab = 'voice';
-  function setTab(t) {
-    tab = t === 'chat' && dock.classList.contains('phone') ? 'chat' : 'voice';
-    vpane.hidden = tab !== 'voice'; cpane.hidden = tab !== 'chat'; tabs.forEach(b => b.classList.toggle('on', b.dataset.t === tab));
-    if (tab === 'chat' && !panel.hidden) { if (typeof chatSeen === 'function') chatSeen(); const i = document.getElementById('chatIn'); if (i) setTimeout(() => i.focus(), 50); }
+  function setTab(t) {       // one combined panel now: voice on top, chat below (the tab only decides whether the chat box gets the cursor)
+    tab = t === 'chat' ? 'chat' : 'voice'; vpane.hidden = false; cpane.hidden = false;
+    if (tab === 'chat' && !panel.hidden) { const i = document.getElementById('chatIn'); if (i) setTimeout(() => i.focus(), 50); }
   }
   function open(o, t) {
     if (t) setTab(t); else if (!o) { /* keep the tab for next time */ }
     panel.hidden = !o; head.setAttribute('aria-expanded', o ? 'true' : 'false'); head.classList.toggle('open', o);
-    if (o) setTab(tab); place();
+    if (o) { setTab(t === 'chat' ? 'chat' : 'voice'); if (typeof chatSeen === 'function') chatSeen(); } place();
   }
   tabs.forEach(b => b.onclick = () => { setTab(b.dataset.t); place(); });
-  window.vcDock = { open, shows: t => !panel.hidden && tab === t };
+  window.vcDock = { open, shows: t => !panel.hidden };
 
   // phones: the room chat moves into the bubble (its Chat tab); on a PC it stays in the side column
   const chat = document.getElementById('chat'), side = document.getElementById('side'), mq = matchMedia('(max-width:999px), (hover:none) and (pointer:coarse)');
-  function chatPlace() {
+  function chatPlace() {      // the room chat always lives inside the bubble panel, on every screen size
     if (!chat) return;
-    if (mq.matches) { chat.classList.remove('min'); if (chat.parentNode !== cpane) cpane.appendChild(chat); }
-    else if (chat.parentNode !== side) side.appendChild(chat);
-    dock.classList.toggle('phone', mq.matches); if (!mq.matches && tab === 'chat') setTab('voice');
+    chat.classList.remove('min'); if (chat.parentNode !== cpane) cpane.appendChild(chat);
+    dock.classList.add('phone');
     if (typeof chatLabel === 'function') chatLabel(); place();
   }
   (mq.addEventListener ? mq.addEventListener('change', chatPlace) : mq.addListener(chatPlace));

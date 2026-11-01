@@ -1,13 +1,15 @@
 <div id="vcDock" aria-label="Voice chat">
   <div id="vcPanel" hidden role="dialog" aria-label="Voice chat">
-    <div class="vcph"><div class="vctabs"><button class="vct on" type="button" data-t="voice">🎧 Voice chat</button><button class="vct" type="button" data-t="chat">💬 Chat<span class="vctb" id="vcTabBd"></span></button></div><span class="vcbtns"><button class="ghost mini" id="vcDetach" type="button" aria-label="Detach" title="Detach: float this window anywhere on the screen">⧉</button><button class="ghost mini" id="vcMin" type="button" aria-label="Minimise">–</button></span></div>
+    <div class="vcph"><b class="vctitle">💬 Chat &amp; voice<span class="vctb" id="vcTabBd"></span></b><span class="vcbtns"><button class="ghost mini" id="vcDetach" type="button" aria-label="Detach" title="Detach: float this window anywhere on the screen">⧉</button><button class="ghost mini" id="vcMin" type="button" aria-label="Minimise">–</button></span></div>
 <div id="vcVoicePane"><div id="vcBox">
     <div class="row"><button id="vcJoin">🎧 Join voice chat</button><button class="ghost" id="vcMute" style="display:none">🎙 Mute</button></div>
     <div id="vcPeers" aria-live="polite"></div>
+    <details class="vcmore"><summary>Voice settings</summary>
     <p class="note" id="vcHint" style="display:none;margin:4px 0 0">Tip: hover or click a person to change how loud they are for you (right-click works too; press and hold on a phone).</p>
     <label id="vcMasterRow" style="display:none">Voice chat volume (everyone) <b id="vcMasterV"></b><input type="range" id="vcMaster" min="0" max="200" step="5"></label>
     <label id="vcDuckRow" style="display:none">Voice chat volume while someone sings <b id="vcDuckV"></b><input type="range" id="vcDuck" min="0" max="100" step="5"></label>
     <p class="note" id="vcNote">Talk with everyone in the room, even during songs (at a lower volume so the singer stays clear). Headphones avoid echo.</p>
+    </details>
   </div></div>
   <div id="vcChatPane" hidden></div>
   <i id="vcResize" aria-hidden="true" title="Drag to resize"></i>
