@@ -88,3 +88,9 @@ body.inroom #queueCard #endNight{grid-column:1/-1}
 .moreMenu .menulink{display:flex;align-items:center;min-height:40px;padding:0 14px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:.88rem;font-weight:600}
 .moreMenu .menulink:hover{background:rgba(255,255,255,.08)}
 .moreMenu .menulink:focus-visible{outline:3px solid var(--cyan);outline-offset:-2px}
+
+/* Status link on the home page: looks like its neighbours (How it works / My songs / Settings) */
+.lbar{flex-wrap:wrap}
+.lbar .statusLink{display:inline-flex;align-items:center;min-height:var(--ctl-sm,34px);padding:0 var(--s3,12px);border:1px solid var(--line);border-radius:12px;font:600 .9rem Rubik,sans-serif;color:#fff;text-decoration:none;transition:transform .15s}
+.lbar .statusLink:hover{transform:translateY(-2px)}
+.lbar .statusLink:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
