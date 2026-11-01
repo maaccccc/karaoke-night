@@ -3,7 +3,7 @@ const badgeQ = []; let badgeBusy = 0;
 function runBadges() {
   while (badgeBusy < 3 && badgeQ.length) {
     const [s, bd] = badgeQ.shift(); badgeBusy++;
-    fetch('/api/haslyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration || 0 })).then(r => r.json())
+    fetch('/api/haslyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration || 0 })).then(r => r.ok ? r.json() : Promise.reject())
       .then(d => { bd.textContent = d.has ? 'synced lyrics ✓' : 'no synced lyrics'; bd.className = 'bdg ' + (d.has ? 'ok' : 'no'); })
       .catch(() => bd.remove()).finally(() => { badgeBusy--; runBadges(); });
   }

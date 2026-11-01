@@ -50,7 +50,7 @@
         const song = song0(s), row = mkEl('div', 'apRow'), info = mkEl('div', 'apInfo');
         const bd = mkEl('span', 'bdg', 'checking lyrics…'); const t = mkEl('span', 'apT', s.title); t.appendChild(bd);
         info.append(t, mkEl('small', '', s.artist + ' · ' + fmt(s.duration)));
-        fetch('/api/haslyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration || 0 })).then(x => x.json())
+        fetch('/api/haslyrics?' + new URLSearchParams({ title: s.title, artist: s.artist, duration: s.duration || 0 })).then(x => x.ok ? x.json() : Promise.reject())
           .then(d => { bd.textContent = d.has ? 'synced lyrics ✓' : 'no synced lyrics'; bd.className = 'bdg ' + (d.has ? 'ok' : 'no'); }).catch(() => bd.remove());
         let sel = null;
         if (!room.on) { sel = mkEl('select'); sel.setAttribute('aria-label', 'Singer for ' + s.title); (players.length ? players : ['Anyone']).forEach(p => sel.appendChild(mkEl('option', '', p))); }

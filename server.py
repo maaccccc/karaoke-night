@@ -58,6 +58,7 @@ def lr_json(url, tries=3):
         except Exception as e:
             err = e
         if i + 1 < tries: time.sleep(0.5 * (i + 1))
+    print('[lyrics] LRCLIB request failed:', url[:140], '->', err, flush=True)      # shows in the server window, so you can see WHY lyrics fail
     raise LyricsBusy(str(err))
 
 def norm(s):
@@ -1308,8 +1309,8 @@ MAX_PER_IP = int(os.getenv('MAX_PER_IP', '10'))      # people from one network a
 CSP_MODE = os.getenv('CSP', 'on').lower()
 # bucket: (requests allowed, per this many seconds), counted per visitor address. Only abuse-prone routes are limited, set well above normal
 # use (a whole family on one Wi-Fi shares an address). Live room polling is deliberately not limited.
-RATE = {'search': (240, 60), 'timing': (30, 600), 'gchat': (20, 60), 'chat': (30, 30), 'join': (60, 60), 'playlist': (6, 60), 'romanize': (30, 60)}
-GET_BUCKETS = {'/api/search': 'search', '/api/haslyrics': 'search', '/api/karaoke': 'search', '/api/versions': 'search', '/api/lyrics': 'search'}
+RATE = {'search': (240, 60), 'timing': (30, 600), 'gchat': (20, 60), 'chat': (30, 30), 'join': (60, 60), 'playlist': (6, 60), 'romanize': (30, 60), 'lyrics': (900, 60)}
+GET_BUCKETS = {'/api/search': 'search', '/api/haslyrics': 'lyrics', '/api/karaoke': 'search', '/api/versions': 'search', '/api/lyrics': 'lyrics'}
 POST_BUCKETS = {'/api/timing': 'timing', '/api/gchat': 'gchat', '/api/room/join': 'join', '/api/playlist': 'playlist', '/api/romanize': 'romanize'}
 _rl = {}; _rl_lock = threading.Lock()
 
