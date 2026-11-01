@@ -37,6 +37,8 @@ body.inroom #cWho .lookbox{padding:10px 12px;margin-top:12px}
   .top .grow{display:block;flex:1}
   .top button.icon{padding:0 10px;font-size:.8rem;flex:none}
   .top #roomBtn{order:0}
+  .top .lbl{display:none}
+  .top #gear,.top #homeBtn{padding:0 11px;font-size:1rem}
 }
 
 /* ===== Sidebar + home cards: lighter, flatter, and collapsible ===== */
@@ -84,13 +86,30 @@ body.inroom #queueCard #endNight{grid-column:1/-1}
 /* song without synced lyrics */
 #lyrics .nolyr{padding:28px 16px;font-size:1.15rem;line-height:1.5;color:var(--mute);text-wrap:balance}
 
-/* link row inside the More menu */
-.moreMenu .menulink{display:flex;align-items:center;min-height:40px;padding:0 14px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:.88rem;font-weight:600}
-.moreMenu .menulink:hover{background:rgba(255,255,255,.08)}
-.moreMenu .menulink:focus-visible{outline:3px solid var(--cyan);outline-offset:-2px}
 
 /* Status link on the home page: looks like its neighbours (How it works / My songs / Settings) */
 .lbar{flex-wrap:wrap}
 .lbar .statusLink{display:inline-flex;align-items:center;min-height:var(--ctl-sm,34px);padding:0 var(--s3,12px);border:1px solid var(--line);border-radius:12px;font:600 .9rem Rubik,sans-serif;color:#fff;text-decoration:none;transition:transform .15s}
 .lbar .statusLink:hover{transform:translateY(-2px)}
 .lbar .statusLink:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+
+/* narrow phones: logo only (the room code matters more than the name), icon-only buttons */
+@media (max-width:520px){
+  .top{gap:6px}
+  .top h1{font-size:0;gap:0}
+  .top button.icon{padding:0 9px;font-size:.8rem}
+  .top #roomBtn{padding:0 10px}
+}
+@media (max-width:520px){
+  .top #sideToggle,.top #roomBtn,.top #gear,.top #homeBtn,.top #moreBtn{padding:0 9px;font-size:.78rem;min-height:36px}
+}
+@media (max-width:420px){.top h1{display:none}}
+@media (max-width:360px){.top #roomBtn{max-width:100px;overflow:hidden;text-overflow:ellipsis}}
+/* header order, spelled out so the phone layout (responsive.css) cannot shuffle it */
+body .top h1{order:0}
+body .top button#roomBtn.icon{order:1}
+body .top .grow{order:2}
+body .top button#sideToggle.icon{order:3}
+body .top button#gear.icon{order:4}
+body .top button#homeBtn.icon{order:5}
+body .top .moreWrap{order:6}
