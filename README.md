@@ -2,6 +2,8 @@
 
 Search songs on YouTube Music, queue them, and sing with time-synced lyrics while the video plays.
 
+> **Transparency:** this project was built with AI assistance and uses one optional AI feature at run time. See [AI, tools and credits](#ai-tools-and-credits) at the bottom for exactly what, and what is not AI.
+
 ## Run it
 1. Install Python 3.9+.
 2. `pip install -r requirements.txt`
@@ -186,3 +188,35 @@ Each browser makes a random secret once (`karaokeDev` in localStorage). The ids 
 ### The 3D look
 `css/depth.css` and `js/tilt.js` add the depth on top of the normal design. Three tiers: **PC** (mouse, window 900px or wider, normal mode) gets tilting cards, raised keycap buttons, receding lyrics and a drifting background; **tablets and phones** get static layered shadows, pressed-button feedback and a phone layout that fits the song, score and controls on one screen; **Smooth mode** (Settings, or chosen automatically on slow devices) and "reduce motion" remove the movement. To tone the PC effect down, lower `MAX` in `js/tilt.js` (tilt degrees) or delete the `.lact` rules in `depth.css`.
 
+## AI, tools and credits
+
+### How this app was built
+- **Built with AI assistance.** Much of the code in this repository was written or revised with the help of AI coding assistants (large language models), working from my prompts, and I directed the design and tested the result by running it. [EDIT: name the tools you used, e.g. "Claude" / "ChatGPT" / "GitHub Copilot", and say how much was AI-written versus hand-written.]
+- **Not independently audited.** The code (including the room-code, ban and rate-limit logic described in `SECURITY_SETUP.md`) has not had a professional security review. Treat it as a hobby project and do not rely on it for anything sensitive.
+- **The documentation** (this README included) was also written or edited with AI help, so if something here disagrees with what the app does, the app and the source code are right.
+
+### AI that runs inside the app
+- **Optional "AI judge" comment (Google Gemini).** If the server owner sets `GEMINI_API_KEY`, the results screen shows a short playful comment written by a Gemini model (`GEMINI_MODEL` picks which; a fallback model is tried if it is not found). Without the key this feature is off and the app works the same otherwise.
+  - What is sent to Google: the song title (first 80 characters) and numbers from the score breakdown (total score, percentage per scoring part, strongest and weakest part, best combo, share of lines detected as singing, held-note steadiness). Never audio, player names or chat (see `judge_facts` and `_gemini` in `server.py`).
+  - The server works out the facts (strongest and weakest part, percentages) itself and Gemini only words them. A comment that contains a number not in the facts is rejected and retried once, and if it fails again a fixed, non-AI template sentence is shown instead. It should not invent scores, but it is still generated text and can be silly or wrong.
+- **Nothing else is AI.** Scoring is ordinary signal processing in your browser from your microphone, plus stars from friends. Lyric timing is set by ear (Mark / Sooner / Later buttons) and shared through `timing.json`; no speech recognition or AI is used to align lyrics. The word filter (`wordfilter.py`) is a rule-based list, and "karaoke version" matching is rule-based ranking (`find_karaoke`, `rank_karaoke`). Romanization uses the libraries listed below.
+- **Your audio:** the app never records or uploads your singing for AI. The microphone is analysed locally for scoring, and in rooms it is streamed live to the other people in the room (peer to peer, or through a TURN relay on strict networks).
+
+### Third-party services and libraries
+| What | Used for |
+|---|---|
+| [YouTube](https://www.youtube.com) embedded player | Playing the music and video. Nothing is downloaded. |
+| [`ytmusicapi`](https://github.com/sigma67/ytmusicapi) (unofficial) | Searching YouTube Music, and optionally saving the queue as a playlist. Not affiliated with or endorsed by YouTube or Google. |
+| [LRCLIB](https://lrclib.net) | Time-synced lyrics. The lyrics belong to their rights holders; this is only suited to private get-togethers (see Notes above). |
+| Google Gemini API | The optional AI judge comment (above). |
+| Google public STUN servers | Letting browsers find each other for voice chat. |
+| Cloudflare Realtime TURN (or your own coturn) | Optional voice relay on strict networks. |
+| Render, Cloudflare Tunnel, ngrok | Optional ways to host or share the app (see the sections above). |
+| Google Fonts, and `qrcode-generator` from cdnjs | Fonts for the pages, and the QR code in the room invite window. (The security policy in `server.py` also allows jsDelivr.) |
+| `pykakasi`, `pypinyin`, `unidecode`, optional `cutlet` | Romanizing lyrics (Japanese, Chinese, other scripts). |
+| `stable-ts` (`requirements-align.txt`) | Listed as an optional extra; the server does not import it. |
+
+Song names, artists and artwork belong to their owners. Karaoke Night is an independent hobby project and is not affiliated with YouTube, Google, LRCLIB or any record label.
+
+### Privacy in one paragraph
+There are no accounts. Your device keeps a random id, favourites, history and settings in your own browser (localStorage). The server keeps rooms, bans and rate limits in memory, and stores shared lyric timing in `timing.json`. Voice goes between browsers, not through the server, unless a TURN relay is needed.
