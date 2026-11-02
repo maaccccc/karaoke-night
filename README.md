@@ -1,188 +1,68 @@
-# Karaoke Night (YouTube edition)
+# Karaoke Night
 
-Search songs on YouTube Music, queue them, and sing with time-synced lyrics while the video plays.
+[![Latest release](https://img.shields.io/github/v/release/maaccccc/karaoke-night-app?label=latest&color=ff9a56)](https://github.com/maaccccc/karaoke-night-app/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/maaccccc/karaoke-night-app/total?color=3be58a)](https://github.com/maaccccc/karaoke-night-app/releases)
+[![Source code](https://img.shields.io/badge/source-open-blue)](https://github.com/maaccccc/karaoke-night)
 
-## Run it
-1. Install Python 3.9+.
-2. `pip install -r requirements.txt`
-3. `python server.py`, then open http://localhost:3000 (friends on the same Wi-Fi can use your computer's local IP).
+Sing with time-synced lyrics, live scoring and friends, on one device or across the world. A free project, made for fun.
 
-Searching and singing need **no login**. 
+**This repository hosts the Windows installer. The full source code is open: [github.com/maaccccc/karaoke-night](https://github.com/maaccccc/karaoke-night).** You can read exactly what the app does, or run it yourself without installing anything.
 
-## How it works
-- `ytmusicapi` searches YouTube Music (songs only).
-- The song plays through YouTube's official embedded player; the lyrics follow the video's clock.
-- Timed lyrics come from LRCLIB. Video versions can differ slightly from the lyric timing, so use the **Sooner / Later** buttons to nudge it.
-- Scoring: up to 50 points from the mic plus 10 per star from friends.
-- Some videos block embedding; the app tells you and you can skip to the next song.
+## Download
 
-## Optional: save the queue as a YouTube Music playlist
-This is the `create_playlist` / `add_playlist_items` part of your snippet, behind the "Save queue" button. It needs a login:
-1. Run `ytmusicapi oauth` once to create `oauth.json` in this folder.
-2. Recent versions of ytmusicapi also need your own Google OAuth client (type "TVs and Limited Input devices", YouTube Data API v3 enabled). Pass it with the environment variables `YTM_CLIENT_ID` and `YTM_CLIENT_SECRET` when starting the server.
+| Device | Download |
+|--------|----------|
+| **Windows PC** | [KaraokeNight-Setup.exe](https://github.com/maaccccc/karaoke-night-app/releases/latest/download/KaraokeNight-Setup.exe) |
 
-Keep `oauth.json` private; it gives access to your account.
+All versions and what changed: see [**Releases**](https://github.com/maaccccc/karaoke-night-app/releases) and the [changelog](CHANGELOG.md).
 
-## Notes
-- `ytmusicapi` is unofficial and can break when YouTube changes things. The music itself is only played through YouTube's embed, never downloaded.
-- LRCLIB lyrics suit private get-togethers. For public or commercial use, swap `synced_lyrics()` in `server.py` for a licensed provider.
+Prefer not to install anything? Run the server from source (Python 3.9+) and open it in your browser. Steps are in the [source README](https://github.com/maaccccc/karaoke-night#run-it).
 
-## Syncing lyrics accurately
-- **Mark buttons (any song):** click a lyric line, press **Mark picked line** the moment you hear it start, then mark a second line near the end. The app fixes the shift and the stretch. Your result is remembered for that song.
-- **Preferences:** *Audio delay* compensates for Bluetooth and other late audio. *Show lines early* highlights each line a little before it is sung.
+## What you can do
 
+- Search any song and sing it with lyrics that follow the music. Karaoke versions are picked automatically when they exist.
+- Live scoring while you sing, in **Solo**, **Duet** and **Tournament** modes.
+- Rooms with friends: shared queue, scoreboard, voice chat and vote-to-skip.
+- Playlists, favourites and your singing history, stored on your device.
+- Hear-yourself echo and reverb when singing without a room.
 
-## Karaoke versions (no original singer)
-Under the search box, a **🎵 Sing-along / 🎤 Karaoke** toggle (Sing-along is the default) chooses what plays. Choosing **Karaoke** swaps the original recording for a karaoke / instrumental upload from YouTube when you add a song to the queue. The queue shows "🎤 karaoke version" when one was found; if none is found the original plays and the status line says so. Rooms work too: the chosen karaoke video is stored with the queue item, so everybody plays the same one.
-- **Lyrics stay tied to the original song.** Timed lyrics are still looked up with the original title, artist and length (`/api/lyrics`), so the lyric match is exactly what it was before. Only the video that plays changes.
-- **Same song, same artist, same arrangement.** `/api/karaoke` (`find_karaoke` and `rank_karaoke` in `server.py`) searches YouTube for karaoke / instrumental videos and keeps only the ones that are really this song: the whole song title must be the video's title (so "Perfect" does not match "Perfect Symphony"), live / cover / remix / "with vocals" uploads are dropped, and "originally performed by" someone else is dropped. The length must be within `KARA_MAX_DIFF` (20 s) of the song, and an upload that does not name the artist (and is not from a known karaoke channel) must be within `KARA_SURE_DIFF` (6 s). Songs titled in another script need the artist's name or a known karaoke channel as well. The closest length goes first, then artist match, then known channels. If nothing passes, the original plays and the page says so, because playing a different song would be worse.
-- **Timing is saved per video.** Shift and stretch are remembered for the karaoke video separately from the original, so fixing one never breaks the other. A karaoke track is never speed-stretched automatically (a length difference is usually extra intro or outro, which needs a shift); the page tells you when the track is more than 3 seconds longer or shorter than the lyrics' version. If the first line starts early or late, click it and press **Mark** when you hear it begin. It is remembered for that track in your browser.
-- Turn the checkbox off to play original recordings as before.
+## Installing
 
-- **If the original still plays:** that means no karaoke video passed the checks above, and the page says so when you add the song. Queued songs without one show a **🎤 Find karaoke** button to try again, and ticking the Karaoke versions box also switches the songs you already queued. The search tries four queries and reads lengths given as text.
-- **See why a song has none:** open `http://localhost:3000/api/karaoke?title=SONG&artist=ARTIST&duration=SECONDS&debug=1`. It lists every video that was left out and the reason (no karaoke word in the title, different title, length too far off, search failed).
+**Windows.** Run the installer. If Windows shows *"Windows protected your PC"*, choose **More info**, then **Run anyway**. The app is not signed with a paid certificate, so Windows does not recognise it yet. After the first install the app **updates itself**: new versions download quietly and install the next time you close the app.
 
-## Online rooms (friends in different places)
-Everyone opens the same link, enters a name, and joins the same room code. The queue and scoreboard are shared, the song starts for everyone at the same moment (after a 5 second countdown), and the singer's microphone is streamed live to everyone else.
+### Checking your download
 
-1. Run `python server.py` on your PC.
-2. Give friends a public **https** link (microphones only work on https). Easiest: install Cloudflare's `cloudflared` and run `cloudflared tunnel --url http://localhost:3000`, then share the `https://...trycloudflare.com` address it prints. ngrok (`ngrok http 3000`) works too.
-3. Open the link, type your name, leave the room code empty and press **Join / create room**. Press the **🌐 Room** button to copy an invite link, and send it to your friends.
+Don't want to take the installer on trust? Two easy checks:
 
-Notes:
-- Singers should wear **headphones**, or friends will hear the song twice (once from YouTube, once leaking into the mic).
-- Each person's browser plays the YouTube video itself, so listeners can be about a second out of step with the singer. Listeners can lower or raise "Singer voice" on the singing page.
-- Voice goes directly between browsers (WebRTC) using a public STUN server. A few strict networks (some school or office Wi-Fi, some mobile carriers) block this and would need a TURN server.
-- Room data is kept in memory and is lost when the server restarts. "Save playlist" is for solo mode only.
+1. **Compare the checksum.** Each release lists the SHA-256 of the installer. In PowerShell:
+   ```
+   Get-FileHash .\KaraokeNight-Setup.exe -Algorithm SHA256
+   ```
+   The result should match the value on the release page.
+2. **Scan it** at [virustotal.com](https://www.virustotal.com) and compare the report with the release notes.
 
-### Ready check and countdown (rooms only)
-After the singer has chosen the mode, pressing **Start the next song** in a room asks everyone "Are you ready?". The song begins, with a 5 second on-screen countdown, once every person has pressed **I'm ready!**. Anyone can press **Not yet** to cancel, and the check cancels itself after 30 seconds.
+Because the source is public, you can also build the app yourself and compare.
 
-### Clearer voice
-Settings has **Headphones mode** (on by default). It turns off the browser's echo canceller while you sing in a room, which is what usually chops a singer's voice up when music is playing. The voice is also sent as high-quality Opus audio with silence-skipping turned off. If you sing through speakers instead of headphones, turn Headphones mode off, otherwise friends will hear the song twice.
+## Privacy: what stays on your device and what doesn't
 
-### Staying in sync
-In a room the song position follows one shared clock (the server's). Every browser preloads the video during the ready countdown, starts it at the same moment, and re-seeks itself if it drifts more than about 0.7 seconds. If a tab was hidden or the video stalled, it jumps back to the right spot when you return. Expect everyone to be within roughly half a second of each other. Keep the karaoke tab visible while singing (mic scoring runs best in the foreground tab).
+The full details are in the [source code](https://github.com/maaccccc/karaoke-night), but in plain language:
 
-### Live mic controls while singing
-The singer sees a **Mic level** slider on the singing page (also in Settings). In a room, friends hear the change immediately, because their audio is your mic after that gain, with a limiter to stop loud notes crackling. Changing the **Microphone** in Settings, or toggling Headphones mode, while singing switches the mic on the fly without cutting the stream.
+- **On your device only:** favourites, history, playlists, settings, lyric-timing tweaks you make, and your name/emoji choice. There are no accounts.
+- **Your microphone** is used to score your singing and, in a room, to send your voice to the other people there. Voice goes directly between browsers (WebRTC); if two people can't connect directly, an optional relay server passes the audio along. Audio is not recorded or stored.
+- **What the server sees:** room codes, the names you type, queue and chat messages (kept in memory and lost when the server restarts), and a one-way hash of a random per-browser ID so one device is treated as one seat. Lyric-timing fixes for a song are saved on the server so they help everyone.
+- **Songs** play through YouTube's official embedded player. Lyrics come from LRCLIB. Nothing is downloaded or stored by the app.
+- The app needs an **internet connection**: songs, lyrics and rooms all run online.
 
-### Lobby, song modes and auto-play (rooms)
-- The **Lobby** card at the top of the side panel lists everyone in the room (name, look, mic status, who is singing, who is choosing a mode, who is ready). On phones, open it with the **Lobby & Queue** button.
-- In a room you always queue songs as **yourself**, from your own device. There is no singer dropdown (that is only for same-device play, where one computer is shared by several people).
-- **The mode is chosen at the start, before the ready check.** When someone presses **Start the next song** (or auto-play kicks in), the person whose song is next gets a window to choose **Solo**, **Duet** or **Tournament**, and a partner from the lobby. Everyone else sees "<name> is choosing the mode…". After that the "Are you ready?" check begins.
-- **Duet:** the lines are shuffled at random between the two singers, with a few sung together, and your mic is only live on your own lines. Each gets their own score, no winner.
-- **Tournament:** you choose who to fight, one person or several (up to 8 in total, or press **Fight everyone**). The lines are shuffled at random and your mic is only live on your lines. Each person is scored only on their own lines, and the highest total (score plus combo bonus) wins a 10-point bonus and a podium. A shared top score is a tie with no bonus.
-- Only the named singer(s) can sing and score a song. Everyone else listens.
-- About 8 seconds after a song ends, the next singer is asked to choose a mode automatically, followed by the ready check and 5 second countdown. If they do not choose within 45 seconds, the start is cancelled. The host can press **Skip for everyone** to move on at once; everybody else presses **Vote to skip**, and the song is skipped when more than half of the room has voted (a singer whose song has no synced lyrics is still skipped automatically).
-- Voice chat in a duet or tournament needs both singers in **headphones**.
+## Good to know
 
-### Looks, reactions and audience stars (rooms)
-- Everyone picks an emoji and a colour (in the join window or the "Who's here" card). It shows in the queue, scoreboard, who's-here list and the tournament line labels. Your choice is remembered on this browser.
-- Listeners get reaction buttons (👏 🔥 ❤️ 😂 🎉 😮) under the lyrics. They float up everyone's screen.
-- After a song, listeners can give 1 to 5 stars. The average becomes up to 10 bonus points for the singer(s). Votes can be changed until the next song starts.
+- Karaoke Night is not affiliated with or endorsed by YouTube, YouTube Music or LRCLIB.
+- Wear **headphones** when singing in a room, or friends will hear the song twice.
+- Some videos block embedding. The app tells you, and you can skip to the next song.
 
-### Voice chat across strict networks (TURN relay)
-Voice goes directly between browsers. When two people are on strict networks (some mobile data plans, school or office Wi-Fi, some home routers), a direct link between *those two* cannot be made, even though both can reach a third person. The Lobby then shows **⚠ cannot connect** next to that person, and you will hear the others but not them.
+## Problems or ideas?
 
-The fix is a TURN relay, which passes the audio along when a direct link is impossible. Get TURN credentials from a TURN provider (several, such as Metered and Cloudflare, offer free tiers; check their current limits), then start the server with:
+Open an [**Issue**](https://github.com/maaccccc/karaoke-night-app/issues/new/choose) and say which device you use and what happened. Code contributions and bug reports for the app itself are welcome in the [source repository](https://github.com/maaccccc/karaoke-night/issues). For security problems, please read [SECURITY.md](SECURITY.md) first.
 
-    set TURN_URL=turn:your-turn-host:3478,turns:your-turn-host:5349
-    set TURN_USER=your-username
-    set TURN_PASS=your-password
-    python server.py
+## License
 
-(On macOS or Linux use `export` instead of `set`.) Everyone who opens the page then uses the relay automatically when they need it. Do not share the credentials publicly.
-
-The voice list under **Join voice chat** shows each person as connected (✓), connecting (…) or unable to connect (⚠). A stuck link is retried three times before it is reported.
-
-### Low-latency voice (on by default)
-**⚡ Low-latency voice** is in Settings and in the Mic test window, and takes effect immediately (turn it off if the voice crackles on weak Wi-Fi). It does three things:
-- A smaller voice buffer (starts at 40 ms and can grow to 180 ms, instead of 100 ms growing to 300 ms), which grows only on real trouble and shrinks faster once the connection is calm.
-- Shorter Opus packets (10 ms instead of 20 ms). This applies to the next song's connection.
-- Tighter video sync: a device is re-aligned to the room clock when it drifts 0.35 s instead of 0.7 s.
-
-### Listeners: music held back to match the singer's voice
-A singer's voice reaches listeners a little late (network + voice buffer). Listeners' music is held back by that measured delay plus **Voice sync (when listening)** in Settings, so voice, music and lyrics line up. The lyrics follow the video, so they move with the music. Singers are never held back (it would add up between two singers). The Lobby line "Voice delay about … ms" also says how much the music is held back.
-
-### Settings that apply right away
-While a song is playing, changing the **Microphone**, or toggling **Headphones mode**, swaps the live microphone without stopping the song or reconnecting anyone (`public/js/live-settings.js`). If the new microphone cannot be opened, the old one keeps working. The voice chat microphone follows the same picker. The **Lyrics** display mode (original / romanized / both) also changes at once. Sliders such as Mic sensitivity, Song volume, Audio delay, Show lines early, Voice sync and lyric size were already live.
-
-## Fair queue, stage looks, awards and end of night
-- **Fair queue:** people take turns. Whoever sang longest ago (or never) goes next, and each person's own songs stay in the order they added them, so one person queuing five songs does not block everyone else. The queue list shows the real play order. This works in rooms and on one shared device.
-- **Themes:** Neon club, Retro arcade and Starry sky, each with its own background and lyric glow. Pick one on the **home page** (the Theme card). It changes the look of the whole site, on every page and while you sing, and it is remembered on this browser. Each person uses their own theme, so friends in a room can have different ones.
-- **Lyric styling:** words fill as they are sung and bounce a little on strong beats. The app cannot hear the YouTube music, so the bounce follows the loudest moments of the singing instead. The stage lights dim in quiet moments (instrumental gaps and soft singing). **Reduce motion** turns both off.
-- **Avatars on stage:** the singer's emoji is shown large and glows and pulses with the voice. In duets and tournaments, the emoji of whoever owns the current line lights up. Listeners appear as a row of emoji under the lyrics, and their reactions float up from their own emoji. A **Crowd energy** meter fills with reactions and chat.
-- **Combo:** every line you sing well in a row builds a combo. Your best streak gives up to 10 bonus points, shown on the result card.
-- **Awards:** after each song, funny titles such as Pitch Perfect, Loudest Voice, Always Early, Non-Stop Singer, Combo Machine and Crowd Favourite are picked from your score breakdown, combo, audience stars and reactions.
-- **Victory moments:** bigger confetti for high scores, and a podium after every tournament.
-- **End of the night:** press **End the night** (next to the queue buttons) for the winner, the most-played singer, the best single performance and the crowd favourite. **Start a new night** clears scores and history.
-
-### Starting together
-When a song starts in a room, every browser first loads the lyrics and quietly pre-loads the video, then reports ready. The server sends one shared start time once everyone is ready (or after 15 seconds, so one slow device cannot hold up the room). A device that is still slow then catches up using the shared clock.
-
-### Premium look (design layer)
-All the extra visuals live in three new files, so the app's own code is untouched: `public/css/premium.css`, `public/js/premium.js` and `public/partials/ornaments.html`.
-- **Spinning microphone:** a 3D gold wire-mesh microphone on the right of the welcome page. It turns slowly by itself. Drag it sideways to spin it faster (a flick shows its RPM and throws sparks), and it slowly coasts back to idle. Keyboard: focus it and press Space or Enter. A small copy sits next to the logo in the app, and glows red and spins faster while a song is playing.
-- **Theatre set** on the welcome page: velvet curtains, a spinning vinyl record and a swinging mirror ball.
-- **Glass cards, glowing buttons, drifting light dust and stage-floor glow** everywhere. The colours follow the stage theme (Neon club, Retro arcade, Starry sky).
-- **Slow devices:** the page checks its own frame rate in the first few seconds and, if it is slow, switches to a lighter "lite" look automatically. To force it, run `localStorage.karaokeLite = '1'` (lite) or `'0'` (always the full look) in the browser console, then refresh.
-- People who prefer reduced motion get a still page (the microphone still responds when dragged).
-- To remove the layer completely, delete the `premium.css`, `premium.js` and `ornaments.html` lines in `public/index.html`.
-
-### Countdown in the lyrics area
-A big 3 · 2 · 1 appears over the lyrics so everyone knows when to come in: "Song starting…" while the music loads, "First line in 3, 2, 1" before the first lyric, and "Next line in…" after a long instrumental break (9 seconds or more between lines). It shows on every screen in the room, in fullscreen too. The styles are in `public/css/countdown.css` and the timing is in `public/js/singing.js` (`lyShow`).
-
-## Romanized lyrics (Japanese kanji, Chinese, Russian, etc.)
-Korean and Japanese kana are romanized in the browser. Kanji, Chinese pinyin and other scripts (Cyrillic, Greek, Arabic, Thai, Hindi...) are romanized by the server through `/api/romanize`, using the libraries in `requirements.txt`: `pip install -r requirements.txt`, then restart `server.py`. If one is missing, the page tells you which to install.
-- Japanese: uses `cutlet` when installed (best: real word spacing and particles like は -> wa; `pip install cutlet unidic-lite`), otherwise `pykakasi`.
-- A song with any kana is treated as Japanese; a song with only Han characters is treated as Chinese (pinyin with tone marks).
-
-### Voice chat volume and mic threshold
-- **Per person (Discord style):** hover over someone in the Lobby or the voice chat list (the box appears beside them), or click them to keep it open (click again to close). Right-click works too, and on a phone press and hold. Drag **User volume** from 0 to 100%. The same menu has Mute. It only changes what *you* hear and is remembered in your browser by the person's name.
-- **Everyone:** the **Voice chat volume (everyone)** slider at the bottom of the voice chat panel goes from 0 to 200% (100% is normal; double-click resets it). Above 100% the sound goes through a limiter so it does not crackle. The "while someone sings" slider still ducks voice chat on top of this.
-- **Meters:** each person in the voice chat list has a live level meter.
-- **Mic threshold (Settings → Sound, and Mic test):** like Discord's input sensitivity. Your mic is muted while the live meter is left of the white line. 0 = off. It works together with Mic suppression and applies right away, even during a song.
-
-### Mic suppression (Settings → Sound, also in Mic test)
-For people with a TV, fans or family on other computers in the same room. It works for both singing and voice chat, takes effect straight away, and only changes what *your* mic sends (and what scores you).
-- **Off:** raw microphone, no processing.
-- **Standard (default):** how the app always worked.
-- **Strong:** the browser's noise suppression, a voice-range filter, and a noise gate that learns the background and turns the mic down about 14 dB while you are not clearly louder than it.
-- **Maximum:** a stricter gate (about 30 dB down) and a tighter filter.
-The gate runs in an AudioWorklet (`public/js/suppress-worklet.js`, logic in `public/js/suppress.js`) and needs https or localhost, like the microphone itself. It cannot tell your voice from someone else's voice, so keep the mic close or wear headphones. If the start of words is clipped, use Strong instead of Maximum.
-
-### Shared lyric timing (fix a karaoke track once, for everybody)
-The timed lyrics match the original recording, and a karaoke track usually has a different intro, so the lyrics can start early or late on it. Nothing can measure that automatically (the app never downloads the audio), so it is fixed by ear: click a lyric line and press **Mark** when you hear it begin, or use **Sooner / Later**.
-- **Saved on the server.** The fix is stored in `timing.json` (next to `server.py`) for that exact video and lyrics version, and used automatically for everybody the next time the song is played. The page says "Using the lyric timing that was already fixed for this track".
-- **Live in a room.** When the singer (or the host) changes the timing, everyone in the room gets it immediately, so listeners no longer have to adjust their own. A listener's own nudges stay on their device only.
-- **Reset timing** puts the shift back to 0 for that track. If a wrong fix was saved, fix it again or reset it. To wipe everything, delete `timing.json`.
-- `/api/timing?v=VIDEOID&l=LYRICID` shows what is stored for a track.
-
-## Sync points (close-to-exact lyric timing on karaoke tracks)
-Lyric files are timed to the original recording, and a karaoke upload is a different recording (longer intro, an extra instrumental break, slightly different speed). One shift plus one stretch cannot fix that, so the app keeps **sync points** instead. A sync point says: *this lyric line really starts at this moment of the video*.
-- **How to make one:** press **[** or **]** (or Sooner / Later) until the lyrics are right and wait 4 seconds, or click a line and press **Mark** when you hear it begin. Do it near the start, again after any long instrumental break, and once near the end.
-- **How it is used:** the lyrics are exact at every sync point and spread evenly between them. Before the first one and after the last one they simply keep that point's shift. One sync point behaves exactly like the old single shift.
-- **Saved for everybody** per video + lyrics version in `timing.json`, and sent live to the room. Because sync points cannot be averaged, the server keeps the one vote that is closest to all the others, so a single bad vote cannot move it. **Reset timing** clears all of them.
-- **Better video choice:** karaoke videos are now ranked by how close their length is to the song (`exact` within 2 s, `close` within 5 s, `loose` within 10 s, `far` beyond). A near-exact length is almost always the same arrangement, so one shift lines it up. `/api/karaoke?...&debug=1` shows each video's `fit`.
-
-## Settings, security and deploying (optional environment variables)
-
-| Variable | What it does |
-|---|---|
-| `GEMINI_API_KEY` | Turns on the AI judge comment on the results screen (Google Gemini). `GEMINI_MODEL` picks the model. |
-| `TRUST_PROXY` | `1` reads the visitor address from the proxy (`CF-Connecting-IP`). On by default on Render. |
-| `RATE_SCALE` | Multiplies every rate limit (`2` = twice as generous, `0.5` = half). Limits only cover search, lyric timing, chat, joining rooms, playlists and romanizing, and are set well above normal use. |
-| `MAX_ROOMS`, `MAX_ROOM_CLIENTS` | Caps on open rooms (default 400) and people per room (default 40). |
-| `MAX_PER_IP` | Most people from one network address inside one room (default 10, `0` = no limit). A party on one Wi-Fi is fine; this stops one person flooding a room from many windows. |
-| `CSP` | `on` (default), `report` (log problems without blocking) or `off`. If something from a new site stops loading, try `report` first, then add that site to `csp_value()` in `server.py`. |
-| `JUDGE_LIMIT` | Optional cap on judge comments per visitor per 10 minutes (default: no limit). |
-
-The server sends compressed files with ETags (a page reload re-downloads nothing that has not changed), keeps connections open, and sets security headers. Lyric-timing fixes are shared by everyone, so the value people see is the median of the latest fixes from different visitors; one visitor cannot overwrite it. On Render, start with `python server.py` and add your variables under Environment.
-
-### One seat per device, and My songs
-Each browser makes a random secret once (`karaokeDev` in localStorage). The ids the server sees are one-way hashes of it, one per room, so every tab of one browser is the same person in a room: opening the room in a second tab moves the seat to the new tab and tells the old one to stop. A private window, another browser or cleared site data counts as a new device (there are no accounts), which is what `MAX_PER_IP` is for. "⭐ My songs" (favourites, history, most sung) is stored in the same browser (`karaokeFavs`, `karaokeHist`) and never sent to the server.
-
-### The 3D look
-`css/depth.css` and `js/tilt.js` add the depth on top of the normal design. Three tiers: **PC** (mouse, window 900px or wider, normal mode) gets tilting cards, raised keycap buttons, receding lyrics and a drifting background; **tablets and phones** get static layered shadows, pressed-button feedback and a phone layout that fits the song, score and controls on one screen; **Smooth mode** (Settings, or chosen automatically on slow devices) and "reduce motion" remove the movement. To tone the PC effect down, lower `MAX` in `js/tilt.js` (tilt degrees) or delete the `.lact` rules in `depth.css`.
-
+The installer is free to use for personal, non-commercial use. See [LICENSE](LICENSE). The source code is licensed separately; see the [source repository](https://github.com/maaccccc/karaoke-night).
