@@ -1,0 +1,161 @@
+/* ---- themes2.css: ten more themes ----
+   Digital rain, Lava lamp, Deep sea, Sakura night, Vaporwave, Warp speed, Pop-art comic, VHS tape, Thunderstorm, Groovy 70s.
+   Same recipe as themes.css: the theme sets the accent colours (--pink / --cyan / --gold, plus --mute for dim text), the .bg backdrop, one animated
+   layer (.th-<name>, created in js/stage-fx.js) and how the sung line looks. Pure CSS; "smooth mode" (body.lite) and "reduce motion" already stop
+   every .th animation (perf.css / themes.css), so those layers simply stay still there. Picker buttons: partials/landing.html. */
+
+body[data-theme="rain"] .th-rain,body[data-theme="lava"] .th-lava,body[data-theme="deepsea"] .th-deepsea,body[data-theme="sakura"] .th-sakura,
+body[data-theme="vapor"] .th-vapor,body[data-theme="warp"] .th-warp,body[data-theme="pop"] .th-pop,body[data-theme="vhs"] .th-vhs,
+body[data-theme="storm"] .th-storm,body[data-theme="groovy"] .th-groovy{opacity:1}
+.th-rain::before,.th-rain::after,.th-lava::before,.th-lava::after,.th-deepsea::before,.th-deepsea::after,.th-sakura::before,.th-sakura::after,
+.th-vapor::before,.th-vapor::after,.th-warp::before,.th-warp::after,.th-pop::before,.th-pop::after,.th-vhs::before,.th-vhs::after,
+.th-storm::before,.th-storm::after,.th-groovy::before,.th-groovy::after{content:"";position:absolute;pointer-events:none}
+
+/* ===== Digital rain: columns of green code falling in the dark ===== */
+body[data-theme="rain"]{--pink:#00ff9c;--cyan:#00d8ff;--gold:#d9ffb0;--mute:#7fcfa8}
+body[data-theme="rain"] .bg{background:radial-gradient(90% 70% at 50% 100%,#00331f,#000805 70%)}
+.th-rain{background:repeating-linear-gradient(0deg,rgba(0,255,156,.05) 0 1px,transparent 1px 3px)}
+.th-rain::before,.th-rain::after{left:0;right:0;bottom:0;will-change:transform}
+.th-rain::before{top:-240px;background:repeating-linear-gradient(177deg,transparent 0,rgba(0,255,156,0) 90px,rgba(0,255,156,.7) 205px,#eaffd8 224px,transparent 226px,transparent 240px);
+ -webkit-mask-image:repeating-linear-gradient(90deg,#000 0 2px,transparent 2px 29px);mask-image:repeating-linear-gradient(90deg,#000 0 2px,transparent 2px 29px);animation:t2-fall 3.4s linear infinite}
+.th-rain::after{top:-340px;opacity:.6;background:repeating-linear-gradient(183deg,transparent 0,rgba(0,216,255,0) 140px,rgba(0,216,255,.6) 300px,#d8fbff 328px,transparent 330px,transparent 340px);
+ -webkit-mask-image:repeating-linear-gradient(90deg,transparent 0 11px,#000 11px 13px,transparent 13px 41px);mask-image:repeating-linear-gradient(90deg,transparent 0 11px,#000 11px 13px,transparent 13px 41px);animation:t2-fall2 5.4s linear infinite}
+@keyframes t2-fall{to{transform:translateY(240px)}}
+@keyframes t2-fall2{to{transform:translateY(340px)}}
+body[data-theme="rain"] .ln.now{font-family:'Courier New',Courier,monospace;font-weight:700;text-transform:uppercase;letter-spacing:.05em;filter:drop-shadow(0 0 8px #00ff9c)}
+
+/* ===== Lava lamp: slow glowing blobs drifting through the dark ===== */
+body[data-theme="lava"]{--pink:#ff5ea8;--cyan:#ffb347;--gold:#fff0a8;--mute:#d4a6e0}
+body[data-theme="lava"] .bg{background:linear-gradient(#1d0738,#3d0b52 55%,#5c1242)}
+.th-lava::before,.th-lava::after{inset:-25%;will-change:transform}
+.th-lava::before{background:radial-gradient(circle at 28% 72%,rgba(255,94,168,.8) 0 8vmax,transparent 15vmax),radial-gradient(circle at 72% 28%,rgba(255,179,71,.75) 0 6vmax,transparent 13vmax),radial-gradient(circle at 52% 88%,rgba(255,240,168,.5) 0 4vmax,transparent 10vmax);animation:t2-lavaA 23s ease-in-out infinite alternate}
+.th-lava::after{background:radial-gradient(circle at 70% 70%,rgba(160,80,255,.7) 0 7vmax,transparent 14vmax),radial-gradient(circle at 25% 25%,rgba(255,120,80,.7) 0 5vmax,transparent 12vmax),radial-gradient(circle at 48% 45%,rgba(255,94,168,.5) 0 4vmax,transparent 9vmax);animation:t2-lavaB 31s ease-in-out infinite alternate}
+@keyframes t2-lavaA{0%{transform:translate(-6%,9%) scale(1)}50%{transform:translate(5%,-10%) scale(1.14)}100%{transform:translate(9%,5%) scale(.92)}}
+@keyframes t2-lavaB{0%{transform:translate(7%,-8%) scale(1.1)}50%{transform:translate(-8%,6%) scale(.9)}100%{transform:translate(4%,10%) scale(1.15)}}
+body[data-theme="lava"] .ln.now{font-weight:600;letter-spacing:.02em;filter:drop-shadow(0 0 14px rgba(255,94,168,.85))}
+
+/* ===== Deep sea: sun rays from above, bubbles rising ===== */
+body[data-theme="deepsea"]{--pink:#4fe3ff;--cyan:#7dffd5;--gold:#c9f6ff;--mute:#8fc4d6}
+body[data-theme="deepsea"] .bg{background:linear-gradient(#04446b 0,#02263f 35%,#01101f 75%,#000611)}
+.th-deepsea{background-size:260px 340px;animation:t2-rise 11s linear infinite;background-image:
+ radial-gradient(circle 6px at 40px 300px,transparent 55%,rgba(200,250,255,.75) 62% 76%,transparent 80%),radial-gradient(circle 4px at 150px 210px,transparent 55%,rgba(200,250,255,.7) 62% 76%,transparent 80%),
+ radial-gradient(circle 9px at 215px 120px,transparent 55%,rgba(200,250,255,.7) 62% 76%,transparent 80%),radial-gradient(circle 5px at 90px 60px,transparent 55%,rgba(200,250,255,.65) 62% 76%,transparent 80%),
+ radial-gradient(circle 3px at 20px 150px,transparent 55%,rgba(200,250,255,.6) 62% 76%,transparent 80%)}
+.th-deepsea::before{inset:-10% -30% 20% -30%;transform-origin:50% 0;will-change:transform;animation:t2-sway 14s ease-in-out infinite alternate;
+ background:repeating-conic-gradient(from 168deg at 50% -8%,rgba(170,240,255,.16) 0 3deg,transparent 3deg 9deg),repeating-conic-gradient(from 171deg at 50% -8%,rgba(120,220,255,.12) 0 2deg,transparent 2deg 13deg);
+ -webkit-mask-image:linear-gradient(#000,transparent 75%);mask-image:linear-gradient(#000,transparent 75%)}
+.th-deepsea::after{inset:0;background-size:180px 260px;animation:t2-rise2 7s linear infinite;background-image:
+ radial-gradient(circle 3px at 30px 240px,transparent 55%,rgba(200,250,255,.6) 62% 76%,transparent 80%),radial-gradient(circle 2px at 120px 150px,transparent 55%,rgba(200,250,255,.55) 62% 76%,transparent 80%),radial-gradient(circle 4px at 80px 50px,transparent 55%,rgba(200,250,255,.55) 62% 76%,transparent 80%)}
+@keyframes t2-rise{to{background-position:0 -340px}}
+@keyframes t2-rise2{to{background-position:0 -260px}}
+@keyframes t2-sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+body[data-theme="deepsea"] .ln.now{letter-spacing:.03em;filter:drop-shadow(0 0 12px rgba(79,227,255,.8))}
+
+/* ===== Sakura night: cherry blossoms drifting under a pale moon ===== */
+body[data-theme="sakura"]{--pink:#ff8fc2;--cyan:#ffc2e0;--gold:#fff1c9;--mute:#e0b4d0}
+body[data-theme="sakura"] .bg{background:radial-gradient(circle at 80% 16%,#fff7e6 0 4.5vmin,rgba(255,228,240,.35) 4.8vmin 6.5vmin,transparent 14vmin),linear-gradient(#1c0b30,#3b1452 52%,#732f68)}
+.th-sakura{background:radial-gradient(circle 90px at 4% 3%,rgba(255,143,194,.65),transparent 72%),radial-gradient(circle 60px at 13% 10%,rgba(255,194,224,.6),transparent 72%),
+ radial-gradient(circle 70px at 24% 2%,rgba(255,143,194,.5),transparent 72%),radial-gradient(circle 50px at 2% 18%,rgba(255,194,224,.5),transparent 72%)}
+.th-sakura::before,.th-sakura::after{inset:0}
+.th-sakura::before{background-size:360px 360px;animation:t2-petalA 17s linear infinite;background-image:
+ radial-gradient(ellipse 7px 4px at 40px 40px,#ffc2e0 55%,transparent 62%),radial-gradient(ellipse 6px 3.5px at 160px 120px,#ff9ccb 55%,transparent 62%),radial-gradient(ellipse 8px 4px at 280px 60px,#ffd6ea 55%,transparent 62%),
+ radial-gradient(ellipse 6px 3px at 90px 230px,#ffc2e0 55%,transparent 62%),radial-gradient(ellipse 7px 4px at 230px 280px,#ff9ccb 55%,transparent 62%),radial-gradient(ellipse 5px 3px at 330px 190px,#ffd6ea 55%,transparent 62%)}
+.th-sakura::after{background-size:240px 280px;animation:t2-petalB 11s linear infinite;background-image:
+ radial-gradient(ellipse 4px 2.5px at 30px 30px,#ffd6ea 55%,transparent 62%),radial-gradient(ellipse 4px 2.5px at 150px 110px,#ffc2e0 55%,transparent 62%),radial-gradient(ellipse 3.5px 2px at 70px 200px,#ff9ccb 55%,transparent 62%),radial-gradient(ellipse 4px 2.5px at 200px 250px,#ffd6ea 55%,transparent 62%)}
+@keyframes t2-petalA{to{background-position:-360px 360px}}
+@keyframes t2-petalB{to{background-position:-240px 280px}}
+body[data-theme="sakura"] .ln.now{font-family:Pacifico,'Brush Script MT',cursive;font-weight:400;filter:drop-shadow(0 0 10px rgba(255,143,194,.85))}
+
+/* ===== Vaporwave: checkerboard floor, a ringed moon, pastel haze ===== */
+body[data-theme="vapor"]{--pink:#ff71ce;--cyan:#01cdfe;--gold:#fffb96;--mute:#c9b6ff}
+body[data-theme="vapor"] .bg{background:linear-gradient(#1a0b3d 0,#4b1f8f 38%,#b967ff 58%,#ff71ce 74.5%,#1a0640 74.6%)}
+.th-vapor{background:radial-gradient(ellipse 17vmin 3.2vmin at 72% 24%,transparent 90%,rgba(255,251,150,.85) 92% 97%,transparent 99%)}
+.th-vapor::after{left:72%;top:24%;width:20vmin;height:20vmin;transform:translate(-50%,-50%);border-radius:50%;background:linear-gradient(#fffb96,#ff71ce 55%,#01cdfe);z-index:-1}
+.th-vapor::before{left:-60%;right:-60%;bottom:0;height:30%;transform:perspective(380px) rotateX(62deg);transform-origin:50% 100%;animation:t2-checker 1.4s linear infinite;
+ background:repeating-conic-gradient(rgba(255,113,206,.6) 0 25%,rgba(1,205,254,.42) 0 50%) 0 0/90px 90px;-webkit-mask-image:linear-gradient(transparent,#000 35%);mask-image:linear-gradient(transparent,#000 35%)}
+@keyframes t2-checker{to{background-position:0 90px}}
+body[data-theme="vapor"] .ln.now{font-family:Orbitron,'Trebuchet MS',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.08em;filter:drop-shadow(2px 2px 0 #01cdfe) drop-shadow(-2px -2px 0 #ff71ce)}
+
+/* ===== Warp speed: stars streaking past at light speed ===== */
+body[data-theme="warp"]{--pink:#7aa8ff;--cyan:#b6f0ff;--gold:#ffffff;--mute:#9fb4e8}
+body[data-theme="warp"] .bg{background:radial-gradient(circle at 50% 50%,#101a4a 0,#050818 45%,#000 85%)}
+.th-warp{background:radial-gradient(circle at 50% 50%,rgba(140,180,255,.35),transparent 28%)}
+.th-warp::before,.th-warp::after{inset:0;opacity:0;will-change:transform,opacity;-webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 0 6%,#000 38%);mask-image:radial-gradient(circle at 50% 50%,transparent 0 6%,#000 38%);animation:t2-warp 2.6s cubic-bezier(.5,0,1,1) infinite}
+.th-warp::before{background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(200,225,255,.85) 0 .3deg,transparent .3deg 3.7deg),repeating-conic-gradient(from 1.3deg at 50% 50%,rgba(150,190,255,.7) 0 .25deg,transparent .25deg 6.1deg)}
+.th-warp::after{animation-delay:-1.3s;background:repeating-conic-gradient(from 2.1deg at 50% 50%,rgba(210,230,255,.8) 0 .28deg,transparent .28deg 4.3deg),repeating-conic-gradient(from 0.6deg at 50% 50%,rgba(160,200,255,.65) 0 .22deg,transparent .22deg 7.3deg)}
+@keyframes t2-warp{0%{transform:scale(.5);opacity:0}15%{opacity:1}100%{transform:scale(2.8);opacity:0}}
+body[data-theme="warp"] .ln.now{font-weight:600;letter-spacing:.12em;filter:drop-shadow(0 0 10px rgba(122,168,255,.95))}
+
+/* ===== Pop-art comic: halftone dots, a comic burst and a POW! ===== */
+body[data-theme="pop"]{--pink:#ff3b6b;--cyan:#27b0ff;--gold:#ffe600;--mute:#cfd8ff}
+body[data-theme="pop"] .bg{background:linear-gradient(135deg,#071a73,#0b2a9c 60%,#1038c8)}
+.th-pop{background:repeating-conic-gradient(from 0deg at 50% 125%,rgba(255,230,0,.16) 0 5deg,transparent 5deg 10deg);transform-origin:50% 125%;animation:t2-burst 6s ease-in-out infinite alternate}
+.th-pop::before{inset:0;animation:t2-dots 3s linear infinite;background:radial-gradient(circle,rgba(39,176,255,.55) 38%,transparent 41%) 0 0/24px 24px,radial-gradient(circle,rgba(255,59,107,.5) 38%,transparent 41%) 12px 12px/24px 24px;
+ -webkit-mask-image:linear-gradient(200deg,#000,transparent 65%);mask-image:linear-gradient(200deg,#000,transparent 65%)}
+.th-pop::after{content:"POW!";right:3%;top:5%;width:22vmin;height:22vmin;display:grid;place-items:center;font:400 4.6vmin Bungee,Impact,sans-serif;color:#111;background:#ffe600;
+ clip-path:polygon(50% 0,60% 18%,80% 6%,78% 28%,100% 30%,86% 48%,100% 66%,78% 68%,82% 92%,60% 82%,50% 100%,40% 82%,18% 92%,22% 68%,0 66%,14% 48%,0 30%,22% 28%,20% 6%,40% 18%);transform:rotate(-12deg);animation:t2-pow 2.4s ease-in-out infinite alternate}
+@keyframes t2-burst{from{transform:scale(1)}to{transform:scale(1.12)}}
+@keyframes t2-dots{from{background-position:0 0,12px 12px}to{background-position:24px 24px,36px 36px}}
+@keyframes t2-pow{from{transform:rotate(-12deg) scale(1)}to{transform:rotate(-7deg) scale(1.12)}}
+body[data-theme="pop"] .ln.now{font-family:Bungee,Impact,sans-serif;text-transform:uppercase;letter-spacing:.03em;filter:drop-shadow(3px 3px 0 #000)}
+
+/* ===== VHS tape: scanlines, static, a tracking glitch ===== */
+body[data-theme="vhs"]{--pink:#ff3b6e;--cyan:#34e8ff;--gold:#f5f2d0;--mute:#a8aac8}
+body[data-theme="vhs"] .bg{background:linear-gradient(#0a0a14,#11122a 60%,#1b1030)}
+.th-vhs{background-size:auto,97px 83px,97px 83px,97px 83px;animation:t2-static .5s steps(1) infinite;background-image:radial-gradient(120% 100% at 50% 50%,transparent 55%,rgba(0,0,0,.65)),
+ radial-gradient(1px 1px at 12px 20px,rgba(255,255,255,.35),transparent),radial-gradient(1px 1px at 55px 63px,rgba(255,255,255,.3),transparent),radial-gradient(1.5px 1.5px at 81px 9px,rgba(255,255,255,.3),transparent)}
+.th-vhs::before{content:"▶ PLAY";inset:0;padding:22px 30px;font:400 clamp(1.1rem,3vmin,1.8rem)/1 'Courier New',Courier,monospace;color:#f5f2d0;letter-spacing:.12em;text-shadow:2px 0 rgba(255,59,110,.8),-2px 0 rgba(52,232,255,.8);
+ background:repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 3px)}
+.th-vhs::after{left:0;right:0;top:-14%;height:10%;will-change:transform;animation:t2-track 7s linear infinite;
+ background:linear-gradient(transparent,rgba(255,255,255,.1) 40%,rgba(255,255,255,.22) 50%,rgba(255,255,255,.1) 60%,transparent)}
+@keyframes t2-static{0%{background-position:0 0,0 0,0 0,0 0}20%{background-position:0 0,13px 29px,13px 29px,13px 29px}40%{background-position:0 0,41px 7px,41px 7px,41px 7px}60%{background-position:0 0,7px 53px,7px 53px,7px 53px}80%{background-position:0 0,66px 31px,66px 31px,66px 31px}}
+@keyframes t2-track{to{transform:translateY(1240%)}}
+body[data-theme="vhs"] .ln.now{font-family:'Courier New',Courier,monospace;font-weight:700;filter:drop-shadow(-2px 0 0 rgba(255,59,110,.85)) drop-shadow(2px 0 0 rgba(52,232,255,.85))}
+
+/* ===== Thunderstorm: rain, dark clouds, lightning ===== */
+body[data-theme="storm"]{--pink:#9fc4ff;--cyan:#c9e4ff;--gold:#fff6c8;--mute:#93a6c4}
+body[data-theme="storm"] .bg{background:linear-gradient(#070b12,#142030 58%,#0a1018)}
+.th-storm{background-image:radial-gradient(70% 28% at 25% 0,rgba(3,5,9,.85),transparent),radial-gradient(60% 24% at 78% 0,rgba(3,5,9,.8),transparent),
+ linear-gradient(104deg,transparent 0 47%,rgba(190,215,255,.4) 48% 50%,transparent 51%),linear-gradient(104deg,transparent 0 47%,rgba(190,215,255,.28) 48% 49.5%,transparent 51%);
+ background-size:auto,auto,62px 96px,41px 71px;background-position:0 0,0 0,0 0,20px 30px;animation:t2-rainfall .55s linear infinite}
+.th-storm::before{inset:0;opacity:0;background:radial-gradient(80% 60% at 70% 0,rgba(220,235,255,.9),rgba(160,190,255,.25) 60%,transparent);animation:t2-flash 8s infinite}
+.th-storm::after{top:0;left:68%;width:14vmin;height:70%;opacity:0;background:linear-gradient(#fff,#bcd7ff);clip-path:polygon(55% 0,30% 38%,48% 38%,22% 100%,70% 52%,52% 52%,78% 0);animation:t2-bolt 8s infinite}
+@keyframes t2-rainfall{to{background-position:0 0,0 0,0 96px,20px 101px}}
+@keyframes t2-flash{0%,88%,100%{opacity:0}89%{opacity:.9}90%{opacity:.15}91.5%{opacity:1}95%{opacity:0}}
+@keyframes t2-bolt{0%,88.5%,100%{opacity:0}89%{opacity:1}90%{opacity:.2}91.5%{opacity:1}92.5%{opacity:0}}
+body[data-theme="storm"] .ln.now{filter:drop-shadow(0 0 10px rgba(159,196,255,.9))}
+
+/* ===== Groovy 70s: breathing rings and a sunburst in orange, mustard and olive ===== */
+body[data-theme="groovy"]{--pink:#ff7a2f;--cyan:#ffc61a;--gold:#fff0b8;--mute:#e8c9a0}
+body[data-theme="groovy"] .bg{background:linear-gradient(#3a1608,#5a230d)}
+.th-groovy::before{inset:-20%;opacity:.5;will-change:transform;animation:t2-breathe 7s ease-in-out infinite alternate;
+ background:repeating-radial-gradient(circle at 50% 112%,#e8590c 0 5.5vmin,#f2a900 5.5vmin 11vmin,#8a9a1b 11vmin 16.5vmin,#6b2c0f 16.5vmin 22vmin)}
+.th-groovy::after{inset:-30%;transform-origin:50% 100%;will-change:transform;animation:t2-sway2 18s ease-in-out infinite alternate;
+ background:repeating-conic-gradient(from 0deg at 50% 100%,rgba(246,227,180,.14) 0 6deg,transparent 6deg 12deg)}
+@keyframes t2-breathe{from{transform:scale(1)}to{transform:scale(1.07)}}
+@keyframes t2-sway2{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+body[data-theme="groovy"] .ln.now{font-family:Chewy,'Comic Sans MS',cursive;font-weight:400;letter-spacing:.03em;filter:drop-shadow(0 0 10px rgba(255,122,47,.85))}
+
+/* ===== picker swatches ===== */
+.thsw-rain{background:repeating-linear-gradient(90deg,rgba(0,255,156,.8) 0 2px,transparent 2px 9px),linear-gradient(#000805,#003a22)}
+.thsw-lava{background:radial-gradient(circle at 30% 65%,#ff5ea8 0 14px,transparent 28px),radial-gradient(circle at 72% 35%,#ffb347 0 11px,transparent 24px),linear-gradient(#1d0738,#5c1242)}
+.thsw-deepsea{background:radial-gradient(circle 4px at 25% 70%,transparent 50%,rgba(200,250,255,.8) 60% 80%,transparent 85%),radial-gradient(circle 3px at 68% 45%,transparent 50%,rgba(200,250,255,.8) 60% 80%,transparent 85%),conic-gradient(from 160deg at 50% -10%,transparent 0,rgba(170,240,255,.3) 8deg,transparent 16deg,transparent 360deg),linear-gradient(#04446b,#000611)}
+.thsw-sakura{background:radial-gradient(ellipse 5px 3px at 22% 30%,#ffc2e0 55%,transparent 62%),radial-gradient(ellipse 5px 3px at 60% 60%,#ff9ccb 55%,transparent 62%),radial-gradient(ellipse 4px 2px at 82% 25%,#ffd6ea 55%,transparent 62%),radial-gradient(circle at 80% 22%,#fff7e6 0 6px,transparent 14px),linear-gradient(#1c0b30,#732f68)}
+.thsw-vapor{background:repeating-conic-gradient(rgba(255,113,206,.7) 0 25%,rgba(1,205,254,.55) 0 50%) 0 100%/22px 22px,linear-gradient(#1a0b3d,#b967ff 50%,#ff71ce 64%,#1a0640 64.5%)}
+.thsw-warp{background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(200,225,255,.9) 0 1deg,transparent 1deg 9deg),radial-gradient(circle,#101a4a,#000 75%)}
+.thsw-pop{background:radial-gradient(circle,rgba(39,176,255,.9) 30%,transparent 34%) 0 0/10px 10px,radial-gradient(circle,rgba(255,59,107,.8) 30%,transparent 34%) 5px 5px/10px 10px,linear-gradient(135deg,#071a73,#1038c8)}
+.thsw-vhs{background:repeating-linear-gradient(0deg,rgba(255,255,255,.12) 0 1px,transparent 1px 3px),linear-gradient(transparent 40%,rgba(255,255,255,.25) 48%,transparent 56%),linear-gradient(#0a0a14,#1b1030)}
+.thsw-storm{background:linear-gradient(104deg,transparent 0 47%,rgba(190,215,255,.7) 48% 50%,transparent 51%) 0 0/14px 20px,radial-gradient(60% 40% at 30% 0,rgba(3,5,9,.9),transparent),linear-gradient(#070b12,#142030)}
+.thsw-groovy{background:repeating-radial-gradient(circle at 50% 120%,#e8590c 0 8px,#f2a900 8px 16px,#8a9a1b 16px 24px,#6b2c0f 24px 32px)}
+
+/* ===== only the chosen theme animates: the other layers are invisible, so their animations are paused (no per-frame work) ===== */
+body:not([data-theme="rain"]) .th-rain,body:not([data-theme="rain"]) .th-rain::before,body:not([data-theme="rain"]) .th-rain::after,
+body:not([data-theme="lava"]) .th-lava,body:not([data-theme="lava"]) .th-lava::before,body:not([data-theme="lava"]) .th-lava::after,
+body:not([data-theme="deepsea"]) .th-deepsea,body:not([data-theme="deepsea"]) .th-deepsea::before,body:not([data-theme="deepsea"]) .th-deepsea::after,
+body:not([data-theme="sakura"]) .th-sakura,body:not([data-theme="sakura"]) .th-sakura::before,body:not([data-theme="sakura"]) .th-sakura::after,
+body:not([data-theme="vapor"]) .th-vapor,body:not([data-theme="vapor"]) .th-vapor::before,body:not([data-theme="vapor"]) .th-vapor::after,
+body:not([data-theme="warp"]) .th-warp,body:not([data-theme="warp"]) .th-warp::before,body:not([data-theme="warp"]) .th-warp::after,
+body:not([data-theme="pop"]) .th-pop,body:not([data-theme="pop"]) .th-pop::before,body:not([data-theme="pop"]) .th-pop::after,
+body:not([data-theme="vhs"]) .th-vhs,body:not([data-theme="vhs"]) .th-vhs::before,body:not([data-theme="vhs"]) .th-vhs::after,
+body:not([data-theme="storm"]) .th-storm,body:not([data-theme="storm"]) .th-storm::before,body:not([data-theme="storm"]) .th-storm::after,
+body:not([data-theme="groovy"]) .th-groovy,body:not([data-theme="groovy"]) .th-groovy::before,body:not([data-theme="groovy"]) .th-groovy::after{animation-play-state:paused!important}
