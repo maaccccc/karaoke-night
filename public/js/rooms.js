@@ -79,7 +79,7 @@ async function roomJoin(code, name, vis, create) {   // vis ('public' | 'private
   room.id = deviceId('room:' + code); room.key = undefined; try { sessionStorage.setItem('karaokeRoom', code); } catch (e) {}   // one seat per device and room, whatever the number of tabs
   const keepLast = () => { try { localStorage.setItem('karaokeLast', JSON.stringify({ code, id: room.id, key: room.key || roomKey(code) || '', t: Date.now() })); } catch (e) {} }; keepLast();
   const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis, create: !!create, key: roomKey(code) }); setRoomKey(d.key, code); keepLast();
-  room.skew = d.now - (t0 + Date.now()) / 2; room.code = code; room.name = d.name; room.on = true;
+  room.skew = d.now - (t0 + Date.now()) / 2; room.code = code; room.name = d.name; room.on = true; refreshIce();   // now we are a member: ask for the voice relay
   document.body.classList.add('inroom'); say('You are in room ' + code + ' as ' + d.name + '. Share the invite link with friends.');
   const b = $('#roomBtn'); b.style.display = ''; $('#skipBtn2').style.display = ''; pollLoop(); syncClock(); if (room.mic !== 'untested') roomOp({ op: 'mic', mic: room.mic });
 }

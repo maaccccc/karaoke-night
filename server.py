@@ -1,7 +1,7 @@
 """Karaoke Night server: YouTube Music search (ytmusicapi) + timed lyrics (LRCLIB).
 Run: pip install -r requirements.txt && python server.py
 """
-import gzip, hashlib, hmac, json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse, urllib.error
+import base64, gzip, hashlib, hmac, ipaddress, json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse, urllib.error
 from collections import deque
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from ytmusicapi import YTMusic
@@ -813,6 +813,9 @@ def room_prune():
         if not r['clients'] and now - r['empty'] > 600:
             del ROOMS[code]
 
+BAN_BY_IP = os.getenv('BAN_BY_IP', '1') != '0'                 # a ban also blocks the banned person's network address, so a new name or cleared browser data does not get them back in
+IP_BAN_SECS = int(float(os.getenv('IP_BAN_HOURS', '12')) * 3600)  # ...for this long, and only in the room that banned them (ids and names stay banned while the room exists)
+
 def key_ok(c, key):
     """Is this the secret key that was handed out when this seat was joined? Everyone in a room can SEE every member's id, so the id alone proves nothing."""
     return bool(c) and bool(key) and hmac.compare_digest(str(key).encode(), str(c.get('key', '')).encode())
@@ -830,7 +833,7 @@ def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip='', creat
             same = sum(1 for i, c in r['clients'].items() if c.get('ip') == ip and not c.get('leaving') and time.time() - c['seen'] < 25)
             if same >= MAX_PER_IP: raise RuntimeError('Too many people are joining this room from the same network.')
         for b in r['bans']:
-            if b['id'] == cid or b['name'].lower() == name.lower():
+            if b['id'] == cid or b['name'].lower() == name.lower() or (BAN_BY_IP and ip and b.get('ip') == ip and time.time() - b.get('t', 0) < IP_BAN_SECS):
                 raise RuntimeError('You have been banned from this room by the host.')
         r['kicked'].pop(cid, None)           # joining on purpose again (a plain kick only removes you)
         cur = r['clients'].get(cid)
@@ -1009,7 +1012,8 @@ def room_send(code, cid, typ, data, to=None, tab='', key=''):
             if op in ('kick', 'ban'):
                 if op == 'ban':
                     if len(r['bans']) >= 50: return 'The ban list is full.'
-                    r['bans'].append({'id': tid, 'name': tc['name']})
+                    hip = (r['clients'].get(cid) or {}).get('ip')
+                    r['bans'].append({'id': tid, 'name': tc['name'], 'ip': '' if (not BAN_BY_IP or tc.get('ip') == hip) else (tc.get('ip') or ''), 't': time.time()})   # never IP-ban the host's own network (same Wi-Fi)
                 r['kicked'][tid] = {'ban': op == 'ban', 't': time.time()}
                 tc['q'].put({'type': 'kicked', 'ban': op == 'ban'})
                 room_push(r, {'type': 'notice', 'text': tc['name'] + (' was banned' if op == 'ban' else ' was kicked') + ' by the host.'})
@@ -1342,10 +1346,85 @@ def judge_comment(data, ip):
 
 MAX_BODY = 1_000_000   # bytes: the largest request body the server will read
 
+# ---- TURN relay (only needed when two people cannot connect their voice chat directly) ----
+# The relay is a metered service anybody could use up if they found its password, so the password is TEMPORARY and only handed to people who are in a room:
+#   CF_TURN_KEY_ID + CF_TURN_API_TOKEN   Cloudflare Realtime TURN (works from a free Render service; Cloudflare gives 1,000 GB a month before billing starts)
+#   TURN_URL + TURN_SECRET               your own coturn server with  use-auth-secret / static-auth-secret  (passwords are made here, no web call needed)
+#   TURN_URL + TURN_USER + TURN_PASS     one fixed password (the old way; still works, but it never expires: avoid)
+# TURN_TTL = how long a password lives, in seconds (default 6 hours).
+TURN_TTL = max(300, min(172800, int(os.getenv('TURN_TTL', '21600') or 21600)))
+_turn_lock = threading.Lock(); _turn_cache = {'exp': 0.0, 'ice': []}
+
+def _turn_urls():
+    return [x.strip() for x in os.getenv('TURN_URL', '').split(',') if x.strip()]
+
+def turn_mode():
+    if os.getenv('CF_TURN_KEY_ID') and os.getenv('CF_TURN_API_TOKEN'): return 'cloudflare'
+    if _turn_urls() and os.getenv('TURN_SECRET'): return 'secret'
+    if _turn_urls(): return 'static'
+    return ''
+
+def _turn_cloudflare():
+    """Ask Cloudflare for fresh short-lived relay credentials. One call serves everybody for a while (cached), and a failure is remembered for a minute so a hiccup cannot hammer their API."""
+    now = time.time()
+    with _turn_lock:
+        if now < _turn_cache['exp']: return _turn_cache['ice']
+    ice = []
+    try:
+        req = urllib.request.Request('https://rtc.live.cloudflare.com/v1/turn/keys/%s/credentials/generate-ice-servers' % urllib.parse.quote(os.getenv('CF_TURN_KEY_ID', '').strip(), safe=''),
+                                     data=json.dumps({'ttl': TURN_TTL}).encode(), method='POST',
+                                     headers={'Authorization': 'Bearer ' + os.getenv('CF_TURN_API_TOKEN', '').strip(), 'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=6) as r: d = json.load(r)
+        raw = d.get('iceServers'); raw = [raw] if isinstance(raw, dict) else (raw or [])
+        for s in raw:
+            urls = s.get('urls'); urls = [urls] if isinstance(urls, str) else (urls or [])
+            urls = [u for u in urls if isinstance(u, str) and u.startswith(('turn:', 'turns:')) and ':53?' not in u and not u.endswith(':53')]   # browsers block port 53: it would only add a timeout
+            if urls and s.get('username') and s.get('credential'): ice.append({'urls': urls, 'username': s['username'], 'credential': s['credential']})
+        ok = bool(ice)
+    except Exception as e:
+        print('TURN: could not get credentials from Cloudflare:', type(e).__name__, str(e)[:120]); ok = False
+    with _turn_lock:
+        _turn_cache.update(ice=ice, exp=now + (TURN_TTL / 3 if ok else 60))      # clients always receive a password with at least two thirds of its life left
+    return ice
+
+def _turn_secret(cid):
+    """coturn's 'REST API' scheme: the user name is an expiry time, the password is an HMAC of it, so nothing has to be stored or looked up."""
+    user = '%d:%s' % (int(time.time()) + TURN_TTL, (cid or 'x')[:12])
+    cred = base64.b64encode(hmac.new(os.getenv('TURN_SECRET', '').encode(), user.encode(), hashlib.sha1).digest()).decode()
+    return [{'urls': _turn_urls(), 'username': user, 'credential': cred}]
+
+def ice_for(code, cid, key):
+    """STUN for everybody; the relay (with a temporary password) only for someone who really holds a seat in a room."""
+    ice = [{'urls': 'stun:stun.l.google.com:19302'}, {'urls': 'stun:stun1.l.google.com:19302'}]
+    with RLOCK:
+        r = ROOMS.get(code); member = key_ok(r and r['clients'].get(cid), key)
+    mode = turn_mode() if member else ''
+    turn = _turn_cloudflare() if mode == 'cloudflare' else _turn_secret(cid) if mode == 'secret' else \
+           [{'urls': _turn_urls(), 'username': os.getenv('TURN_USER', ''), 'credential': os.getenv('TURN_PASS', '')}] if mode == 'static' else []
+    return {'iceServers': ice + turn, 'turn': bool(turn)}
+
 # ---- abuse protection, speed and security headers ----
 # Environment switches (all optional):  TRUST_PROXY=1 (on by default on Render) reads the visitor's address from the proxy headers,
 # RATE_SCALE=2 doubles every limit below (0.5 halves them), MAX_ROOMS, MAX_ROOM_CLIENTS, CSP=on|report|off, PROXY_HSTS=0 to skip HSTS.
 BEHIND_PROXY = os.getenv('TRUST_PROXY', '1' if os.getenv('RENDER') else '0') == '1'
+
+def _as_ip(x):
+    """The text as a clean IP address, or '' if it is not one (a forged or garbled header value must never become a rate-limit key or a ban key)."""
+    try: return str(ipaddress.ip_address(str(x or '').strip().strip('[]')))
+    except ValueError: return ''
+
+def pick_client_ip(headers, peer, behind_proxy):
+    """Who is really connecting? Behind Render this is the address Cloudflare saw (CF-Connecting-IP / True-Client-IP: Cloudflare sets them itself, a visitor cannot forge them).
+    Render only APPENDS to X-Forwarded-For, so a visitor can put anything at the front of that list: only the entry just before Cloudflare's own address is trusted, and only
+    as a fallback. Never use this on a server that is reachable directly from the internet: there the headers are whatever the visitor sends."""
+    if behind_proxy:
+        for name in ('CF-Connecting-IP', 'True-Client-IP'):
+            ip = _as_ip(headers.get(name))
+            if ip: return ip
+        parts = [x.strip() for x in (headers.get('X-Forwarded-For') or '').split(',') if x.strip()]
+        ip = _as_ip(parts[-2] if len(parts) >= 2 else (parts[0] if parts else ''))
+        if ip: return ip
+    return _as_ip(peer) or str(peer)
 RATE_SCALE = float(os.getenv('RATE_SCALE', '1') or 1)
 MAX_ROOMS = int(os.getenv('MAX_ROOMS', '400'))
 MAX_ROOM_CLIENTS = int(os.getenv('MAX_ROOM_CLIENTS', '40'))
@@ -1353,8 +1432,8 @@ MAX_PER_IP = int(os.getenv('MAX_PER_IP', '10'))      # people from one network a
 CSP_MODE = os.getenv('CSP', 'on').lower()
 # bucket: (requests allowed, per this many seconds), counted per visitor address. Only abuse-prone routes are limited, set well above normal
 # use (a whole family on one Wi-Fi shares an address). Live room polling is deliberately not limited.
-RATE = {'search': (240, 60), 'timing': (30, 600), 'gchat': (20, 60), 'chat': (30, 30), 'join': (60, 60), 'playlist': (6, 60), 'romanize': (30, 60), 'lyrics': (900, 60), 'status': (20, 60)}
-GET_BUCKETS = {'/api/search': 'search', '/api/haslyrics': 'lyrics', '/api/karaoke': 'search', '/api/versions': 'search', '/api/lyrics': 'lyrics', '/api/status': 'status'}
+RATE = {'search': (240, 60), 'timing': (30, 600), 'gchat': (20, 60), 'chat': (30, 30), 'join': (60, 60), 'playlist': (6, 60), 'romanize': (30, 60), 'lyrics': (900, 60), 'status': (20, 60), 'ice': (30, 60)}
+GET_BUCKETS = {'/api/ice': 'ice', '/api/search': 'search', '/api/haslyrics': 'lyrics', '/api/karaoke': 'search', '/api/versions': 'search', '/api/lyrics': 'lyrics', '/api/status': 'status'}
 POST_BUCKETS = {'/api/timing': 'timing', '/api/gchat': 'gchat', '/api/room/join': 'join', '/api/playlist': 'playlist', '/api/romanize': 'romanize'}
 _rl = {}; _rl_lock = threading.Lock()
 
@@ -1465,14 +1544,7 @@ class Handler(BaseHTTPRequestHandler):
         BaseHTTPRequestHandler.end_headers(self)
 
     def client_ip(self):
-        h = self.headers
-        if BEHIND_PROXY:       # Render sits behind Cloudflare, which sets CF-Connecting-IP itself. X-Forwarded-For can be forged, so it is only a fallback.
-            ip = (h.get('CF-Connecting-IP') or h.get('True-Client-IP') or '').strip()
-            if not ip:
-                parts = [x.strip() for x in (h.get('X-Forwarded-For') or '').split(',') if x.strip()]
-                ip = parts[-2] if len(parts) >= 2 else (parts[0] if parts else '')
-            if ip: return ip[:64]
-        return self.client_address[0]
+        return pick_client_ip(self.headers, self.client_address[0], BEHIND_PROXY)
 
     def limit(self, bucket):
         if rate_ok(self.client_ip(), bucket): return True
@@ -1551,12 +1623,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/gchat':
                 sv = (q.get('since', [''])[0]).strip()
                 return self.send_json(200, gchat_poll(int(sv) if sv.lstrip('-').isdigit() else None))
-            if u.path == '/api/ice':          # STUN, plus an optional TURN relay for strict networks (set TURN_URL / TURN_USER / TURN_PASS)
-                ice = [{'urls': 'stun:stun.l.google.com:19302'}, {'urls': 'stun:stun1.l.google.com:19302'}]
-                turn = [x.strip() for x in os.getenv('TURN_URL', '').split(',') if x.strip()]
-                if turn:
-                    ice.append({'urls': turn, 'username': os.getenv('TURN_USER', ''), 'credential': os.getenv('TURN_PASS', '')})
-                return self.send_json(200, {'iceServers': ice, 'turn': bool(turn)})
+            if u.path == '/api/ice':          # STUN for everyone; the TURN relay (temporary password) only for people who are in a room: ?room=&id=&key=
+                return self.send_json(200, ice_for(clean_code(q.get('room', [''])[0]), clean_id(q.get('id', [''])[0]), q.get('key', [''])[0][:64]))
             if u.path == '/api/room/time':
                 return self.send_json(200, {'now': int(time.time() * 1000)})
             if u.path == '/api/room/poll':
@@ -1640,4 +1708,7 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 3000))
     print(f'Karaoke Night running at http://localhost:{port}')
     print('Page file:', find_page() or ('NOT FOUND. Put index.html in ' + PUB))
+    print('Visitor address:', 'read from the proxy headers (TRUST_PROXY on)' if BEHIND_PROXY else 'taken from the connection itself (TRUST_PROXY off)')
+    print('Voice relay (TURN):', {'cloudflare': 'Cloudflare, temporary passwords', 'secret': 'your own server, temporary passwords', 'static': 'one fixed password (consider CF_TURN_KEY_ID / TURN_SECRET instead)', '': 'not set up (voice chat works directly between players)'}[turn_mode()])
+    print('Bans also block the address:', 'yes, %g hours, this room only' % (IP_BAN_SECS / 3600) if BAN_BY_IP else 'no (BAN_BY_IP=0)')
     ThreadingHTTPServer(('0.0.0.0', port), Handler).serve_forever()

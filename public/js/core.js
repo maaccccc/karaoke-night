@@ -1,7 +1,17 @@
 const $ = s => document.querySelector(s);
 const players = [], queue = [], scores = {};
 let current = null, an = null, stream = null, actx = null, raf = 0, audio = null;
-const say = t => $('#msg').textContent = t;
+// Messages are pop-ups now (they slide in at the top for a few seconds) instead of one fixed line of text on the home page. say('') shows nothing.
+const say = t => { t = String(t == null ? '' : t).trim(); if (t) popup(t); };
+function popup(t) {
+  let box = document.getElementById('joinToasts');
+  if (!box) { box = document.createElement('div'); box.id = 'joinToasts'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
+  if ([...box.children].some(x => x.dataset.t === t)) return;                    // the same text is already showing
+  while (box.children.length >= 4) box.firstChild.remove();
+  const d = document.createElement('div'); d.className = 'jt jtmsg'; d.dataset.t = t; d.textContent = t;
+  d.style.animationDuration = Math.min(10, 3.8 + t.length * .045) + 's';         // longer messages stay a little longer
+  box.appendChild(d); d.addEventListener('animationend', () => d.remove());
+}
 const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 const fmt = s => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
 

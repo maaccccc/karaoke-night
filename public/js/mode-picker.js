@@ -132,7 +132,13 @@ function tuneOpus(sdp) {
 }
 // singer -> listeners: one WebRTC connection per listener
 const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-fetch('/api/ice').then(r => r.json()).then(d => { if (d.iceServers && d.iceServers.length) ICE.iceServers = d.iceServers; ICE.turn = !!d.turn; }).catch(() => {});   // adds the TURN relay if the server has one
+// STUN for everyone; the TURN relay (a temporary password) is only handed to people who are in a room, so it is asked for again after joining and then every 20 minutes
+function refreshIce() {
+  const k = (typeof room !== 'undefined' && room.on && typeof roomKey === 'function') ? roomKey() : '';
+  const q = k ? '?' + new URLSearchParams({ room: room.code, id: room.id, key: k }) : '';
+  return fetch('/api/ice' + q).then(r => r.json()).then(d => { if (d.iceServers && d.iceServers.length) ICE.iceServers = d.iceServers; ICE.turn = !!d.turn; }).catch(() => {});
+}
+refreshIce(); setInterval(() => { if (typeof room !== 'undefined' && room.on) refreshIce(); }, 20 * 60 * 1000);
 function newPc(peer) {
   const pc = new RTCPeerConnection(ICE); rtc.pcs[peer] = pc;
   pc.onicecandidate = e => { if (e.candidate) roomRtc(peer, { kind: 'ice', cand: e.candidate }); };

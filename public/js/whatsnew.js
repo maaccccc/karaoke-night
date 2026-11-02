@@ -1,6 +1,6 @@
 // Shows the "What's new" popup once per browser. After EVERY update: add a new dated block (e.g. Nov 2, 2026) at the TOP of the list in partials/dialogs.html (#newdlg), move old blocks down, and change NEWS_VERSION so it shows again. Any button with data-news reopens it.
 (function () {
-  const NEWS_VERSION = '2026-11-02a', KEY = 'karaokeNewsSeen', dlg = document.getElementById('newdlg');
+  const NEWS_VERSION = '2026-11-02b', KEY = 'karaokeNewsSeen', dlg = document.getElementById('newdlg');
   if (!dlg || !dlg.showModal) return;
   let seen = ''; try { seen = localStorage.getItem(KEY) || ''; } catch (e) {}
   if (seen === NEWS_VERSION) return;

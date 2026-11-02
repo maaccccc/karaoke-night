@@ -3,3 +3,8 @@
 .jtav{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;flex:none}
 @keyframes jtin{0%{transform:translateY(-90px);opacity:0}10%,82%{transform:translateY(0);opacity:1}100%{transform:translateY(-90px);opacity:0}}
 @media (prefers-reduced-motion:reduce){@keyframes jtin{0%{opacity:0}10%,82%{opacity:1}100%{opacity:0}}}
+
+/* messages from say() and room notices: same pop-up stack as "joined the lobby", but they may wrap onto two lines */
+#joinToasts{z-index:96}
+.jt.jtmsg{max-width:min(92vw,460px);border-radius:16px;font-weight:500;line-height:1.35;text-align:left;overflow-wrap:anywhere}
+#msg{display:none}
