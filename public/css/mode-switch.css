@@ -1,0 +1,16 @@
+/* Sing-along / Karaoke toggle under the search box (the hidden #karOn checkbox is still the source of truth) */
+.modeSw{margin:12px 0 4px}
+.modeSw .segRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modeSw button.seg{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;width:100%;min-height:58px;padding:9px 12px;text-align:left;font-weight:400;border:2px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);box-shadow:none;transform:none;color:var(--ink);transition:border-color .2s,background .2s,box-shadow .2s}
+.modeSw button.seg b{font-weight:600;font-size:.98rem}
+.modeSw button.seg small{display:block;font-size:.74rem;line-height:1.25;color:var(--mute)}
+.modeSw button.seg:hover{transform:none;border-color:rgba(255,255,255,.35);box-shadow:none}
+.modeSw button.seg:active{transform:scale(.98);box-shadow:none}
+/* selected side: Sing-along when the box is unticked, Karaoke when it is ticked */
+#karOn:not(:checked)~.segRow #segSing,#karOn:checked~.segRow #segKar{border-color:var(--gold);background:rgba(255,200,61,.1);box-shadow:0 0 18px -6px var(--gold)}
+#karOn:not(:checked)~.segRow #segSing small,#karOn:checked~.segRow #segKar small{color:var(--ink)}
+/* warning only while Karaoke is selected */
+.modeSw .karwarn{display:none;margin-top:8px;padding:9px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);background:rgba(255,200,61,.09);font-size:.84rem;line-height:1.45;animation:in .3s both}
+#karOn:checked~.karwarn{display:block}
+.modeSw .karHelp{color:var(--cyan);font-weight:600;white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
+@media (max-width:420px){.modeSw button.seg small{font-size:.7rem}}
