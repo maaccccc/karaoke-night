@@ -817,9 +817,11 @@ def key_ok(c, key):
     """Is this the secret key that was handed out when this seat was joined? Everyone in a room can SEE every member's id, so the id alone proves nothing."""
     return bool(c) and bool(key) and hmac.compare_digest(str(key).encode(), str(c.get('key', '')).encode())
 
-def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip=''):
+def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip='', create=False):
     with RLOCK:
         room_prune()
+        if code in ROOMS and create: raise RuntimeError('That room code is already taken. Please try again.')
+        if code not in ROOMS and not create: raise LookupError("That room doesn't exist. Check the code, or press Create a room to start one.")   # a typed code can only JOIN a room, never make one
         if code not in ROOMS and len(ROOMS) >= MAX_ROOMS: raise RuntimeError('The server is busy right now. Please try again in a few minutes.')
         r = ROOMS.setdefault(code, {'code': code, 'public': vis == 'public', 'timer': None, 'clients': {}, 'queue': [], 'chat': [], 'hist': [], 'sung': {}, 'turn': 0, 'tv': {}, 'scores': {}, 'now': None, 'ready': None, 'pick': None, 'nid': 0, 'empty': time.time(), 'host': cid, 'bans': [], 'kicked': {}})
         r.setdefault('bans', []); r.setdefault('kicked', {})
@@ -1609,7 +1611,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise RuntimeError('Enter a room code.')
                 check_name(data.get('name'))
                 if data.get('vis') == 'public' and is_blocked(code): raise RuntimeError("That room code isn't allowed.")
-                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis'), data.get('key'), clean_id(data.get('tab')), self.client_ip()))
+                return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis'), data.get('key'), clean_id(data.get('tab')), self.client_ip(), data.get('create') is True))
             if u.path == '/api/room/leave':
                 room_leave(clean_code(data.get('room')), clean_id(data.get('id')), clean_id(data.get('tab')), str(data.get('key') or '')[:64])
                 return self.send_json(200, {'ok': True})

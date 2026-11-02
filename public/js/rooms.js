@@ -75,10 +75,10 @@ async function rpost(path, body) {
 }
 function roomOp(data) { if (HOSTOPS.includes(data.op)) data = Object.assign({ key: roomKey() }, data); return rpost('/api/room/send', { room: room.code, id: room.id, type: 'op', data }).then(d => { if (d.msg) say(d.msg); }).catch(e => say(e.message)); }
 function roomRtc(to, data) { return rpost('/api/room/send', { room: room.code, id: room.id, type: 'rtc', to, data }).catch(() => {}); }
-async function roomJoin(code, name, vis) {   // vis ('public' | 'private') only matters when this join creates the room
+async function roomJoin(code, name, vis, create) {   // vis ('public' | 'private') only matters when this join creates the room
   room.id = deviceId('room:' + code); room.key = undefined; try { sessionStorage.setItem('karaokeRoom', code); } catch (e) {}   // one seat per device and room, whatever the number of tabs
   const keepLast = () => { try { localStorage.setItem('karaokeLast', JSON.stringify({ code, id: room.id, key: room.key || roomKey(code) || '', t: Date.now() })); } catch (e) {} }; keepLast();
-  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis, key: roomKey(code) }); setRoomKey(d.key, code); keepLast();
+  const t0 = Date.now(), d = await rpost('/api/room/join', { room: code, id: room.id, name, av: myAv, vis, create: !!create, key: roomKey(code) }); setRoomKey(d.key, code); keepLast();
   room.skew = d.now - (t0 + Date.now()) / 2; room.code = code; room.name = d.name; room.on = true;
   document.body.classList.add('inroom'); say('You are in room ' + code + ' as ' + d.name + '. Share the invite link with friends.');
   const b = $('#roomBtn'); b.style.display = ''; $('#skipBtn2').style.display = ''; pollLoop(); syncClock(); if (room.mic !== 'untested') roomOp({ op: 'mic', mic: room.mic });
@@ -87,9 +87,9 @@ async function pollLoop() {
   while (room.on) {
     try {
       const r = await fetch('/api/room/poll?' + new URLSearchParams({ room: room.code, id: room.id, tab: TAB, key: roomKey() || '' }));
-      if (r.status === 410) { const j = await rpost('/api/room/join', { room: room.code, id: room.id, name: room.name, av: myAv, key: roomKey() }); setRoomKey(j.key, room.code); continue; }
+      if (r.status === 410) { const j = await rpost('/api/room/join', { room: room.code, id: room.id, name: room.name, av: myAv, key: roomKey() }); setRoomKey(j.key, room.code); continue; }   // (re-joining never creates a room)
       const d = await r.json(); (d.msgs || []).forEach(handleMsg);
-    } catch (e) { if (/banned/.test(e.message)) return kickedOut(true); await new Promise(r => setTimeout(r, 1500)); }
+    } catch (e) { if (/banned/.test(e.message)) return kickedOut(true); if (/doesn't exist/.test(e.message)) return roomClosed(); await new Promise(r => setTimeout(r, 1500)); }
   }
 }
 function handleMsg(m) {
@@ -202,6 +202,10 @@ async function replacedOut() {
   room.on = false; try { sessionStorage.removeItem('karaokeRoom'); } catch (e) {}
   if (_roomGone) return; _roomGone = true; await kAlert('This room was opened in another tab on this device, so this tab was disconnected. You can only be in a room once per device.', { title: 'Disconnected', ok: 'OK' });
   location.href = location.pathname;
+}
+async function roomClosed() {   // the room is gone (server restarted, or it sat empty too long) and joining never creates one
+  room.on = false; try { sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
+  if (_roomGone) return; _roomGone = true; await kAlert('This room no longer exists (the server may have restarted). Press Create a room to start a new one.', { title: 'Room closed', ok: 'OK' }); location.href = location.pathname;
 }
 async function kickedOut(banned) {
   room.on = false; try { sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
