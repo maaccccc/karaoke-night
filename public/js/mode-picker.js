@@ -204,7 +204,7 @@ $('#roomBtn').onclick = async () => {
 addEventListener('pagehide', e => {
   if (!room.on) return;
   try { const l = JSON.parse(localStorage.getItem('karaokeLast') || 'null'); if (l) { l.t = Date.now(); localStorage.setItem('karaokeLast', JSON.stringify(l)); } } catch (x) {}
-  if (!e.persisted) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB }));
+  if (!e.persisted) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB, key: roomKey() }));
 });
 {
   const qs = new URLSearchParams(location.search); let nm = '';
@@ -251,7 +251,7 @@ addEventListener('pagehide', e => {
     $('#hmStay').onclick = () => d.close();
     $('#hmLeave').onclick = () => {
       d.close();
-      try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB })); sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
+      try { if (room.on) navigator.sendBeacon('/api/room/leave', JSON.stringify({ room: room.code, id: room.id, tab: TAB, key: roomKey() })); sessionStorage.removeItem('karaokeRoom'); localStorage.removeItem('karaokeLast'); } catch (e) {}
       location.href = location.pathname;
     };
     d.showModal(); $('#hmStay').focus();

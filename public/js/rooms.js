@@ -68,7 +68,7 @@ const TOGETHER = 9;      // line marker for "everybody sings this" (singers them
 const ownLine = i => { if (!(room.on && current && current.mode !== 'solo' && current.turns)) return true; const v = current.turns[i]; return v === TOGETHER || v === myIdx(); };
 const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), b => (b % 36).toString(36)).join('');
 async function rpost(path, body) {
-  if (body && body.room) body.tab = TAB;
+  if (body && body.room) { body.tab = TAB; if (body.key === undefined && path.startsWith('/api/room/')) body.key = roomKey(body.room); }   // the seat's secret key goes with every room call
   const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Server error');
   return d;
@@ -86,7 +86,7 @@ async function roomJoin(code, name, vis) {   // vis ('public' | 'private') only 
 async function pollLoop() {
   while (room.on) {
     try {
-      const r = await fetch('/api/room/poll?' + new URLSearchParams({ room: room.code, id: room.id, tab: TAB }));
+      const r = await fetch('/api/room/poll?' + new URLSearchParams({ room: room.code, id: room.id, tab: TAB, key: roomKey() || '' }));
       if (r.status === 410) { const j = await rpost('/api/room/join', { room: room.code, id: room.id, name: room.name, av: myAv, key: roomKey() }); setRoomKey(j.key, room.code); continue; }
       const d = await r.json(); (d.msgs || []).forEach(handleMsg);
     } catch (e) { if (/banned/.test(e.message)) return kickedOut(true); await new Promise(r => setTimeout(r, 1500)); }
@@ -96,7 +96,7 @@ function handleMsg(m) {
   if (m.type === 'state') applyState(m);
   else if (m.type === 'kicked') kickedOut(m.ban);
   else if (m.type === 'replaced') replacedOut();
-  else if (m.type === 'notice') { say(m.text); roomToast(m.text); }
+  else if (m.type === 'notice') { if (m.by !== room.id) say((/voted to skip/i.test(m.text) ? '🗳 ' : '') + m.text); }   // pop-up; "by" = you caused it and already saw your own message
   else if (m.type === 'shift') { if (room.live) room.live.at = m.at; if (room.startAt) { room.startAt = m.at; lastSeek = 0; } }   // a singer skipped the intro: the shared clock moved forward, the sync loop seeks every video
   else if (m.type === 'pick') showPick(m);
   else if (m.type === 'pickcancel') { hidePick(); nextStop(); say(m.reason || 'The start was cancelled.'); }

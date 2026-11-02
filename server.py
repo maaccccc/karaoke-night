@@ -1,7 +1,7 @@
 """Karaoke Night server: YouTube Music search (ytmusicapi) + timed lyrics (LRCLIB).
 Run: pip install -r requirements.txt && python server.py
 """
-import gzip, hashlib, json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse, urllib.error
+import gzip, hashlib, hmac, json, os, queue as _queue, random, re, threading, time, urllib.request, urllib.parse, urllib.error
 from collections import deque
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from ytmusicapi import YTMusic
@@ -813,6 +813,10 @@ def room_prune():
         if not r['clients'] and now - r['empty'] > 600:
             del ROOMS[code]
 
+def key_ok(c, key):
+    """Is this the secret key that was handed out when this seat was joined? Everyone in a room can SEE every member's id, so the id alone proves nothing."""
+    return bool(c) and bool(key) and hmac.compare_digest(str(key).encode(), str(c.get('key', '')).encode())
+
 def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip=''):
     with RLOCK:
         room_prune()
@@ -828,7 +832,7 @@ def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip=''):
                 raise RuntimeError('You have been banned from this room by the host.')
         r['kicked'].pop(cid, None)           # joining on purpose again (a plain kick only removes you)
         cur = r['clients'].get(cid)
-        if cur and not cur.get('leaving') and time.time() - cur['seen'] < 25 and key != cur.get('key'):
+        if cur and not cur.get('leaving') and time.time() - cur['seen'] < 25 and not key_ok(cur, key):
             raise RuntimeError('You are already in this room (another tab, or someone else is using this seat). Close the other one, or try again in a few seconds.')   # nobody can take your seat (or the host role) by copying your id
         if cur and tab and cur.get('tab') and cur['tab'] != tab:
             try: cur['q'].put({'type': 'replaced'})      # same device, newer tab wins: the older tab is told to stop instead of both fighting over one seat
@@ -846,7 +850,7 @@ def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip=''):
         while name in taken:
             name = '%s %d' % (base[:17], n); n += 1
         old = r['clients'].get(cid)
-        mykey = os.urandom(8).hex()
+        mykey = os.urandom(16).hex()
         r['clients'][cid] = {'name': name, 'key': mykey, 'tab': tab, 'ip': ip, 'q': _queue.Queue(), 'seen': time.time(), 'mic': (old or {}).get('mic') or inherit or 'untested',
                                 'av': clean_av(av) if av else (old or {}).get('av') or clean_av(None)}
         r['scores'].setdefault(name, 0)
@@ -867,17 +871,18 @@ def room_join(code, cid, name, av=None, vis=None, key=None, tab='', ip=''):
             r['clients'][cid]['q'].put({'type': 'live', 'item': sm['item'], 'sids': sm['sids'], 'seed': sm['seed'], 'at': nw.get('at', 0), 'prep': not nw.get('went')})
         return {'id': cid, 'name': name, 'key': mykey, 'now': int(time.time() * 1000)}
 
-def room_leave(code, cid, tab=''):
+def room_leave(code, cid, tab='', key=''):
     with RLOCK:
         r = ROOMS.get(code)
-        if r and cid in r['clients'] and not (tab and r['clients'][cid].get('tab') and r['clients'][cid]['tab'] != tab):   # a replaced tab closing must not remove the new one
+        if r and cid in r['clients'] and key_ok(r['clients'][cid], key) and not (tab and r['clients'][cid].get('tab') and r['clients'][cid]['tab'] != tab):   # a replaced tab closing must not remove the new one
             r['clients'][cid]['leaving'] = time.time(); room_push(r, room_state(r))   # dropped after GRACE seconds
             maybe_go(r)
 
-def room_poll(code, cid, wait=20, tab=''):
+def room_poll(code, cid, wait=20, tab='', key=''):
     with RLOCK:
         room_prune()
         r = ROOMS.get(code); c = r and r['clients'].get(cid)
+        if c and not key_ok(c, key): return [{'type': 'replaced'}]      # only the real seat may read its messages (an id alone proves nothing); a tab left open from before this check is told to stop and reload
         if not c:
             k = r and r.get('kicked', {}).get(cid)
             return [{'type': 'kicked', 'ban': k['ban']}] if k else None
@@ -895,12 +900,13 @@ def room_poll(code, cid, wait=20, tab=''):
             ROOMS[code]['clients'][cid]['seen'] = time.time()
     return msgs
 
-def room_send(code, cid, typ, data, to=None, tab=''):
+def room_send(code, cid, typ, data, to=None, tab='', key=''):
     """Handle one action from a room member. Returns an optional message for that person."""
     with RLOCK:
         r = ROOMS.get(code); me = r and r['clients'].get(cid)
         if not me:
             raise RuntimeError('You are not in the room any more. Reload the page.')
+        if not key_ok(me, key): raise RuntimeError('Your room session is out of date. Reload the page.')      # every action must carry this seat's secret key
         if tab and me.get('tab') and me['tab'] != tab: raise RuntimeError('This room was opened in another tab on this device. Use that tab.')
         me['seen'] = time.time()
         if typ == 'rtc':                       # relay WebRTC signalling to one person
@@ -926,6 +932,7 @@ def room_send(code, cid, typ, data, to=None, tab=''):
             if kv: song['kv'] = kv            # everyone in the room then plays this same karaoke video
             r['queue'].append({'id': r['nid'], 'singer': singer, 'singer2': s2, 'mode': mode, 'song': song})
             fair_sort(r)
+            room_push(r, {'type': 'notice', 'by': cid, 'text': singer + ' queued “' + (song['title'] or 'a song') + '”.'})   # pops up for everyone else
         elif op == 'loaded':       # this browser has the lyrics and the video ready
             nw = r['now']
             if nw and not nw.get('went'):
@@ -958,7 +965,7 @@ def room_send(code, cid, typ, data, to=None, tab=''):
             if skip_cur(r):
                 reason, nw = str(data.get('reason') or '')[:160], r['now']
                 auto = bool(reason) and bool(nw) and me['name'] in nw['singers']
-                host = r.get('host') == cid and data.get('key') and data.get('key') == me.get('key')
+                host = r.get('host') == cid and key_ok(me, data.get('key') or key)
                 if auto or host:
                     do_skip(r, me['name'], reason)
                 else:
@@ -992,7 +999,7 @@ def room_send(code, cid, typ, data, to=None, tab=''):
             fair_sort(r)
             room_push(r, {'type': 'hist', 'hist': []})
         elif op in ('kick', 'ban', 'unban', 'vis', 'host'):     # host-only tools; the secret key proves it is really the host
-            if r.get('host') != cid or not data.get('key') or data.get('key') != me.get('key'):
+            if r.get('host') != cid or not key_ok(me, data.get('key') or key):
                 return 'Only the host can do that.'
             tid = clean_id(data.get('id')); tc = r['clients'].get(tid)
             if op in ('kick', 'ban', 'host') and (not tc or tid == cid):
@@ -1551,7 +1558,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/room/time':
                 return self.send_json(200, {'now': int(time.time() * 1000)})
             if u.path == '/api/room/poll':
-                msgs = room_poll(clean_code(q.get('room', [''])[0]), clean_id(q.get('id', [''])[0]), tab=clean_id(q.get('tab', [''])[0]))
+                msgs = room_poll(clean_code(q.get('room', [''])[0]), clean_id(q.get('id', [''])[0]), tab=clean_id(q.get('tab', [''])[0]), key=q.get('key', [''])[0][:64])
                 return self.send_json(410, {'error': 'gone'}) if msgs is None else self.send_json(200, {'msgs': msgs})
             if u.path == '/api/haslyrics':
                 g = lambda k: q.get(k, [''])[0]
@@ -1604,11 +1611,11 @@ class Handler(BaseHTTPRequestHandler):
                 if data.get('vis') == 'public' and is_blocked(code): raise RuntimeError("That room code isn't allowed.")
                 return self.send_json(200, room_join(code, cid, clean_name(data.get('name')), data.get('av'), data.get('vis'), data.get('key'), clean_id(data.get('tab')), self.client_ip()))
             if u.path == '/api/room/leave':
-                room_leave(clean_code(data.get('room')), clean_id(data.get('id')), clean_id(data.get('tab')))
+                room_leave(clean_code(data.get('room')), clean_id(data.get('id')), clean_id(data.get('tab')), str(data.get('key') or '')[:64])
                 return self.send_json(200, {'ok': True})
             if u.path == '/api/room/send':
                 msg = room_send(clean_code(data.get('room')), clean_id(data.get('id')), str(data.get('type')),
-                                data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None, clean_id(data.get('tab')))
+                                data.get('data') if isinstance(data.get('data'), dict) else {}, clean_id(data.get('to')) or None, clean_id(data.get('tab')), str(data.get('key') or '')[:64])
                 return self.send_json(200, {'ok': True, 'msg': msg})
             if u.path == '/api/judge':
                 return self.send_json(200, judge_comment(data, self.client_ip()))
