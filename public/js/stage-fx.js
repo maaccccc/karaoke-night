@@ -1,9 +1,9 @@
 // ---- stage look: themes, bouncing lyrics, dimming lights, singer avatars, crowd energy, combo, confetti
-const THEMES = { neon: 'Neon club', arcade: 'Retro arcade', stars: 'Starry sky', xmas: 'Christmas', spooky: 'Spooky night', sunset: 'Sunset drive', aurora: 'Aurora', jazz: 'Jazz lounge', rain: 'Digital rain', lava: 'Lava lamp', deepsea: 'Deep sea', sakura: 'Sakura night', vapor: 'Vaporwave', warp: 'Warp speed', pop: 'Pop-art comic', vhs: 'VHS tape', storm: 'Thunderstorm', groovy: 'Groovy 70s', none: 'No theme' };
+const THEMES = { studio: 'Studio', neon: 'Neon club', arcade: 'Retro arcade', stars: 'Starry sky', xmas: 'Christmas', spooky: 'Spooky night', sunset: 'Sunset drive', aurora: 'Aurora', jazz: 'Jazz lounge', rain: 'Digital rain', lava: 'Lava lamp', deepsea: 'Deep sea', sakura: 'Sakura night', vapor: 'Vaporwave', warp: 'Warp speed', pop: 'Pop-art comic', vhs: 'VHS tape', storm: 'Thunderstorm', groovy: 'Groovy 70s', none: 'No theme' };
 { const bg = $('.bg'); ['arcade', 'stars', 'sunset', 'aurora', 'jazz', 'spooky', 'xmas', 'xlights', 'rain', 'lava', 'deepsea', 'sakura', 'vapor', 'warp', 'pop', 'vhs', 'storm', 'groovy'].forEach(k => bg.appendChild(el('b', null, 'th th-' + k))); bg.after(el('div', null, 'bgdim')); }
-if (!THEMES[prefs.theme]) prefs.theme = 'neon';      // older saved settings said "song's choice"; there is now one overall theme
-const themeFor = () => THEMES[prefs.theme] ? prefs.theme : 'neon';
-function applyTheme(t) { document.body.dataset.theme = THEMES[t] ? t : 'neon'; renderThemeRow(); }
+if (!THEMES[prefs.theme]) prefs.theme = 'studio';      // older saved settings said "song's choice"; there is now one overall theme
+const themeFor = () => THEMES[prefs.theme] ? prefs.theme : 'studio';
+function applyTheme(t) { document.body.dataset.theme = THEMES[t] ? t : 'studio'; renderThemeRow(); }
 function refreshTheme() { applyTheme(themeFor()); }
 function renderThemeRow() { document.querySelectorAll('#lTheme button[data-th]').forEach(b => { const on = b.dataset.th === prefs.theme; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
 document.querySelectorAll('#lTheme button[data-th]').forEach(b => b.onclick = () => { prefs.theme = b.dataset.th; applyPrefs(); });   // home page: changes the whole site

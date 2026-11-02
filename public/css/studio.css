@@ -1,0 +1,146 @@
+/* ===== Studio theme: near-black, dot grid, flat charcoal cards, one violet accent =====
+   Rules for colour: violet (--pink here) = the one action colour. Mint (--cyan) = live / ready.
+   Amber (--gold) = "this is the active one" glow and scores. Everything else is neutral.
+   Linked LAST in index.html. A few !important are used on purpose to beat the older keycap/gradient button layers. */
+
+body[data-theme="studio"] {
+  --bg: #0b0b0d;
+  --glass: #151518;           /* card surface */
+  --raised: #1d1d22;          /* buttons, hovered rows */
+  --inset: #0e0e11;           /* inputs and wells inside cards */
+  --line: rgba(255, 255, 255, .09);
+  --ink: #f4f4f7;
+  --mute: #8e8e9a;
+  --pink: #8b7cff;            /* primary accent: electric violet (text, borders, glows) */
+  --btn: #6b5cf2;             /* button fill: deeper violet so white text passes contrast */
+  --cyan: #5eead4;            /* mint: live / ready */
+  --gold: #ffc247;            /* amber: active glow, scores */
+  --radius: 16px;
+  font-family: Outfit, Rubik, system-ui, sans-serif;
+  letter-spacing: -.005em;
+}
+
+/* --- backdrop: near-black with a faint dot grid, no beams, curtains or spotlights --- */
+body[data-theme="studio"] .bg {
+  background:
+    radial-gradient(90% 60% at 50% -10%, rgba(139, 124, 255, .10), transparent 70%),
+    radial-gradient(rgba(255, 255, 255, .075) 1px, transparent 1.2px) 0 0 / 24px 24px,
+    var(--bg);
+}
+body[data-theme="studio"] .bg i,
+body[data-theme="studio"] .curtains,
+body[data-theme="studio"] .curtain-open,
+body[data-theme="studio"] .vinyl,
+body[data-theme="studio"] .discoball,
+body[data-theme="studio"] #fxDust,
+body[data-theme="studio"] .mic3d .mglow { display: none !important; }
+
+/* --- type: Bungee only for the moments that earn it (stage lyric, score, room code) --- */
+body[data-theme="studio"] h1 {
+  font: 700 1.7rem Outfit, Rubik, sans-serif;
+  letter-spacing: -.02em;
+  background: none; color: var(--ink); -webkit-background-clip: border-box; background-clip: border-box;
+  filter: none;
+}
+body[data-theme="studio"] h2 { font: 600 1rem Outfit, Rubik, sans-serif; letter-spacing: 0; }
+body[data-theme="studio"] .lhero h1,
+body[data-theme="studio"] #landing h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); }
+body[data-theme="studio"] .rcode { font-family: Bungee, Impact, sans-serif; }
+
+/* --- cards: flat charcoal, 1px border, soft shadow, no blur --- */
+body[data-theme="studio"] .card {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 12px 32px -18px rgba(0, 0, 0, .8) !important;
+}
+/* landing cards: no 3D tilt, just a border lift on hover */
+body[data-theme="studio"].home #landing .card { transform: none; transition: border-color .2s, background .2s; }
+body[data-theme="studio"].home #landing .card::after { display: none; }
+body[data-theme="studio"].home #landing .card:hover { border-color: rgba(255, 255, 255, .2); background: #18181c; }
+body[data-theme="studio"] #home .card:hover { transform: none; }
+
+/* --- buttons: flat violet primary, charcoal secondary; no keycaps, no shine --- */
+body[data-theme="studio"] button:not(.ghost):not(.seg):not(.on):not(.favbtn):not(.mini):not(.thnav) {
+  background: var(--btn) !important;
+  background-image: none !important;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px rgba(0, 0, 0, .5) !important;
+  transform: none;
+  transition: filter .15s, transform .1s, box-shadow .15s;
+}
+body[data-theme="studio"] button:not(.ghost):not(.seg):not(.on):not(.favbtn):not(.mini):not(.thnav):hover {
+  filter: brightness(1.12);
+  transform: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 6px 18px -8px var(--pink) !important;
+}
+body[data-theme="studio"] button:not(.ghost):not(.seg):not(.on):not(.favbtn):not(.mini):not(.thnav):active {
+  transform: scale(.98);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .25) !important;
+}
+body[data-theme="studio"] button.ghost {
+  background: var(--raised) !important;
+  background-image: none !important;
+  border: 1px solid var(--line);
+  box-shadow: none !important;
+  transform: none;
+}
+body[data-theme="studio"] button.ghost:hover {
+  border-color: rgba(255, 255, 255, .26);
+  background: #25252b !important;
+  box-shadow: none !important;
+}
+body[data-theme="studio"] button.ghost:active { transform: scale(.98); }
+/* selected / active option: amber ring + soft glow (the "active card" glow from the reference) */
+body[data-theme="studio"] button.on,
+body[data-theme="studio"] .pk button.on {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 10px 26px -10px color-mix(in srgb, var(--gold) 55%, transparent) !important;
+}
+body[data-theme="studio"] button:focus-visible,
+body[data-theme="studio"] input:focus-visible,
+body[data-theme="studio"] select:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+
+/* --- inputs: inset wells --- */
+body[data-theme="studio"] input,
+body[data-theme="studio"] select,
+body[data-theme="studio"] textarea {
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+body[data-theme="studio"] input:focus,
+body[data-theme="studio"] select:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pink) 25%, transparent);
+}
+body[data-theme="studio"] input[type=range] { accent-color: var(--pink); }
+body[data-theme="studio"] select option,
+body[data-theme="studio"] select optgroup { background-color: #17171b; color: var(--ink); }
+body[data-theme="studio"] select option:hover,
+body[data-theme="studio"] select option:focus,
+body[data-theme="studio"] select option:checked { background-color: var(--pink); color: #fff; }
+
+/* --- dialogs and menus --- */
+body[data-theme="studio"] dialog {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .7);
+}
+body[data-theme="studio"] dialog::backdrop { background: rgba(5, 5, 8, .7); }
+
+/* --- theme picker swatch --- */
+.thsw-studio {
+  background:
+    radial-gradient(rgba(255, 255, 255, .22) 1px, transparent 1.2px) 0 0 / 10px 10px,
+    linear-gradient(135deg, #131316, #0b0b0d 70%);
+  box-shadow: inset 0 -18px 28px -18px rgba(139, 124, 255, .75);
+}
+
+/* the 3D mic is gold and wide: only show it where it has room beside the cards */
+@media (max-width: 1500px) { body[data-theme="studio"] .mic3d.hero { display: none !important; } }

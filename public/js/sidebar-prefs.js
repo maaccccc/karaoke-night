@@ -25,7 +25,7 @@ $('#sideClose').onclick = () => $('#side').classList.remove('open');
 // ---- preferences
 let micGain = null, micSrc = null, vdest = null, micSup = null;
 let gate = null, gateState = -1, listenDelay = 0, latIv = 0;
-const prefs = Object.assign({ fs: 1, vol: 100, sens: 1, calm: false, delay: 0, lead: 0, vsync: 0, hp: true, lowLat: true, sup: 'std', thr: 0, kar: false, cover: true, theme: 'neon' }, (() => { try { return JSON.parse(localStorage.getItem('karaokePrefs')) || {}; } catch (e) { return {}; } })());
+const prefs = Object.assign({ fs: 1, vol: 100, sens: 1, calm: false, delay: 0, lead: 0, vsync: 0, hp: true, lowLat: true, sup: 'std', thr: 0, kar: false, cover: true, theme: 'studio' }, (() => { try { return JSON.parse(localStorage.getItem('karaokePrefs')) || {}; } catch (e) { return {}; } })());
 function applyPrefs(save = true) {
   document.documentElement.style.setProperty('--fs', prefs.fs);
   document.documentElement.classList.toggle('calm', prefs.calm);
