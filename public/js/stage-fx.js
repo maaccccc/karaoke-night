@@ -40,7 +40,7 @@ function setCombo(pop) {
 }
 function comboEval(i) {             // line i is over: did I sing it?
   if (!ownLine(i) || !S || (S.lf[i] || 0) < 6) return;
-  if (S.lv[i] / S.lf[i] >= .5) { cb.n++; cb.max = Math.max(cb.max, cb.n); setCombo(true); }
+  if (S.lv[i] / (S.lf[i] * S.fr[i]) >= .5) { cb.n++; cb.max = Math.max(cb.max, cb.n); setCombo(true); }
   else { cb.n = 0; setCombo(); }
 }
 function comboTick(idx) { while (cb.last < idx - 1) comboEval(++cb.last); }

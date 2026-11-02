@@ -26,7 +26,7 @@ let S = null;
 // Fresh per-song scoring stats. singing.js calls this at the start of every song.
 function newStats(ls) {
   return { voiced: 0, rms: 0, db: 0, db2: 0, nf: 0, nfN: 0, pn: 0, ps: 0, ps2: 0, gf: 0, gv: 0, clear: 0, clip: 0,
-    lf: ls.map(() => 0), lv: ls.map(() => 0), hit: ls.map(() => 0),
+    lf: ls.map(() => 0), lv: ls.map(() => 0), hit: ls.map(() => 0), fr: ls.map(() => 1), hold: 0, nf0: 0,
     gb: [], bg: 0, vh: 0, run: 0, lt: 0, lb: 0, gdb: 0, gdn: 0, echoWarn: false,
     lastSt: 0, hist: new Array(100).fill(0), sn: 0, ai: 0, aiS: 0 };
 }
@@ -39,7 +39,7 @@ function echoLevel() {      // 0 = clean, 1 = the mic is clearly just replaying 
 }
 function compute(n) {
   n = Math.max(1, Math.min(n, lines.length)); let cov = 0, hits = 0, m = 0;
-  for (let i = 0; i < n; i++) { if (!ownLine(i)) continue; m++; cov += S.lf[i] ? clamp01(S.lv[i] / (S.lf[i] * .7)) : 0; hits += S.hit[i]; }
+  for (let i = 0; i < n; i++) { if (!ownLine(i)) continue; m++; cov += S.lf[i] ? clamp01(S.lv[i] / (S.lf[i] * S.fr[i] * .7)) : 0; hits += S.hit[i]; }
   const v = S.voiced;
   if (!v) return { Singing: 0, Tone: 0, Volume: 0, Timing: 0 };
   const echo = echoLevel(), leak = 1 - .85 * echo, soft = 1 - .6 * echo;

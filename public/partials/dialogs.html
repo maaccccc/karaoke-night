@@ -124,25 +124,59 @@
 </dialog>
 <dialog id="newdlg" aria-labelledby="nwTitle">
   <h2 id="nwTitle">✨ What’s new</h2>
-  <ul id="nwList" style="margin:10px 0 14px;padding-left:20px;line-height:1.7">
-    <li>🧊 <b>A more 3D look on PC</b>: cards tilt towards your mouse, buttons are raised keys you press down, and the lyrics roll back into the distance. Phones and tablets get a lighter version, and “Smooth mode” or reduced motion turns it off</li>
-    <li>⭐ <b>My songs</b>: star your favourites and see what you have sung, with scores and your most-sung songs. Saved on this device only</li>
-    <li>🪪 <b>One seat per device</b>: opening the site in many tabs no longer lets one person fill a room. The newest tab takes over, and the old one is told to stop</li>
-    <li>🎙 <b>Fairer scoring</b> that ignores how loud your mic is, plus an on-device AI check that you are really singing</li>
-    <li>🚫 <b>No duplicate songs</b> in the queue, and a calmer, roomier look</li>
-  </ul>
-  <details style="margin:0 0 14px"><summary>Earlier updates</summary>
-    <ul style="margin:8px 0 0;padding-left:20px;line-height:1.7">
-    <li>🎤 <b>Karaoke versions are stricter</b>: only the same song by the same artist in the same arrangement is used (no covers, live or remix uploads). If none passes, the original plays and you are told</li>
-    <li>⏱ <b>Lyric timing is shared</b>: fix a karaoke track once with Mark or Sooner / Later and it is remembered for everybody. In a room, the singer's fix reaches everyone live</li>
-    <li>🖱 <b>Hover or click a person</b> in the Lobby or voice chat (right-click works too; press and hold on a phone) to set how loud <i>they</i> are for you, 0 to 100%, like Discord</li>
-    <li>🎚 <b>Voice chat volume (everyone)</b> at the bottom of the voice chat panel now goes from 0 to 200%</li>
-    <li>🎙 <b>Mic threshold</b> moved to <b>⚙ Settings → Sound</b> (and Mic test), with a live meter: your mic is muted below the white line, like Discord’s input sensitivity</li>
-    <li>👥 The voice chat list is cleaner: just who is connected and a live meter for each person</li>
-      <li>🧹 <b>Mic suppression</b> (Off / Standard / Strong / Maximum) hides TV, fans and family noise</li>
-      <li>⚙ Settings is grouped into Sound, Sync &amp; timing and Preferences</li>
-      <li>🎤 Karaoke versions of songs, with timing remembered per video</li>
-    </ul>
-  </details>
+  <div id="nwList" class="nwlog">
+    <section>
+      <h3><time datetime="2026-11-02">Nov 2, 2026</time> <span class="nwnew">New</span></h3>
+      <ul>
+        <li>🔔 <b>Pop-up messages</b>: what used to be one line of text on the home page (“Queued…”, “Searching…”, errors) and the room notices (new host, skip votes, kicks) now slide in as pop-ups. In a room you also get one when someone queues a song</li>
+        <li>🎨 <b>10 new themes</b>: Digital rain, Lava lamp, Deep sea, Sakura night, Vaporwave, Warp speed, Pop-art comic, VHS tape, Thunderstorm and Groovy 70s. Pick one under 🎨 Theme</li>
+        <li>🎙 <b>Scoring fix</b>: your combo no longer breaks and your score no longer slides while you are singing. Short lines followed by a pause are judged on the time you actually sing</li>
+        <li>🔤 <b>Lyrics fit the screen</b>: the line being sung is no longer cut off at the edges (fullscreen or not), and the first line no longer lights up before the music starts</li>
+      </ul>
+    </section>
+    <section>
+      <h3><time datetime="2026-11-01">Nov 1, 2026</time></h3>
+      <ul>
+        <li>🧭 <b>A simpler header</b>, and the side cards can be collapsed. Chat and voice chat share one bubble</li>
+        <li>📡 <b>Status page</b>: a button on the home page shows whether search, lyrics and the other services are working</li>
+        <li>🗂 <b>Backup lyrics</b>: if the lyrics search fails, lyrics found in the last few hours are used instead</li>
+        <li>✨ A few new fun animations</li>
+      </ul>
+    </section>
+    <section>
+      <h3><time datetime="2026-10-31">Oct 31, 2026</time></h3>
+      <ul><li>🎯 <b>Better lyric sync</b> between the lyrics and the karaoke version of a song</li></ul>
+    </section>
+    <section>
+      <h3><time datetime="2026-10-27">Oct 27, 2026</time></h3>
+      <ul>
+        <li>🎶 <b>Playlists</b> and a <b>Skip intro</b> button for long instrumental intros</li>
+        <li>➕ An <b>add song</b> button while you are singing, and a notice when people vote to skip</li>
+      </ul>
+    </section>
+    <section>
+      <h3><time datetime="2026-10-24">Oct 24, 2026</time></h3>
+      <ul>
+        <li>🧊 <b>A more 3D look on PC</b>: cards tilt towards your mouse, buttons are raised keys you press down, and the lyrics roll back into the distance. Phones and tablets get a lighter version, and “Smooth mode” or reduced motion turns it off</li>
+        <li>⭐ <b>My songs</b>: star your favourites and see what you have sung, with scores and your most-sung songs. Saved on this device only</li>
+        <li>🪪 <b>One seat per device</b>: opening the site in many tabs no longer lets one person fill a room. The newest tab takes over, and the old one is told to stop</li>
+        <li>🎙 <b>Fairer scoring</b> that ignores how loud your mic is, plus an on-device AI check that you are really singing</li>
+        <li>🚫 <b>No duplicate songs</b> in the queue, and a calmer, roomier look</li>
+      </ul>
+    </section>
+    <details class="nwold"><summary>Earlier updates (Oct 23, 2026 and before)</summary>
+      <ul>
+        <li>🎤 <b>Karaoke versions are stricter</b>: only the same song by the same artist in the same arrangement is used (no covers, live or remix uploads). If none passes, the original plays and you are told</li>
+        <li>⏱ <b>Lyric timing is shared</b>: fix a karaoke track once with Mark or Sooner / Later and it is remembered for everybody. In a room, the singer's fix reaches everyone live</li>
+        <li>🖱 <b>Hover or click a person</b> in the Lobby or voice chat (right-click works too; press and hold on a phone) to set how loud <i>they</i> are for you, 0 to 100%, like Discord</li>
+        <li>🎚 <b>Voice chat volume (everyone)</b> at the bottom of the voice chat panel now goes from 0 to 200%</li>
+        <li>🎙 <b>Mic threshold</b> moved to <b>⚙ Settings → Sound</b> (and Mic test), with a live meter: your mic is muted below the white line, like Discord’s input sensitivity</li>
+        <li>👥 The voice chat list is cleaner: just who is connected and a live meter for each person</li>
+        <li>🧹 <b>Mic suppression</b> (Off / Standard / Strong / Maximum) hides TV, fans and family noise</li>
+        <li>⚙ Settings is grouped into Sound, Sync &amp; timing and Preferences</li>
+        <li>🎤 Karaoke versions of songs, with timing remembered per video</li>
+      </ul>
+    </details>
+  </div>
   <div class="row" style="justify-content:center"><button type="button" id="nwOk">Got it</button></div>
 </dialog>

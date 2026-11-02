@@ -408,11 +408,16 @@ async function runSong() {
       // Fair scoring: judge the voice itself, not how loud the mic is set. The Mic level slider is divided back out, and "singing" is
       // measured against this mic's own background noise (learned in the first second and tracked while you are quiet).
       const g = (micGain && micGain.gain.value) || 1, rr = rms / g, rmx = mx / g;
-      if (S.nfN < 45) { S.nf = S.nfN ? Math.min(S.nf, rr) : rr; S.nfN++; }
+      if (S.nfN < 45) { S.nf = S.nfN ? Math.min(S.nf, rr) : rr; S.nfN++; if (S.nfN === 45) S.nf0 = Math.max(S.nf, .002); }
       const thr = Math.min(.045, Math.max(.008, S.nf * 3));
-      if (rr <= thr && S.nfN >= 45) S.nf += (rr - S.nf) * .03;
+      // The floor follows the room DOWN quickly but creeps UP very slowly and never past twice what was learned at the start. It used to follow every
+      // quiet-ish frame upward (soft syllables, breaths, the song leaking in), so the "you are singing" threshold crept up until normal singing no longer
+      // counted: the combo broke and the score fell for the rest of the song.
+      if (rr <= thr && S.nfN >= 45) { S.nf += (rr - S.nf) * (rr < S.nf ? .08 : .004); S.nf = Math.min(S.nf, Math.max(S.nf0 * 2, .004)); }
       const ai = window.AIScore ? AIScore.read() : null;                              // null until the AI model has loaded (or if it cannot)
-      const voiced = rr > thr && clr > .5 && (!ai || ai.sing >= .2);                  // above the noise, a real pitch, and (with AI) it hears singing
+      const raw = rr > thr && clr > .5 && (!ai || ai.sing >= .2);                     // above the noise, a real pitch, and (with AI) it hears singing
+      S.hold = raw ? 9 : Math.max(0, (S.hold || 0) - 1);                              // hangover: about a sixth of a second of grace for consonants, breaths and pitch wobble
+      const voiced = raw || (S.hold > 0 && rr > thr * .6);
       const mine = idx >= 0 && t < lineEnd(idx) && ownLine(idx);
       if (voiced && (idx < 0 || ownLine(idx))) {
         const d = 20 * Math.log10(Math.max(rr, 1e-4)); S.voiced++; S.rms += rr; S.db += d; S.db2 += d * d; if (clr > .8) S.clear++; if (rmx > .95) S.clip++;
@@ -423,7 +428,7 @@ async function runSong() {
       } else if (fresh) S.run = 0;
       if (ai && mine) { S.ai++; if (ai.sing >= .2) S.aiS++; }                         // how much of your own lines the AI heard as singing
       if (!mine) { S.gf++; if (voiced) S.gv++; }                                      // sound during breaks / a partner's lines = noise or music leaking in
-      if (idx >= 0 && t < lineEnd(idx)) { S.lf[idx]++; if (voiced) { S.lv[idx]++; if (t - lines[idx].t * scale < 2) S.hit[idx] = 1; } }
+      if (idx >= 0 && t < lineEnd(idx)) { const w = lineEnd(idx) - lines[idx].t * scale; S.fr[idx] = Math.max(.35, Math.min(1, Math.min(w * .95, Math.max(1, (lines[idx].text || '').length * .14)) / Math.max(.5, w))); S.lf[idx]++; if (voiced) { S.lv[idx]++; if (t - lines[idx].t * scale < 2) S.hit[idx] = 1; } }
       if (now - liveT > 300 && idx >= 0) { liveT = now; const sc = total(compute(idx + 1)); $('#liveScore').textContent = sc; const ns = $('#nowScore'); if (ns) ns.textContent = sc + ' pts'; }
     }
     fxTick(now, t, idx, playing, an && playing ? lvl : -1);
